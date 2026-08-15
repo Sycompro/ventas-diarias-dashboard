@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../config/database.js';
+import { db, sqlClient } from '../config/database.js';
 import { companies } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { encrypt, decrypt } from '../services/crypto.service.js';
@@ -227,6 +227,25 @@ router.post('/:id/sync', async (req: any, res) => {
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: 'Error syncing company data' });
+  }
+});
+
+router.get('/:id/sellers', async (req: any, res) => {
+  try {
+    if (req.params.id !== req.user.companyId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    
+    const result = await sqlClient`
+      SELECT DISTINCT seller_name as "name"
+      FROM sales
+      WHERE company_id = ${req.params.id} AND seller_name IS NOT NULL AND seller_name != ''
+      ORDER BY seller_name ASC
+    `;
+    
+    res.json(result.map(r => r.name));
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error listing company sellers', error: error.message });
   }
 });
 

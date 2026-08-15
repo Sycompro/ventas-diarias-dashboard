@@ -43,3 +43,22 @@ export const useActiveCompany = () => {
   
   return companies?.find((c: any) => c.id === companyId) || null;
 };
+
+export const useCompanySellers = () => {
+  const companyId = useFilters((state) => state.companyId);
+  return useQuery({
+    queryKey: ['company-sellers', companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      try {
+        const data = await companyService.getSellers(companyId);
+        return data || [];
+      } catch (err) {
+        console.error("Error fetching sellers list from api:", err);
+        return [];
+      }
+    },
+    enabled: !!companyId,
+    staleTime: 2 * 60 * 1000,
+  });
+};

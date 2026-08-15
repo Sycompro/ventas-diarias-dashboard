@@ -84,6 +84,10 @@ export const companyService = {
   sync: async (id: string) => {
     const { data } = await api.post(`/companies/${id}/sync`);
     return data;
+  },
+  getSellers: async (id: string) => {
+    const { data } = await api.get(`/companies/${id}/sellers`);
+    return data;
   }
 };
 
