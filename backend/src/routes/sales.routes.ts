@@ -540,4 +540,17 @@ router.get('/debug-db', async (req, res) => {
   }
 });
 
+router.get('/debug-series', async (req, res) => {
+  try {
+    const seriesStats = await sqlClient`
+      SELECT series, COUNT(*)::int as count, SUM(total::numeric) as total
+      FROM sales
+      GROUP BY series
+    `;
+    res.json({ seriesStats });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

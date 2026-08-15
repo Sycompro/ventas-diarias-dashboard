@@ -13,15 +13,12 @@ async function main() {
     const { accessToken } = loginRes.data;
     console.log("Logged in successfully.");
     
-    console.log("2. Querying debug-db endpoint...");
-    const dbRes = await axios.get(`${backendUrl}/api/sales/debug-db`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
+    console.log("2. Querying debug-series endpoint...");
+    const seriesRes = await axios.get(`${backendUrl}/api/sales/debug-series`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
     });
-    
-    console.log("--- DEBUG-DB RESPONSE ---");
-    console.log(JSON.stringify(dbRes.data, null, 2));
+    console.log("--- DEBUG-SERIES RESPONSE ---");
+    console.log(JSON.stringify(seriesRes.data, null, 2));
     
   } catch (err: any) {
     console.error("Error:", err.response?.data || err.message);
