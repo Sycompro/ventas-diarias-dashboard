@@ -64,7 +64,7 @@ export const Sidebar: React.FC<{ isOpen: boolean; setIsOpen: (v: boolean) => voi
                   ? 'bg-primary-light text-primary-dark' 
                   : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'}
               `}
-              end={item.to === '/'}
+              end={item.to === '/' || item.to === '/ventas'}
             >
               <div className="flex items-center gap-3">
                 <item.icon size={20} className="shrink-0" />
@@ -83,6 +83,7 @@ export const Sidebar: React.FC<{ isOpen: boolean; setIsOpen: (v: boolean) => voi
         <div className="p-4 border-t border-border-subtle">
           <NavLink
             to="/configuracion"
+            end
             className={({ isActive }) => `
               flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-2
               ${isActive ? 'bg-primary-light text-primary-dark' : 'text-neutral-600 hover:bg-neutral-100'}
