@@ -16,6 +16,10 @@ export interface DashboardMetrics {
     notasVenta: { amount: number; count: number };
   };
   byPaymentMethod: Record<string, { amount: number, description: string }>;
+  byItemType: {
+    products: number;
+    services: number;
+  };
   topProducts: Array<{ description: string; quantity: number; total: number; category: string }>;
   salesBySeller: Array<{ name: string; total: number; count: number; avgTicket: number }>;
 }
@@ -170,6 +174,29 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
         ORDER BY total DESC
       `;
 
+  // Query para Productos vs Servicios
+  const itemTypeRes = companyId
+    ? await sqlClient`
+        SELECT 
+          COALESCE(SUM(CASE WHEN i.category = '02' THEN i.total::numeric ELSE 0 END), 0) as services_total,
+          COALESCE(SUM(CASE WHEN i.category != '02' THEN i.total::numeric ELSE 0 END), 0) as products_total
+        FROM sale_items i
+        JOIN sales s ON i.sale_id = s.id
+        WHERE s.status = 'active' AND s.company_id = ${companyId} AND s.issued_at::date >= ${dateStart}::date AND s.issued_at::date <= ${dateEnd}::date
+      `
+    : await sqlClient`
+        SELECT 
+          COALESCE(SUM(CASE WHEN i.category = '02' THEN i.total::numeric ELSE 0 END), 0) as services_total,
+          COALESCE(SUM(CASE WHEN i.category != '02' THEN i.total::numeric ELSE 0 END), 0) as products_total
+        FROM sale_items i
+        JOIN sales s ON i.sale_id = s.id
+        WHERE s.status = 'active' AND s.issued_at::date >= ${dateStart}::date AND s.issued_at::date <= ${dateEnd}::date
+      `;
+
+  const itemTypeRow = itemTypeRes[0];
+  const productsTotal = parseFloat(itemTypeRow.products_total as string || '0');
+  const servicesTotal = parseFloat(itemTypeRow.services_total as string || '0');
+
   const result: DashboardMetrics = {
     totalSales,
     documentsCount,
@@ -193,6 +220,10 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
       },
     },
     byPaymentMethod,
+    byItemType: {
+      products: productsTotal,
+      services: servicesTotal,
+    },
     topProducts: productsRes.map(r => ({
       description: r.description as string,
       quantity: parseFloat(r.quantity as string),

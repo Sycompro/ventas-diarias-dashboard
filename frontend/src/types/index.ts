@@ -22,6 +22,10 @@ export interface DashboardMetrics {
     notasVenta: { count: number; amount: number };
   };
   byPaymentMethod: Record<string, { count: number; amount: number; description?: string }>;
+  byItemType: {
+    products: number;
+    services: number;
+  };
   topProducts: Array<{ name: string; quantity: number; total: number; category: string }>;
   byCategory: Array<{ category: string; total: number; count: number }>;
   bySeller: Array<{ sellerName: string; total: number; count: number; avgTicket: number }>;

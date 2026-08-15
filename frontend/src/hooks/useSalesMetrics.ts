@@ -34,6 +34,10 @@ const generateDynamicMockMetrics = (filters: any): DashboardMetrics => {
       yapePlin: { count: 0, amount: 0 },
       otros: { count: 0, amount: 0 },
     },
+    byItemType: {
+      products: 0,
+      services: 0,
+    },
     topProducts: [],
     byCategory: [],
     bySeller: [],
@@ -119,6 +123,10 @@ const mapBackendMetricsToFrontend = (data: any, filters: any): DashboardMetrics 
     avgTicket,
     byDocumentType,
     byPaymentMethod,
+    byItemType: {
+      products: parseFloat(data.byItemType?.products || 0),
+      services: parseFloat(data.byItemType?.services || 0),
+    },
     topProducts,
     byCategory: Object.values(categoriesMap),
     bySeller,
