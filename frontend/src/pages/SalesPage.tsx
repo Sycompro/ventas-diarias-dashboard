@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { useFilters } from '../hooks/useFilters';
 import { GlobalFilters } from '../components/filters/GlobalFilters';
-import { useSalesPivot, useSalesDocuments } from '../hooks/useSalesMetrics';
-import { formatCurrency, formatDateTime } from '../utils/formatters';
+import { useSalesPivot, useSalesByDocumentType } from '../hooks/useSalesMetrics';
+import { formatCurrency } from '../utils/formatters';
 import { useAuthStore } from '../hooks/useAuth';
 import axios from 'axios';
 import { useHeaderStore } from '../hooks/useHeader';
@@ -25,13 +25,12 @@ export const SalesPage: React.FC = () => {
   const token = useAuthStore((state) => state.accessToken);
   
   const { data: pivotResponse, isLoading: loadingPivot } = useSalesPivot();
-  const { data: documentsData, isLoading: loadingDocs } = useSalesDocuments(100, 0);
+  const { data: docTypeMetrics, isLoading: loadingDocTypes } = useSalesByDocumentType();
   
   const pivotData = pivotResponse?.pivotData || [];
   const paymentMethods = pivotResponse?.paymentMethods || [];
 
   const [expandedSedes, setExpandedSedes] = useState<Record<string, boolean>>({});
-  const [docSearch, setDocSearch] = useState('');
 
   const setHeader = useHeaderStore((state: any) => state.setHeader);
   const clearHeader = useHeaderStore((state: any) => state.clearHeader);
@@ -91,18 +90,15 @@ export const SalesPage: React.FC = () => {
     return totals;
   }, [pivotData, paymentMethods]);
 
-  // Filtrar documentos en el cliente para el buscador
-  const filteredDocs = useMemo(() => {
-    if (!documentsData) return [];
-    if (!docSearch.trim()) return documentsData;
-    const query = docSearch.toLowerCase();
-    return documentsData.filter((doc: any) => {
-      const docNum = `${doc.series}-${doc.number}`.toLowerCase();
-      const customer = (doc.customerName || '').toLowerCase();
-      const seller = (doc.sellerName || '').toLowerCase();
-      return docNum.includes(query) || customer.includes(query) || seller.includes(query);
-    });
-  }, [documentsData, docSearch]);
+  const docSummaryData = useMemo(() => {
+    if (!docTypeMetrics) return [];
+    return [
+      { name: 'Facturas', amount: docTypeMetrics.facturas.amount, count: docTypeMetrics.facturas.count, colorBg: 'bg-blue-50 text-blue-700 border-blue-100/50' },
+      { name: 'Boletas', amount: docTypeMetrics.boletas.amount, count: docTypeMetrics.boletas.count, colorBg: 'bg-emerald-50 text-emerald-700 border-emerald-100/50' },
+      { name: 'Notas de Venta', amount: docTypeMetrics.notasVenta.amount, count: docTypeMetrics.notasVenta.count, colorBg: 'bg-amber-50 text-amber-700 border-amber-100/50' },
+      { name: 'Notas de Crédito', amount: docTypeMetrics.notasCredito.amount, count: docTypeMetrics.notasCredito.count, colorBg: 'bg-rose-50 text-rose-700 border-rose-100/50' },
+    ];
+  }, [docTypeMetrics]);
 
   return (
     <div className="space-y-6">
@@ -227,99 +223,47 @@ export const SalesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Registro Detallado de Documentos en Base de Datos Real */}
+      {/* Resumen por Tipo de Comprobante - Solicitud de Usuario */}
       <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-200">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <h3 className="font-bold text-slate-900 text-sm">Listado Detallado de Comprobantes</h3>
-          <div className="relative w-full sm:w-72">
-            <input 
-              type="text" 
-              placeholder="Buscar por doc, cliente o vendedor..." 
-              value={docSearch}
-              onChange={(e) => setDocSearch(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 placeholder:text-slate-400 transition-all"
-            />
-          </div>
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="font-bold text-slate-900 text-sm">Resumen por Tipo de Comprobante</h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">Ingresos acumulados y cantidad de documentos emitidos.</p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-4">Fecha Emisión</th>
-                <th className="py-3 px-4">Comprobante</th>
-                <th className="py-3 px-4 text-center">Tipo</th>
-                <th className="py-3 px-4">Cliente</th>
-                <th className="py-3 px-4">Vendedor</th>
-                <th className="py-3 px-4 text-right">Monto Total</th>
-                <th className="py-3 px-4 text-center">Estado SUNAT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
-              {loadingDocs ? (
-                <tr>
-                  <td colSpan={7} className="py-6 text-center text-slate-400 animate-pulse">
-                    Cargando listado de comprobantes...
-                  </td>
-                </tr>
-              ) : filteredDocs.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-6 text-center text-slate-400">
-                    No se encontraron comprobantes registrados.
-                  </td>
-                </tr>
-              ) : (
-                filteredDocs.map((doc: any) => {
-                  const isVoided = doc.status === 'voided';
-                  return (
-                    <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-2.5 px-4 text-slate-500 tabular-nums">{formatDateTime(doc.issuedAt)}</td>
-                      <td className="py-2.5 px-4 font-semibold text-slate-800">{doc.series}-{doc.number}</td>
-                      <td className="py-2.5 px-4 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase inline-block border ${
-                          doc.documentTypeId === '01' 
-                            ? 'bg-blue-50 text-blue-700 border-blue-100' 
-                            : doc.documentTypeId === '03'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                            : doc.documentTypeId === '80'
-                            ? 'bg-amber-50 text-amber-700 border-amber-100'
-                            : doc.documentTypeId === '07'
-                            ? 'bg-red-50 text-red-700 border-red-100'
-                            : 'bg-slate-50 text-slate-700 border-slate-100'
-                        }`}>
-                          {doc.documentTypeId === '01' 
-                            ? 'Factura' 
-                            : doc.documentTypeId === '03'
-                            ? 'Boleta'
-                            : doc.documentTypeId === '80'
-                            ? 'Nota Venta'
-                            : doc.documentTypeId === '07'
-                            ? 'N. Crédito'
-                            : 'Otro'}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 text-slate-700 truncate max-w-[200px]" title={doc.customerName}>
-                        {doc.customerName || 'Cliente Varios'}
-                      </td>
-                      <td className="py-2.5 px-4 text-slate-600">{doc.sellerName || 'Desconocido'}</td>
-                      <td className="py-2.5 px-4 text-right font-medium text-slate-900 tabular-nums">{formatCurrency(doc.total)}</td>
-                      <td className="py-2.5 px-4 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize inline-block ${
-                          isVoided 
-                            ? 'bg-red-50 text-red-700 border border-red-100' 
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                        }`}>
-                          {isVoided ? 'Anulado' : 'Aceptado'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+        <div className="p-5">
+          {loadingDocTypes ? (
+            <div className="py-6 text-center text-slate-400 animate-pulse">
+              Cargando resumen de comprobantes...
+            </div>
+          ) : docSummaryData.length === 0 ? (
+            <div className="py-6 text-center text-slate-400">
+              No se encontraron comprobantes registrados en el rango seleccionado.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {docSummaryData.map((doc) => {
+                const isNegative = doc.amount < 0;
+                return (
+                  <div key={doc.name} className="p-4 rounded-xl border border-slate-200/60 bg-slate-50/40 hover:bg-slate-50 transition-all duration-300 flex flex-col justify-between">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-bold text-slate-500 tracking-wide uppercase">{doc.name}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${doc.colorBg}`}>
+                        {doc.count} emitidos
+                      </span>
+                    </div>
+                    <div className="mt-4">
+                      <span className={`text-xl font-extrabold tabular-nums ${isNegative ? 'text-rose-600' : 'text-slate-900'}`}>
+                        {formatCurrency(doc.amount)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
+
     </div>
   );
 };
