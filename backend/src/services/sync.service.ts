@@ -155,8 +155,9 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
 
           if (doc.download_xml) {
             try {
-              // Descargar XML directamente con bypass de SSL
-              const xmlRes = await axios.get(doc.download_xml, { 
+              // Descargar XML directamente con bypass de SSL y esquema HTTP para evitar bloqueo de Cloudflare
+              const xmlUrl = doc.download_xml.replace('https://', 'http://');
+              const xmlRes = await axios.get(xmlUrl, { 
                 responseType: 'text', 
                 timeout: 5000,
                 httpsAgent: new https.Agent({ rejectUnauthorized: false })

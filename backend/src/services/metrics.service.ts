@@ -14,6 +14,7 @@ export interface DashboardMetrics {
     boletas: { amount: number; count: number }; 
     notasCredito: { amount: number; count: number };
     notasVenta: { amount: number; count: number };
+    anulados: { amount: number; count: number };
   };
   byPaymentMethod: Record<string, { amount: number, description: string }>;
   byItemType: {
@@ -67,6 +68,22 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
   const row = salesRes[0];
   const totalSales = parseFloat(row.total_sales as string || '0');
   const documentsCount = parseInt(row.count as string || '0', 10);
+
+  // Query para documentos anulados
+  const voidedRes = companyId
+    ? await sqlClient`
+        SELECT COALESCE(SUM(total::numeric), 0) as amount, COUNT(*)::int as count
+        FROM sales
+        WHERE status = 'voided' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+      `
+    : await sqlClient`
+        SELECT COALESCE(SUM(total::numeric), 0) as amount, COUNT(*)::int as count
+        FROM sales
+        WHERE status = 'voided' AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+      `;
+  const voidedRow = voidedRes[0];
+  const voidedAmount = parseFloat(voidedRow.amount as string || '0');
+  const voidedCount = parseInt(voidedRow.count as string || '0', 10);
 
   // Métodos de pago
   const paymentsRes = companyId
@@ -217,6 +234,10 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
       notasVenta: {
         amount: parseFloat(row.notas_venta_amount as string || '0'),
         count: parseInt(row.notas_venta_count as string || '0', 10),
+      },
+      anulados: {
+        amount: voidedAmount,
+        count: voidedCount,
       },
     },
     byPaymentMethod,

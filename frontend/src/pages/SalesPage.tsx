@@ -12,7 +12,8 @@ import {
   Smartphone, 
   HelpCircle,
   Package,
-  Briefcase
+  Briefcase,
+  XCircle
 } from 'lucide-react';
 import { useFilters } from '../hooks/useFilters';
 import { GlobalFilters } from '../components/filters/GlobalFilters';
@@ -100,6 +101,7 @@ export const SalesPage: React.FC = () => {
       { name: 'Boletas', amount: docTypeMetrics.boletas.amount, count: docTypeMetrics.boletas.count, colorBg: 'bg-emerald-50 text-emerald-700 border-emerald-100/50', type: 'doc', icon: <CreditCard size={13} className="text-emerald-500 shrink-0" /> },
       { name: 'Notas de Venta', amount: docTypeMetrics.notasVenta.amount, count: docTypeMetrics.notasVenta.count, colorBg: 'bg-amber-50 text-amber-700 border-amber-100/50', type: 'doc', icon: <ArrowLeftRight size={13} className="text-amber-500 shrink-0" /> },
       { name: 'Notas de Crédito', amount: docTypeMetrics.notasCredito.amount, count: docTypeMetrics.notasCredito.count, colorBg: 'bg-rose-50 text-rose-700 border-rose-100/50', type: 'doc', icon: <Smartphone size={13} className="text-rose-500 shrink-0" /> },
+      { name: 'Anulados', amount: docTypeMetrics.anulados?.amount || 0, count: docTypeMetrics.anulados?.count || 0, colorBg: 'bg-slate-50 text-slate-700 border-slate-100/50', type: 'doc', icon: <XCircle size={13} className="text-slate-500 shrink-0" /> },
     ];
     if (metrics?.byItemType) {
       const totalItem = (metrics.byItemType.products || 0) + (metrics.byItemType.services || 0) || 1;
@@ -157,7 +159,7 @@ export const SalesPage: React.FC = () => {
               No se encontraron datos registrados en el rango seleccionado.
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
               {docSummaryData.map((doc) => {
                 const isNegative = doc.amount < 0;
                 return (

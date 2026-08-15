@@ -26,6 +26,7 @@ const generateDynamicMockMetrics = (filters: any): DashboardMetrics => {
       boletas: { count: 0, amount: 0 },
       notasCredito: { count: 0, amount: 0 },
       notasVenta: { count: 0, amount: 0 },
+      anulados: { count: 0, amount: 0 },
     },
     byPaymentMethod: {
       efectivo: { count: 0, amount: 0 },
@@ -78,6 +79,10 @@ const mapBackendMetricsToFrontend = (data: any, filters: any): DashboardMetrics 
       count: parseInt(data.byDocumentType?.notasVenta?.count || 0, 10), 
       amount: parseFloat(data.byDocumentType?.notasVenta?.amount || 0) 
     },
+    anulados: {
+      count: parseInt(data.byDocumentType?.anulados?.count || 0, 10),
+      amount: parseFloat(data.byDocumentType?.anulados?.amount || 0)
+    }
   };
 
   // Payment methods

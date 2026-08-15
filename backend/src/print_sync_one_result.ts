@@ -22,6 +22,20 @@ async function main() {
     
     console.log("--- DEBUG-SYNC-ONE RESPONSE ---");
     console.log(JSON.stringify(res.data, null, 2));
+
+    const httpUrl = res.data.xmlUrl?.replace('https://', 'http://');
+    if (httpUrl) {
+      console.log(`Testing HTTP download direct: ${httpUrl}...`);
+      try {
+        const httpRes = await axios.get(httpUrl, {
+          responseType: 'text',
+          timeout: 5000
+        });
+        console.log(`  🟢 HTTP Success! Length: ${httpRes.data?.length}`);
+      } catch (err: any) {
+        console.log(`  🔴 HTTP Failed: ${err.message} ${err.response?.data?.substring(0, 100) || ''}`);
+      }
+    }
     
   } catch (err: any) {
     console.error("Error:", err.response?.data || err.message);
