@@ -9,6 +9,7 @@ import { useFilters } from '../hooks/useFilters';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { salesService } from '../services/api';
 import { useAuthStore } from '../hooks/useAuth';
+import { CustomDatePicker } from '../components/ui/CustomDatePicker';
 
 export const ComparatorPage: React.FC = () => {
   const { companyId } = useFilters();
@@ -141,42 +142,30 @@ export const ComparatorPage: React.FC = () => {
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-blue-600" /> Período Actual (P1)
           </label>
-          <div className="flex items-center gap-2">
-            <input 
-              type="date" 
-              value={p1Start} 
-              onChange={(e) => setP1Start(e.target.value)} 
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-blue-600"
-            />
-            <span className="text-slate-400">a</span>
-            <input 
-              type="date" 
-              value={p1End} 
-              onChange={(e) => setP1End(e.target.value)} 
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-blue-600"
-            />
-          </div>
+          <CustomDatePicker
+            dateStart={p1Start}
+            dateEnd={p1End}
+            onChange={(start, end) => {
+              setP1Start(start);
+              setP1End(end);
+            }}
+            className="w-full"
+          />
         </div>
 
         <div className="space-y-2">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-emerald-600" /> Período Anterior (P2)
           </label>
-          <div className="flex items-center gap-2">
-            <input 
-              type="date" 
-              value={p2Start} 
-              onChange={(e) => setP2Start(e.target.value)} 
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-blue-600"
-            />
-            <span className="text-slate-400">a</span>
-            <input 
-              type="date" 
-              value={p2End} 
-              onChange={(e) => setP2End(e.target.value)} 
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:border-blue-600"
-            />
-          </div>
+          <CustomDatePicker
+            dateStart={p2Start}
+            dateEnd={p2End}
+            onChange={(start, end) => {
+              setP2Start(start);
+              setP2End(end);
+            }}
+            className="w-full"
+          />
         </div>
       </div>
 

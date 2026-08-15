@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { goalsService } from '../services/api';
 import { useFilters } from '../hooks/useFilters';
 import { Skeleton } from '../components/ui/Skeleton';
+import { CustomDatePicker } from '../components/ui/CustomDatePicker';
 
 export const GoalsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -174,31 +175,19 @@ export const GoalsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-slate-400" /> Fecha Inicio
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={periodStart}
-                    onChange={(e) => setPeriodStart(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-600"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-slate-400" /> Fecha Fin
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={periodEnd}
-                    onChange={(e) => setPeriodEnd(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-600"
-                  />
-                </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-slate-400" /> Período de la Meta
+                </label>
+                <CustomDatePicker
+                  dateStart={periodStart}
+                  dateEnd={periodEnd}
+                  onChange={(start, end) => {
+                    setPeriodStart(start);
+                    setPeriodEnd(end);
+                  }}
+                  className="w-full"
+                />
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-50">
