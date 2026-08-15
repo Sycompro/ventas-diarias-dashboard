@@ -157,12 +157,59 @@ export const DashboardPage: React.FC = () => {
         <TrafficLight indicators={trafficIndicators} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 animate-in fade-in duration-700 delay-200 fill-mode-both">
-        <div className="lg:col-span-2">
-          <SalesTrendChart data={trendData || []} isLoading={loadingTrend} />
-        </div>
+      {/* Evolución de Ventas - Ancho Completo */}
+      <div className="mb-5 animate-in fade-in duration-700 delay-200 fill-mode-both">
+        <SalesTrendChart data={trendData || []} isLoading={loadingTrend} />
+      </div>
+
+      {/* Distribución de Medios de Pago - Panel Amplio */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 animate-in fade-in duration-700 delay-250 fill-mode-both">
         <div className="lg:col-span-1">
           <PaymentDonutChart data={paymentData || {}} isLoading={loadingPayment} />
+        </div>
+        <div className="lg:col-span-2">
+          <DataTable 
+            title="Distribución de Medios de Pago por Sede y Vendedor"
+            columns={[
+              { 
+                header: 'Medio de Pago', 
+                key: 'method',
+                render: (item: any) => {
+                  const colorClassMap: Record<string, string> = {
+                    'tarjeta': 'bg-indigo-50 text-indigo-700',
+                    'efectivo': 'bg-emerald-50 text-emerald-700',
+                    'transferencia': 'bg-blue-50 text-blue-700',
+                    'yape / plin': 'bg-violet-50 text-violet-700'
+                  };
+                  const colorClass = colorClassMap[item.method.toLowerCase()] || 'bg-slate-50 text-slate-700';
+                  return (
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${colorClass}`}>
+                      {item.method}
+                    </span>
+                  );
+                }
+              },
+              { key: 'company', header: 'Sede / Sucursal' },
+              { key: 'seller', header: 'Vendedor' },
+              { key: 'count', header: 'Operaciones', render: (item: any) => <span className="tabular-nums">{item.count} ops</span> },
+              { key: 'amount', header: 'Total Recaudado', render: (item: any) => <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(item.amount)}</span> }
+            ]}
+            data={[
+              { id: '1', method: 'Tarjeta', company: 'Sede Principal - Lima', seller: 'Ana García', count: 45, amount: 8000 },
+              { id: '2', method: 'Tarjeta', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 32, amount: 6200 },
+              { id: '3', method: 'Tarjeta', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 28, amount: 3800 },
+              { id: '4', method: 'Efectivo', company: 'Sede Principal - Lima', seller: 'Ana García', count: 70, amount: 3500 },
+              { id: '5', method: 'Efectivo', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 65, amount: 3200 },
+              { id: '6', method: 'Efectivo', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 65, amount: 3300 },
+              { id: '7', method: 'Transferencia', company: 'Sede Principal - Lima', seller: 'Ana García', count: 25, amount: 5000 },
+              { id: '8', method: 'Transferencia', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 20, amount: 4000 },
+              { id: '9', method: 'Transferencia', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 35, amount: 3000 },
+              { id: '10', method: 'Yape / Plin', company: 'Sede Principal - Lima', seller: 'Ana García', count: 20, amount: 1000 },
+              { id: '11', method: 'Yape / Plin', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 18, amount: 900 },
+              { id: '12', method: 'Yape / Plin', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 12, amount: 600 }
+            ]}
+            isLoading={loadingPayment}
+          />
         </div>
       </div>
 
