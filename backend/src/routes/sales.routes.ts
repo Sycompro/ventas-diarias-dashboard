@@ -444,6 +444,19 @@ router.get('/debug-sync-one', async (req: any, res) => {
   }
 });
 
+router.get('/debug-sync-logs', async (req, res) => {
+  try {
+    const logs = await sqlClient`
+      SELECT * FROM sync_logs
+      ORDER BY started_at DESC
+      LIMIT 10
+    `;
+    res.json(logs);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/debug-db', async (req, res) => {
   try {
     const paymentsCount = await sqlClient`SELECT COUNT(*)::int as count FROM sale_payments`;
