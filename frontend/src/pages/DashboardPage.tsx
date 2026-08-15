@@ -37,6 +37,7 @@ import { useAuthStore } from '../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { intelligenceService, companyService } from '../services/api';
+import { GlobalFilters } from '../components/filters/GlobalFilters';
 
 export const DashboardPage: React.FC = () => {
   const { companyId, datePreset, dateStart, dateEnd, granularity } = useFilters();
@@ -183,6 +184,11 @@ export const DashboardPage: React.FC = () => {
             Exportar
           </button>
         </div>
+      </div>
+
+      {/* Barra de Filtros Globales */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm mb-6 animate-in fade-in duration-500">
+        <GlobalFilters />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 max-w-4xl animate-in fade-in slide-in-from-bottom-8 duration-700">
