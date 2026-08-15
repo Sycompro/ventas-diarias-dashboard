@@ -6,10 +6,10 @@ import { authenticate } from '../middleware/auth.middleware.js';
 const router = Router();
 router.use(authenticate);
 
-router.get('/alerts', async (req, res) => {
+router.get('/alerts', async (req: any, res) => {
   try {
-    const { companyId, unread } = req.query as any;
-    const unreadOnly = unread === 'true';
+    const companyId = req.user.companyId || (req.query.companyId as string);
+    const unreadOnly = req.query.unread === 'true';
     const alerts = await getAlerts(companyId, unreadOnly);
     res.json(alerts);
   } catch (err) {
@@ -26,9 +26,9 @@ router.put('/alerts/:id/read', async (req, res) => {
   }
 });
 
-router.get('/insights', async (req, res) => {
+router.get('/insights', async (req: any, res) => {
   try {
-    const { companyId } = req.query as any;
+    const companyId = req.user.companyId || (req.query.companyId as string);
     const date = new Date().toISOString().split('T')[0];
     const insights = await generateInsights(companyId, date);
     res.json(insights);
@@ -37,9 +37,9 @@ router.get('/insights', async (req, res) => {
   }
 });
 
-router.get('/anomalies', async (req, res) => {
+router.get('/anomalies', async (req: any, res) => {
   try {
-    const { companyId } = req.query as any;
+    const companyId = req.user.companyId || (req.query.companyId as string);
     const anomalies = await detectAnomalies(companyId);
     res.json(anomalies);
   } catch (err) {
@@ -47,9 +47,9 @@ router.get('/anomalies', async (req, res) => {
   }
 });
 
-router.get('/health', async (req, res) => {
+router.get('/health', async (req: any, res) => {
   try {
-    const { companyId } = req.query as any;
+    const companyId = req.user.companyId || (req.query.companyId as string);
     const health = await getHealthStatus(companyId);
     res.json(health);
   } catch (err) {
