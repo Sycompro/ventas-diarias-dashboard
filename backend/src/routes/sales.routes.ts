@@ -373,6 +373,19 @@ router.get('/documents/:id', async (req, res) => {
   }
 });
 
+router.get('/debug-categories', async (req, res) => {
+  try {
+    const categories = await sqlClient`
+      SELECT category, count(*)::int as count, sum(total::numeric) as total
+      FROM sale_items
+      GROUP BY category
+    `;
+    res.json(categories);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/debug-db', async (req, res) => {
   try {
     const paymentsCount = await sqlClient`SELECT COUNT(*)::int as count FROM sale_payments`;
