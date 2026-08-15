@@ -249,4 +249,23 @@ router.get('/:id/sellers', async (req: any, res) => {
   }
 });
 
+router.get('/:id/branches', async (req: any, res) => {
+  try {
+    if (req.params.id !== req.user.companyId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    
+    const result = await sqlClient`
+      SELECT DISTINCT series as "name"
+      FROM sales
+      WHERE company_id = ${req.params.id} AND series IS NOT NULL AND series != ''
+      ORDER BY series ASC
+    `;
+    
+    res.json(result.map(r => r.name));
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error listing company branches', error: error.message });
+  }
+});
+
 export default router;

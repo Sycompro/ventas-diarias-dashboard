@@ -88,6 +88,10 @@ export const companyService = {
   getSellers: async (id: string) => {
     const { data } = await api.get(`/companies/${id}/sellers`);
     return data;
+  },
+  getBranches: async (id: string) => {
+    const { data } = await api.get(`/companies/${id}/branches`);
+    return data;
   }
 };
 

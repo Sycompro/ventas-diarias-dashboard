@@ -82,14 +82,25 @@ router.get('/by-seller', async (req, res) => {
 router.get('/pivot', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    const branch = req.query.branch as string;
+    const seller = req.query.seller as string;
     
+    let conditions = and(
+      eq(sales.companyId, companyId),
+      eq(sales.status, 'active'),
+      gte(sales.issuedAt, new Date(dateStart)),
+      lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999Z'))
+    );
+    
+    if (branch) {
+      conditions = and(conditions, eq(sales.series, branch));
+    }
+    if (seller) {
+      conditions = and(conditions, eq(sales.sellerName, seller));
+    }
+
     const salesList = await db.query.sales.findMany({
-      where: and(
-        eq(sales.companyId, companyId),
-        eq(sales.status, 'active'),
-        gte(sales.issuedAt, new Date(dateStart)),
-        lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999Z'))
-      ),
+      where: conditions,
       with: {
         payments: true
       }
@@ -192,12 +203,21 @@ router.get('/documents', async (req, res) => {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
     const limit = parseInt(req.query.limit as string || '50', 10);
     const offset = parseInt(req.query.offset as string || '0', 10);
+    const branch = req.query.branch as string;
+    const seller = req.query.seller as string;
     
     let conditions = and(
       eq(sales.companyId, companyId),
       gte(sales.issuedAt, new Date(dateStart)),
       lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999Z'))
     );
+    
+    if (branch) {
+      conditions = and(conditions, eq(sales.series, branch));
+    }
+    if (seller) {
+      conditions = and(conditions, eq(sales.sellerName, seller));
+    }
     
     const result = await db.query.sales.findMany({
       where: conditions,

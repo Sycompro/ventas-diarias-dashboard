@@ -62,3 +62,22 @@ export const useCompanySellers = () => {
     staleTime: 2 * 60 * 1000,
   });
 };
+
+export const useCompanyBranches = () => {
+  const companyId = useFilters((state) => state.companyId);
+  return useQuery({
+    queryKey: ['company-branches', companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      try {
+        const data = await companyService.getBranches(companyId);
+        return data || [];
+      } catch (err) {
+        console.error("Error fetching branches list from api:", err);
+        return [];
+      }
+    },
+    enabled: !!companyId,
+    staleTime: 2 * 60 * 1000,
+  });
+};
