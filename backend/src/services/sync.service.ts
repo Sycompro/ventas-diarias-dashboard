@@ -24,10 +24,10 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
-    // Sincronizamos por defecto los últimos 7 días
+    // Sincronizamos por defecto los últimos 30 días
     const dateEnd = new Date();
     const dateStart = new Date();
-    dateStart.setDate(dateStart.getDate() - 7);
+    dateStart.setDate(dateStart.getDate() - 30);
     
     const startDateStr = dateStart.toISOString().split('T')[0];
     const endDateStr = dateEnd.toISOString().split('T')[0];
