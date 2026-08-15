@@ -97,10 +97,11 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 max-w-4xl animate-in fade-in slide-in-from-bottom-8 duration-700">
         <KpiCard
           title="Ventas Hoy"
           value={metrics?.totalSales ? metrics.totalSales * 0.15 : 4500}
+          previousValue={4200}
           format="currency"
           icon={DollarSign}
           iconColor="text-blue-600"
@@ -109,42 +110,11 @@ export const DashboardPage: React.FC = () => {
         <KpiCard
           title="Ventas del Mes"
           value={metrics?.totalSales || 35000}
+          previousValue={30000}
           format="currency"
           icon={TrendingUp}
           iconColor="text-emerald-600"
           iconBg="bg-emerald-50"
-        />
-        <KpiCard
-          title="Operaciones"
-          value={metrics?.totalDocuments || 450}
-          format="number"
-          icon={ShoppingCart}
-          iconColor="text-sky-600"
-          iconBg="bg-sky-50"
-        />
-        <KpiCard
-          title="Ticket Promedio"
-          value={metrics?.avgTicket || 120}
-          format="currency"
-          icon={Receipt}
-          iconColor="text-violet-600"
-          iconBg="bg-violet-50"
-        />
-        <KpiCard
-          title="Cumplimiento Meta"
-          value={85.4}
-          format="percent"
-          icon={Target}
-          iconColor="text-amber-600"
-          iconBg="bg-amber-50"
-        />
-        <KpiCard
-          title="Alertas Pendientes"
-          value={3}
-          format="number"
-          icon={Bell}
-          iconColor="text-red-600"
-          iconBg="bg-red-50"
         />
       </div>
 
