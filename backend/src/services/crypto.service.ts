@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { env } from '../config/env.js';
 
 const ALGORITHM = 'aes-256-gcm';
-const MASTER_KEY = Buffer.from(env.MASTER_ENCRYPTION_KEY, 'utf8');
+const MASTER_KEY = crypto.createHash('sha256').update(env.MASTER_ENCRYPTION_KEY).digest();
 
 export function encrypt(plaintext: string): { encrypted: string; iv: string; tag: string } {
   const iv = crypto.randomBytes(12);
