@@ -33,7 +33,7 @@ export interface BillingDocument {
 export function createBillingClient(subdomain: string, decryptedToken: string): AxiosInstance {
   const baseURL = subdomain.includes('.') 
     ? `https://${subdomain}/api` 
-    : `https://${subdomain}.uio.la/api`;
+    : `https://${subdomain}.syscomecosistemadigital.com/api`;
     
   return axios.create({
     baseURL,
@@ -41,7 +41,8 @@ export function createBillingClient(subdomain: string, decryptedToken: string): 
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${decryptedToken}`
+      'Authorization': `Bearer ${decryptedToken}`,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
   });
 }
