@@ -29,6 +29,7 @@ export interface BillingDocument {
   user_name: string;
   items: BillingItem[];
   payments: BillingPayment[];
+  download_xml?: string;
 }
 
 export function createBillingClient(subdomain: string, decryptedToken: string): AxiosInstance {

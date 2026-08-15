@@ -1,6 +1,7 @@
 import { db } from '../config/database.js';
 import { companies, sales, saleItems, salePayments, syncLogs } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import axios from 'axios';
 import { decrypt } from './crypto.service.js';
 import { createBillingClient, fetchDocuments, fetchReportDocuments, fetchSaleNotes, fetchSaleNoteDetail } from './billing-api.service.js';
 
@@ -138,20 +139,93 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
         },
       }).returning({ id: sales.id });
       
-      if (insertedSale && doc.items) {
-        await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
-        
-        if (doc.items.length > 0) {
-          await db.insert(saleItems).values(
-            doc.items.map(item => ({
+      if (insertedSale) {
+        // Verificar si ya tiene items guardados
+        const [existingItemsCount] = await db
+          .select({ count: sql`COUNT(*)::int` })
+          .from(saleItems)
+          .where(eq(saleItems.saleId, insertedSale.id));
+
+        if (!existingItemsCount || existingItemsCount.count === 0) {
+          let itemsToInsert: any[] = [];
+
+          if (doc.download_xml) {
+            try {
+              // Descargar XML directamente
+              const xmlRes = await axios.get(doc.download_xml, { responseType: 'text', timeout: 5000 });
+              const xmlText = xmlRes.data;
+              
+              // Parsear items desde XML
+              let startIdx = 0;
+              while (true) {
+                const startNode = xmlText.indexOf('<cac:InvoiceLine>', startIdx);
+                if (startNode === -1) break;
+                const endNode = xmlText.indexOf('</cac:InvoiceLine>', startNode);
+                if (endNode === -1) break;
+                
+                const lineText = xmlText.substring(startNode, endNode + '</cac:InvoiceLine>'.length);
+                startIdx = endNode + '</cac:InvoiceLine>'.length;
+                
+                let description = '';
+                const descMatch = lineText.match(/<cbc:Description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/cbc:Description>/);
+                if (descMatch) {
+                  description = descMatch[1].trim();
+                }
+                
+                let quantity = '1';
+                let unitCode = '';
+                const qtyMatch = lineText.match(/<cbc:InvoicedQuantity\s+unitCode="([^"]+)">([^<]+)<\/cbc:InvoicedQuantity>/);
+                if (qtyMatch) {
+                  unitCode = qtyMatch[1];
+                  quantity = qtyMatch[2].trim();
+                }
+                
+                let unitPrice = '0';
+                const priceMatch = lineText.match(/<cac:AlternativeConditionPrice>[\s\S]*?<cbc:PriceAmount[^>]*>([^<]+)<\/cbc:PriceAmount>/);
+                if (priceMatch) {
+                  unitPrice = priceMatch[1].trim();
+                } else {
+                  const basePriceMatch = lineText.match(/<cac:Price>[\s\S]*?<cbc:PriceAmount[^>]*>([^<]+)<\/cbc:PriceAmount>/);
+                  if (basePriceMatch) {
+                    unitPrice = basePriceMatch[1].trim();
+                  }
+                }
+                
+                const qtyVal = parseFloat(quantity) || 0;
+                const priceVal = parseFloat(unitPrice) || 0;
+                const total = (qtyVal * priceVal).toFixed(2);
+                
+                const category = unitCode === 'ZZ' ? '02' : '01';
+                
+                itemsToInsert.push({
+                  saleId: insertedSale.id,
+                  description,
+                  quantity,
+                  unitPrice,
+                  total,
+                  category
+                });
+              }
+            } catch (err: any) {
+              console.warn(`[Sync Service] Warning: Failed to download/parse XML for doc ${doc.number}:`, err.message);
+            }
+          }
+
+          // Fallback si no se pudieron extraer items del XML
+          if (itemsToInsert.length === 0) {
+            itemsToInsert.push({
               saleId: insertedSale.id,
-              description: item.description,
-              quantity: item.quantity.toString(),
-              unitPrice: item.unit_price.toString(),
-              total: item.total.toString(),
-              category: item.item_type_id || 'GENERAL',
-            }))
-          );
+              description: 'Venta de Bienes o Servicios (Consolidado)',
+              quantity: '1',
+              unitPrice: doc.total.toString(),
+              total: doc.total.toString(),
+              category: '01' // Default a Producto
+            });
+          }
+
+          // Insertar los items
+          await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
+          await db.insert(saleItems).values(itemsToInsert);
         }
       }
       
@@ -275,7 +349,7 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
               quantity: item.quantity.toString(),
               unitPrice: item.unit_price ? item.unit_price.toString() : '0',
               total: item.total ? item.total.toString() : '0',
-              category: item.item?.item_type_id || 'GENERAL',
+              category: item.item?.item_type_id || ((item.item?.description || item.description || '').toLowerCase().includes('servicio') ? '02' : '01'),
             }))
           );
         } else if (note.items_for_report && note.items_for_report.length > 0) {
@@ -287,7 +361,7 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
               quantity: item.quantity.toString(),
               unitPrice: '0',
               total: '0',
-              category: 'GENERAL',
+              category: (item.description || '').toLowerCase().includes('servicio') ? '02' : '01',
             }))
           );
         }
