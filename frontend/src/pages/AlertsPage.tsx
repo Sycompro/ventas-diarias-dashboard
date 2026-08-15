@@ -1,18 +1,29 @@
-import React, { useState } from 'react';
-import { Bell } from 'lucide-react';
+import React from 'react';
+import { Bell, ShieldCheck } from 'lucide-react';
 import { AlertBadge } from '../components/ui/AlertBadge';
-
-const mockAlerts = [
-  { id: '1', type: 'critical' as const, title: 'Caída de ventas inusual', description: 'Se ha detectado una caída del 45% en las ventas durante las últimas 4 horas comparado con el promedio.', recommendation: 'Revisar la operatividad del sistema de facturación y el estado de la conexión a internet en la tienda principal.', detectedAt: new Date().toISOString(), isRead: false },
-  { id: '2', type: 'warning' as const, title: 'Vendedor debajo de meta', description: 'Ana García está un 30% por debajo de su meta semanal y faltan solo 2 días.', recommendation: 'Agendar reunión de seguimiento y revisar pipeline de prospectos.', detectedAt: new Date(Date.now() - 86400000).toISOString(), isRead: false },
-  { id: '3', type: 'info' as const, title: 'Nueva empresa sincronizada', description: 'La empresa "Syscom Sur" ha finalizado su primera sincronización exitosamente.', detectedAt: new Date(Date.now() - 172800000).toISOString(), isRead: true },
-];
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { intelligenceService } from '../services/api';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export const AlertsPage: React.FC = () => {
-  const [alerts, setAlerts] = useState(mockAlerts);
+  const queryClient = useQueryClient();
+
+  // Query to fetch alerts
+  const { data: alerts = [], isLoading } = useQuery({
+    queryKey: ['alerts'],
+    queryFn: () => intelligenceService.getAlerts()
+  });
+
+  // Mutation to mark alert as read
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => intelligenceService.markAlertRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+    }
+  });
 
   const handleMarkAsRead = (id: string) => {
-    setAlerts(alerts.map(a => a.id === id ? { ...a, isRead: true } : a));
+    markReadMutation.mutate(id);
   };
 
   return (
@@ -24,19 +35,32 @@ export const AlertsPage: React.FC = () => {
         <p className="text-sm text-neutral-500 mt-1">Notificaciones y avisos automáticos detectados por el sistema inteligente.</p>
       </div>
 
-      <div className="space-y-4">
-        {alerts.map(alert => (
-          <AlertBadge 
-            key={alert.id}
-            priority={alert.type}
-            title={alert.title}
-            description={alert.description}
-            recommendation={alert.recommendation}
-            timestamp={alert.detectedAt}
-            onMarkRead={() => handleMarkAsRead(alert.id)}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      ) : alerts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-sm border border-slate-100">
+          <ShieldCheck className="w-12 h-12 text-slate-300 mb-3" />
+          <p className="text-slate-500 font-medium">No se detectaron anomalías ni alertas en el sistema.</p>
+          <p className="text-xs text-slate-400 mt-1">Tu facturación se encuentra operando dentro de los rangos normales.</p>
+        </div>
+      ) : (
+        <div className="space-y-4 animate-in fade-in duration-500">
+          {alerts.map((alert: any) => (
+            <AlertBadge 
+              key={alert.id}
+              priority={alert.priority || 'low'}
+              title={alert.title}
+              description={alert.description}
+              recommendation={alert.recommendation}
+              timestamp={alert.detectedAt}
+              onMarkRead={alert.isRead ? undefined : () => handleMarkAsRead(alert.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

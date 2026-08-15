@@ -17,175 +17,36 @@ const getCompanyMultiplier = (companyId: string | null): number => {
 
 // Deterministic sales data generator based on active filters (company, branch, seller, date range)
 const generateDynamicMockMetrics = (filters: any): DashboardMetrics => {
-  const start = parseISO(filters.dateStart);
-  const end = parseISO(filters.dateEnd);
-  const diffDays = Math.max(differenceInDays(end, start) + 1, 1);
-  const companyMult = getCompanyMultiplier(filters.companyId);
-
-  // Scale down sales if a specific branch/seller is selected
-  let branchMult = 1.0;
-  if (filters.branch) {
-    branchMult = filters.branch === 'Sede Principal - Lima' ? 0.65 : 0.35;
-  }
-  
-  let sellerMult = 1.0;
-  if (filters.seller) {
-    const sellerShares: Record<string, number> = {
-      'Ana García': 0.38,
-      'Carlos López': 0.30,
-      'María Rodríguez': 0.20,
-      'Juan Pérez': 0.12,
-    };
-    sellerMult = sellerShares[filters.seller] || 0.25;
-  }
-
-  const multiplier = companyMult * branchMult * sellerMult;
-  const baseSalesPerDay = 1500;
-  const baseDocsPerDay = 12;
-
-  const totalSales = parseFloat((diffDays * baseSalesPerDay * multiplier * 0.95).toFixed(2));
-  const totalDocuments = Math.round(diffDays * baseDocsPerDay * multiplier);
-  const avgTicket = totalDocuments > 0 ? parseFloat((totalSales / totalDocuments).toFixed(2)) : 0;
-
-  // Define top products dynamically sizing by period
-  const topProducts = [
-    { name: 'Laptop Pro X', quantity: Math.round(5 * diffDays * multiplier * 0.1), total: parseFloat((15000 * (diffDays / 30) * multiplier).toFixed(2)), category: 'Electrónica' },
-    { name: 'Monitor 27"', quantity: Math.round(10 * diffDays * multiplier * 0.1), total: parseFloat((5000 * (diffDays / 30) * multiplier).toFixed(2)), category: 'Electrónica' },
-    { name: 'Teclado Mecánico', quantity: Math.round(15 * diffDays * multiplier * 0.1), total: parseFloat((1500 * (diffDays / 30) * multiplier).toFixed(2)), category: 'Accesorios' },
-    { name: 'Mouse Inalámbrico', quantity: Math.round(25 * diffDays * multiplier * 0.1), total: parseFloat((1000 * (diffDays / 30) * multiplier).toFixed(2)), category: 'Accesorios' },
-    { name: 'Silla Ergonómica', quantity: Math.round(4 * diffDays * multiplier * 0.1), total: parseFloat((2800 * (diffDays / 30) * multiplier).toFixed(2)), category: 'Mobiliario' },
-  ].sort((a, b) => b.total - a.total).filter(p => p.quantity > 0);
-
-  // Sum categories
-  const categoriesMap: Record<string, { category: string; total: number; count: number }> = {};
-  topProducts.forEach(p => {
-    if (!categoriesMap[p.category]) {
-      categoriesMap[p.category] = { category: p.category, total: 0, count: 0 };
-    }
-    categoriesMap[p.category].total = parseFloat((categoriesMap[p.category].total + p.total).toFixed(2));
-    categoriesMap[p.category].count += p.quantity;
-  });
-
-  // Dynamic sellers with distinct values
-  let bySeller = [
-    { sellerName: 'Ana García', total: parseFloat((totalSales * (filters.seller ? 1 : 0.38)).toFixed(2)), count: Math.round(totalDocuments * (filters.seller ? 1 : 0.35)), avgTicket: 0 },
-    { sellerName: 'Carlos López', total: parseFloat((totalSales * (filters.seller ? 1 : 0.30)).toFixed(2)), count: Math.round(totalDocuments * (filters.seller ? 1 : 0.28)), avgTicket: 0 },
-    { sellerName: 'María Rodríguez', total: parseFloat((totalSales * (filters.seller ? 1 : 0.20)).toFixed(2)), count: Math.round(totalDocuments * (filters.seller ? 1 : 0.22)), avgTicket: 0 },
-    { sellerName: 'Juan Pérez', total: parseFloat((totalSales * (filters.seller ? 1 : 0.12)).toFixed(2)), count: Math.round(totalDocuments * (filters.seller ? 1 : 0.15)), avgTicket: 0 },
-  ].map(s => ({
-    ...s,
-    avgTicket: s.count > 0 ? parseFloat((s.total / s.count).toFixed(2)) : 0
-  })).sort((a, b) => b.total - a.total);
-
-  // Filter ranking list if specific seller is active
-  if (filters.seller) {
-    bySeller = bySeller.filter(s => s.sellerName === filters.seller);
-  }
-
   return {
-    totalSales,
-    totalDocuments,
-    avgTicket,
+    totalSales: 0,
+    totalDocuments: 0,
+    avgTicket: 0,
     byDocumentType: {
-      facturas: { count: Math.round(totalDocuments * 0.3), amount: parseFloat((totalSales * 0.65).toFixed(2)) },
-      boletas: { count: Math.round(totalDocuments * 0.65), amount: parseFloat((totalSales * 0.38).toFixed(2)) },
-      notasCredito: { count: Math.round(totalDocuments * 0.05), amount: parseFloat((-totalSales * 0.03).toFixed(2)) },
+      facturas: { count: 0, amount: 0 },
+      boletas: { count: 0, amount: 0 },
+      notasCredito: { count: 0, amount: 0 },
     },
     byPaymentMethod: {
-      efectivo: { count: Math.round(totalDocuments * 0.4), amount: parseFloat((totalSales * 0.25).toFixed(2)) },
-      tarjeta: { count: Math.round(totalDocuments * 0.3), amount: parseFloat((totalSales * 0.42).toFixed(2)) },
-      transferencia: { count: Math.round(totalDocuments * 0.15), amount: parseFloat((totalSales * 0.20).toFixed(2)) },
-      yapePlin: { count: Math.round(totalDocuments * 0.15), amount: parseFloat((totalSales * 0.13).toFixed(2)) },
+      efectivo: { count: 0, amount: 0 },
+      tarjeta: { count: 0, amount: 0 },
+      transferencia: { count: 0, amount: 0 },
+      yapePlin: { count: 0, amount: 0 },
       otros: { count: 0, amount: 0 },
     },
-    topProducts,
-    byCategory: Object.values(categoriesMap),
-    bySeller,
+    topProducts: [],
+    byCategory: [],
+    bySeller: [],
     comparison: {
-      previousTotal: parseFloat((totalSales * 0.9).toFixed(2)),
-      changePercent: 11.1,
-      changeAmount: parseFloat((totalSales * 0.1).toFixed(2)),
-      trend: 'up',
+      previousTotal: 0,
+      changePercent: 0,
+      changeAmount: 0,
+      trend: 'stable',
     },
   };
 };
 
-// Generates trend data points based on granularity selection (day, month, year, hour)
 const generateDynamicMockTrend = (filters: any): TrendPoint[] => {
-  const start = parseISO(filters.dateStart);
-  const end = parseISO(filters.dateEnd);
-  const multiplier = getCompanyMultiplier(filters.companyId) * 
-    (filters.branch ? (filters.branch === 'Sede Principal - Lima' ? 0.65 : 0.35) : 1.0) *
-    (filters.seller ? 0.3 : 1.0);
-
-  try {
-    const granularity = filters.granularity || 'day';
-
-    if (granularity === 'hour') {
-      // 14 data points representing hours from 8am to 9pm
-      return Array.from({ length: 14 }).map((_, i) => {
-        const hour = i + 8;
-        const displayHour = `${hour.toString().padStart(2, '0')}:00`;
-        const wave = Math.sin((hour - 8) * 0.4) * 0.4;
-        const total = parseFloat((500 * multiplier * (1.0 + wave)).toFixed(2));
-        const count = Math.max(Math.round(total / 60), 1);
-        return {
-          date: displayHour,
-          total,
-          count,
-          avgTicket: parseFloat((total / count).toFixed(2))
-        };
-      });
-    }
-
-    if (granularity === 'month') {
-      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      return months.map((month, index) => {
-        const wave = Math.sin(index * 0.8) * 0.3;
-        const total = parseFloat((45000 * multiplier * (1.0 + wave)).toFixed(2));
-        const count = Math.round(total / 125);
-        return {
-          date: month,
-          total,
-          count,
-          avgTicket: parseFloat((total / count).toFixed(2))
-        };
-      });
-    }
-
-    if (granularity === 'year') {
-      const years = ['2024', '2025', '2026'];
-      return years.map((year, index) => {
-        const total = parseFloat(((120000 + index * 40000) * multiplier).toFixed(2));
-        const count = Math.round(total / 125);
-        return {
-          date: year,
-          total,
-          count,
-          avgTicket: parseFloat((total / count).toFixed(2))
-        };
-      });
-    }
-
-    // Default 'day' daily trend
-    const days = eachDayOfInterval({ start, end });
-    return days.map(day => {
-      const dateStr = format(day, 'yyyy-MM-dd');
-      const dayNum = day.getDate();
-      const wave = Math.sin(dayNum * 0.5) * 0.25;
-      const total = parseFloat((1500 * multiplier * (1.0 + wave)).toFixed(2));
-      const count = Math.round(total / 125);
-      
-      return {
-        date: dateStr,
-        total,
-        count: Math.max(count, 1),
-        avgTicket: count > 0 ? parseFloat((total / count).toFixed(2)) : 125
-      };
-    });
-  } catch (err) {
-    return [];
-  }
+  return [];
 };
 
 // Maps backend schema data objects to the frontend component expected interfaces
@@ -372,53 +233,36 @@ export const useDetailedPaymentMetrics = () => {
   return useQuery({
     queryKey: ['sales-detailed-payments', filters],
     queryFn: async () => {
-      const start = parseISO(filters.dateStart);
-      const end = parseISO(filters.dateEnd);
-      const diffDays = Math.max(differenceInDays(end, start) + 1, 1);
-      const multiplier = getCompanyMultiplier(filters.companyId) * 
-        (filters.branch ? (filters.branch === 'Sede Principal - Lima' ? 0.65 : 0.35) : 1.0) *
-        (filters.seller ? 0.3 : 1.0);
+      try {
+        const data = await salesService.getDetailedPayments({
+          companyId: filters.companyId,
+          dateStart: filters.dateStart,
+          dateEnd: filters.dateEnd,
+          branch: filters.branch,
+          seller: filters.seller
+        });
+        
+        const methodNames: Record<string, string> = { 
+          '01': 'Efectivo', 
+          '02': 'Tarjeta', 
+          '03': 'Transferencia', 
+          '04': 'Tarjeta',
+          '05': 'Yape / Plin',
+          '06': 'Tarjeta' 
+        };
 
-      const baseDetailed = [
-        { id: '1', method: 'Tarjeta', company: 'Sede Principal - Lima', seller: 'Ana García', count: 45, amount: 8000 },
-        { id: '2', method: 'Tarjeta', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 32, amount: 6200 },
-        { id: '3', method: 'Tarjeta', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 28, amount: 3800 },
-        { id: '4', method: 'Efectivo', company: 'Sede Principal - Lima', seller: 'Ana García', count: 70, amount: 3500 },
-        { id: '5', method: 'Efectivo', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 65, amount: 3200 },
-        { id: '6', method: 'Efectivo', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 65, amount: 3300 },
-        { id: '7', method: 'Transferencia', company: 'Sede Principal - Lima', seller: 'Ana García', count: 25, amount: 5000 },
-        { id: '8', method: 'Transferencia', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 20, amount: 4000 },
-        { id: '9', method: 'Transferencia', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 35, amount: 3000 },
-        { id: '10', method: 'Yape / Plin', company: 'Sede Principal - Lima', seller: 'Ana García', count: 20, amount: 1000 },
-        { id: '11', method: 'Yape / Plin', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 18, amount: 900 },
-        { id: '12', method: 'Yape / Plin', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 12, amount: 600 }
-      ];
-
-      // Scale counts and amounts dynamically by interval length and company selection
-      let adjusted = baseDetailed.map(item => ({
-        ...item,
-        count: Math.round(item.count * (diffDays / 30) * multiplier),
-        amount: parseFloat((item.amount * (diffDays / 30) * multiplier).toFixed(2))
-      })).filter(item => item.count > 0);
-
-      // Filter by company selection
-      if (filters.companyId) {
-        // Mock company mappings
-        const selectedCompany = filters.companyId === '1' ? 'Sede Principal - Lima' : 'Sede Sur - Arequipa';
-        adjusted = adjusted.filter(item => item.company === selectedCompany);
+        return (data || []).map((item: any, idx: number) => ({
+          id: String(idx + 1),
+          method: methodNames[item.paymentMethodId] || 'Otros',
+          company: 'Sede Principal',
+          seller: item.seller,
+          count: item.count,
+          amount: parseFloat(item.amount || 0)
+        }));
+      } catch (err) {
+        console.error("Detailed payments real API offline/empty:", err);
+        return [];
       }
-
-      // Filter by branch selection
-      if (filters.branch) {
-        adjusted = adjusted.filter(item => item.company === filters.branch);
-      }
-
-      // Filter by seller selection
-      if (filters.seller) {
-        adjusted = adjusted.filter(item => item.seller === filters.seller);
-      }
-
-      return adjusted;
     },
     ...queryOptions,
   });

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getDashboardMetrics } from '../services/metrics.service.js';
 import { getSalesTrend, getSalesByHour, getRankingBySeller, getRankingByCompany } from '../services/analytics.service.js';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { db } from '../config/database.js';
+import { db, sqlClient } from '../config/database.js';
 import { sales } from '../db/schema.js';
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
 
@@ -43,6 +43,29 @@ router.get('/by-hour', async (req, res) => {
     res.json(data);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching hourly data' });
+  }
+});
+
+router.get('/by-payment-detailed', async (req, res) => {
+  try {
+    const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    const result = await sqlClient`
+      SELECT 
+        p.payment_method_id as "paymentMethodId",
+        COALESCE(s.seller_name, 'Sin Vendedor') as "seller",
+        COUNT(DISTINCT s.id)::int as "count",
+        SUM(p.amount::numeric)::numeric as "amount"
+      FROM sale_payments p
+      JOIN sales s ON p.sale_id = s.id
+      WHERE s.company_id = ${companyId} AND s.status = 'active'
+        AND s.issued_at::date >= ${dateStart}::date AND s.issued_at::date <= ${dateEnd}::date
+      GROUP BY p.payment_method_id, s.seller_name
+      ORDER BY amount DESC
+    `;
+    res.json(result);
+  } catch (err: any) {
+    console.error('Error fetching detailed payment metrics:', err.message);
+    res.status(500).json({ message: 'Error fetching detailed payment metrics' });
   }
 });
 

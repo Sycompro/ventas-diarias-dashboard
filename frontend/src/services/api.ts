@@ -111,6 +111,60 @@ export const salesService = {
   getBySeller: async (params: any) => {
     const { data } = await api.get('/sales/by-seller', { params });
     return data;
+  },
+  getByHour: async (params: any) => {
+    const { data } = await api.get('/sales/by-hour', { params });
+    return data;
+  },
+  getDetailedPayments: async (params: any) => {
+    const { data } = await api.get('/sales/by-payment-detailed', { params });
+    return data;
+  }
+};
+
+export const goalsService = {
+  getAll: async () => {
+    const { data } = await api.get('/goals');
+    return data;
+  },
+  getProgress: async () => {
+    const { data } = await api.get('/goals/progress');
+    return data;
+  },
+  create: async (goal: any) => {
+    const { data } = await api.post('/goals', goal);
+    return data;
+  },
+  update: async (id: string, goal: any) => {
+    const { data } = await api.put(`/goals/${id}`, goal);
+    return data;
+  },
+  delete: async (id: string) => {
+    const { data } = await api.delete(`/goals/${id}`);
+    return data;
+  }
+};
+
+export const intelligenceService = {
+  getAlerts: async (unreadOnly?: boolean) => {
+    const { data } = await api.get('/intelligence/alerts', { params: { unread: unreadOnly } });
+    return data;
+  },
+  markAlertRead: async (id: string) => {
+    const { data } = await api.put(`/intelligence/alerts/${id}/read`);
+    return data;
+  },
+  getInsights: async () => {
+    const { data } = await api.get('/intelligence/insights');
+    return data;
+  },
+  getAnomalies: async () => {
+    const { data } = await api.get('/intelligence/anomalies');
+    return data;
+  },
+  getHealth: async () => {
+    const { data } = await api.get('/intelligence/health');
+    return data;
   }
 };
 

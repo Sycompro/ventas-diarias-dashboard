@@ -34,9 +34,14 @@ import { InsightCard } from '../components/ui/InsightCard';
 import { useFilters } from '../hooks/useFilters';
 import { formatCurrency } from '../utils/formatters';
 import { useAuthStore } from '../hooks/useAuth';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import { intelligenceService, companyService } from '../services/api';
 
 export const DashboardPage: React.FC = () => {
-  const { datePreset, dateStart, dateEnd, granularity } = useFilters();
+  const { companyId, datePreset, dateStart, dateEnd, granularity } = useFilters();
+  const token = useAuthStore((state) => state.accessToken);
+
   const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
   const { data: trendData, isLoading: loadingTrend } = useSalesTrend();
   const { data: paymentData, isLoading: loadingPayment } = useSalesByPayment();
@@ -45,11 +50,47 @@ export const DashboardPage: React.FC = () => {
   const { data: sellersData, isLoading: loadingSellers } = useSalesBySeller();
   const { data: detailedPayments, isLoading: loadingDetailed } = useDetailedPaymentMetrics();
 
+  // Fetch Health Status dynamically
+  const { data: healthData } = useQuery({
+    queryKey: ['health-status', companyId],
+    queryFn: () => intelligenceService.getHealth(),
+    enabled: !!companyId
+  });
+
+  const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleSync = () => {
+  const handleSync = async () => {
+    if (!companyId) return;
     setIsSyncing(true);
-    setTimeout(() => setIsSyncing(false), 1500);
+    try {
+      await companyService.sync(companyId);
+      queryClient.invalidateQueries();
+    } catch (err) {
+      console.error("Error triggering sync:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (!companyId) return;
+    axios({
+      url: `/api/reports/excel`,
+      method: 'GET',
+      params: { companyId, dateStart, dateEnd },
+      responseType: 'blob',
+      headers: { Authorization: `Bearer ${token}` }
+    }).then((response) => {
+      const href = URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = href;
+      link.setAttribute('download', `reporte_ventas_${dateStart}_a_${dateEnd}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(href);
+    }).catch(err => console.error("Error exporting report:", err));
   };
 
   const today = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
@@ -72,11 +113,49 @@ export const DashboardPage: React.FC = () => {
     { key: 'total', header: 'Ingresos', sortable: true, render: (item) => <span className="font-semibold text-slate-900 tabular-nums">{formatCurrency(item.total)}</span> }
   ];
 
+  const getTrafficStatus = (val: string | undefined): TrafficStatus => {
+    if (val === 'critical') return 'critical';
+    if (val === 'attention') return 'attention';
+    return 'healthy';
+  };
+
   const trafficIndicators = [
-    { label: 'Ventas Mensuales', description: 'Por encima del promedio histórico (+15%)', status: 'healthy' as TrafficStatus },
-    { label: 'Cumplimiento de Meta', description: 'Meta mensual alcanzada al 85%', status: 'healthy' as TrafficStatus },
-    { label: 'Ticket Promedio', description: 'Leve caída respecto a la semana pasada', status: 'attention' as TrafficStatus },
-    { label: 'Stock Crítico', description: '12 productos estrella por agotarse', status: 'critical' as TrafficStatus },
+    { 
+      label: 'Ventas Mensuales', 
+      description: healthData?.sales === 'critical' 
+        ? 'Caída severa de ventas detectada' 
+        : healthData?.sales === 'attention' 
+          ? 'Leve caída respecto al promedio diario' 
+          : 'Ventas dentro del promedio saludable', 
+      status: getTrafficStatus(healthData?.sales) 
+    },
+    { 
+      label: 'Cumplimiento de Meta', 
+      description: healthData?.goals === 'critical' 
+        ? 'Crítico: Muy por debajo de la meta mensual' 
+        : healthData?.goals === 'attention' 
+          ? 'En camino a la meta, requiere atención' 
+          : 'Meta mensual en buen progreso', 
+      status: getTrafficStatus(healthData?.goals) 
+    },
+    { 
+      label: 'Tendencia de Ventas', 
+      description: healthData?.trends === 'critical' 
+        ? 'Tendencia bajista preocupante en los últimos días' 
+        : healthData?.trends === 'attention' 
+          ? 'Tendencia stable con precauciones' 
+          : 'Tendencia alcista o estable saludable', 
+      status: getTrafficStatus(healthData?.trends) 
+    },
+    { 
+      label: 'Estado Operacional', 
+      description: healthData?.overall === 'critical' 
+        ? 'Se requiere acción inmediata en las operaciones' 
+        : healthData?.overall === 'attention' 
+          ? 'Operación estable con áreas a vigilar' 
+          : 'Operación empresarial totalmente saludable', 
+      status: getTrafficStatus(healthData?.overall) 
+    },
   ];
 
   return (
@@ -96,7 +175,10 @@ export const DashboardPage: React.FC = () => {
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
             {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
           </button>
-          <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1">
+          <button 
+            onClick={handleExport}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1"
+          >
             <Download className="w-3.5 h-3.5" />
             Exportar
           </button>
@@ -105,20 +187,20 @@ export const DashboardPage: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 max-w-4xl animate-in fade-in slide-in-from-bottom-8 duration-700">
         <KpiCard
-          title="Ventas Hoy"
-          value={metrics?.totalSales ? metrics.totalSales * 0.15 : 4500}
-          previousValue={4200}
+          title="Ventas del Período"
+          value={metrics?.totalSales || 0}
+          previousValue={metrics?.comparison?.previousTotal || 0}
           format="currency"
           icon={DollarSign}
           iconColor="text-blue-600"
           iconBg="bg-blue-50"
         />
         <KpiCard
-          title="Ventas del Mes"
-          value={metrics?.totalSales || 35000}
-          previousValue={30000}
-          format="currency"
-          icon={TrendingUp}
+          title="Documentos Emitidos"
+          value={metrics?.totalDocuments || 0}
+          previousValue={0}
+          format="number"
+          icon={Receipt}
           iconColor="text-emerald-600"
           iconBg="bg-emerald-50"
         />

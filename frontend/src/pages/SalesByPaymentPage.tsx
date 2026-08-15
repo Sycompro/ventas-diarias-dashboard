@@ -16,12 +16,12 @@ export const SalesByPaymentPage: React.FC = () => {
   const methods = ['Todos', 'Tarjeta', 'Efectivo', 'Transferencia', 'Yape / Plin'];
 
   // Calcular total general de la recaudación
-  const totalRevenue = detailedData?.reduce((acc, item) => acc + item.amount, 0) || 1;
+  const totalRevenue = detailedData?.reduce((acc: number, item: any) => acc + item.amount, 0) || 1;
 
   // Filtrar y preparar los datos de la tabla
   const tableData = detailedData
     ? detailedData
-        .filter(item => {
+        .filter((item: any) => {
           const matchesSearch = 
             item.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.seller.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,7 +31,7 @@ export const SalesByPaymentPage: React.FC = () => {
           
           return matchesSearch && matchesMethod;
         })
-        .map(item => ({
+        .map((item: any) => ({
           ...item,
           share: (item.amount / totalRevenue) * 100
         }))

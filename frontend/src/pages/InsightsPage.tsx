@@ -1,8 +1,35 @@
 import React from 'react';
 import { Lightbulb } from 'lucide-react';
 import { InsightCard } from '../components/ui/InsightCard';
+import { useQuery } from '@tanstack/react-query';
+import { intelligenceService } from '../services/api';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export const InsightsPage: React.FC = () => {
+  const { data: insights = [], isLoading } = useQuery({
+    queryKey: ['insights'],
+    queryFn: () => intelligenceService.getInsights()
+  });
+
+  const getDataLabel = (title: string): string => {
+    if (title.toLowerCase().includes('vendedor')) return 'Rendimiento';
+    if (title.toLowerCase().includes('hora') || title.toLowerCase().includes('horario')) return 'Horarios';
+    if (title.toLowerCase().includes('pago') || title.toLowerCase().includes('efectivo') || title.toLowerCase().includes('tarjeta')) return 'Pagos';
+    return 'General';
+  };
+
+  const getDataPoint = (insight: any): string => {
+    if (!insight.data) return '';
+    if (insight.data.total !== undefined) {
+      return `S/. ${insight.data.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    if (insight.data.hour !== undefined) {
+      const h = insight.data.hour;
+      return `${h.toString().padStart(2, '0')}:00`;
+    }
+    return '';
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -12,29 +39,32 @@ export const InsightsPage: React.FC = () => {
         <p className="text-sm text-neutral-500 mt-1">Descubrimientos automáticos basados en el análisis de sus datos.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <InsightCard 
-          type="positive"
-          dataLabel="Ventas Cruzadas"
-          title="Oportunidad de Upsell detectada"
-          description="El 65% de los clientes que compran el producto 'Laptop Pro X' terminan comprando 'Mouse Inalámbrico' en menos de 30 días. Sugerimos crear un combo promocional."
-          dataPoint="+ S/. 15,000 pot."
-        />
-        <InsightCard 
-          type="neutral"
-          dataLabel="Rendimiento"
-          title="Tendencia Positiva en Tarjetas"
-          description="Los pagos con tarjeta de crédito han aumentado consistentemente durante los últimos 3 meses, representando ahora el 45% del total."
-          dataPoint="+ 15% vs ant."
-        />
-        <InsightCard 
-          type="negative"
-          dataLabel="Horarios"
-          title="Baja afluencia matutina"
-          description="Las ventas entre las 09:00 y 11:00 am están un 20% por debajo de su promedio histórico para este mes."
-          dataPoint="- 20% flujo"
-        />
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-[220px]" />
+          <Skeleton className="h-[220px]" />
+          <Skeleton className="h-[220px]" />
+        </div>
+      ) : insights.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-xl mx-auto">
+          <Lightbulb className="w-12 h-12 text-slate-300 mb-3" />
+          <p className="text-slate-500 font-medium text-center">Aún no hay suficientes datos para generar insights inteligentes.</p>
+          <p className="text-xs text-slate-400 mt-1 text-center">Continúa registrando transacciones para activar las sugerencias del sistema.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
+          {insights.map((insight: any, index: number) => (
+            <InsightCard 
+              key={index}
+              type={insight.type || 'neutral'}
+              dataLabel={getDataLabel(insight.title)}
+              title={insight.title}
+              description={insight.description}
+              dataPoint={getDataPoint(insight)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
