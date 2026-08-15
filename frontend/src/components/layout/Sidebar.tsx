@@ -29,25 +29,25 @@ const navGroups = [
     label: 'Principal',
     items: [
       { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-      { name: 'Ventas', path: '/sales', icon: ShoppingCart },
-      { name: 'Vendedores', path: '/sellers', icon: Users },
-      { name: 'Empresas', path: '/companies', icon: Building2 },
+      { name: 'Ventas', path: '/ventas', icon: ShoppingCart },
+      { name: 'Vendedores', path: '/ventas/vendedores', icon: Users },
+      { name: 'Empresas', path: '/configuracion/empresas', icon: Building2 },
     ]
   },
   {
     label: 'Análisis',
     items: [
-      { name: 'Análisis Temporal', path: '/temporal', icon: LineChart },
-      { name: 'Comparador', path: '/comparator', icon: ArrowLeftRight },
-      { name: 'Metas', path: '/goals', icon: Target },
+      { name: 'Análisis Temporal', path: '/analisis', icon: LineChart },
+      { name: 'Comparador', path: '/comparador', icon: ArrowLeftRight },
+      { name: 'Metas', path: '/metas', icon: Target },
     ]
   },
   {
     label: 'Sistema',
     items: [
-      { name: 'Alertas', path: '/alerts', icon: Bell, badge: true },
+      { name: 'Alertas', path: '/alertas', icon: Bell, badge: true },
       { name: 'Insights', path: '/insights', icon: Lightbulb },
-      { name: 'Reportes', path: '/reports', icon: FileText },
+      { name: 'Reportes', path: '/reportes', icon: FileText },
     ]
   }
 ];

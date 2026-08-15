@@ -24,7 +24,7 @@ export const MainLayout: React.FC = () => {
       >
         <Header setIsMobileOpen={setIsMobileOpen} />
         
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 w-full max-w-7xl mx-auto animate-fade-in">
+        <main className="flex-1 p-4 sm:p-6 pb-20 w-full max-w-6xl mx-auto animate-fade-in">
           <Outlet />
         </main>
       </div>
