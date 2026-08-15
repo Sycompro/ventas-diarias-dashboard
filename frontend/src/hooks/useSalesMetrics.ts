@@ -25,6 +25,7 @@ const generateDynamicMockMetrics = (filters: any): DashboardMetrics => {
       facturas: { count: 0, amount: 0 },
       boletas: { count: 0, amount: 0 },
       notasCredito: { count: 0, amount: 0 },
+      notasVenta: { count: 0, amount: 0 },
     },
     byPaymentMethod: {
       efectivo: { count: 0, amount: 0 },
@@ -57,9 +58,22 @@ const mapBackendMetricsToFrontend = (data: any, filters: any): DashboardMetrics 
 
   // Document types
   const byDocumentType = {
-    facturas: { count: 0, amount: parseFloat(data.byDocumentType?.facturas || 0) },
-    boletas: { count: 0, amount: parseFloat(data.byDocumentType?.boletas || 0) },
-    notasCredito: { count: 0, amount: parseFloat(data.byDocumentType?.notasCredito || 0) },
+    facturas: { 
+      count: parseInt(data.byDocumentType?.facturas?.count || 0, 10), 
+      amount: parseFloat(data.byDocumentType?.facturas?.amount || 0) 
+    },
+    boletas: { 
+      count: parseInt(data.byDocumentType?.boletas?.count || 0, 10), 
+      amount: parseFloat(data.byDocumentType?.boletas?.amount || 0) 
+    },
+    notasCredito: { 
+      count: parseInt(data.byDocumentType?.notasCredito?.count || 0, 10), 
+      amount: parseFloat(data.byDocumentType?.notasCredito?.amount || 0) 
+    },
+    notasVenta: { 
+      count: parseInt(data.byDocumentType?.notasVenta?.count || 0, 10), 
+      amount: parseFloat(data.byDocumentType?.notasVenta?.amount || 0) 
+    },
   };
 
   // Payment methods

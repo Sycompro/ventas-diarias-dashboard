@@ -2,7 +2,7 @@ import { db } from '../config/database.js';
 import { companies, sales, saleItems, salePayments, syncLogs } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { decrypt } from './crypto.service.js';
-import { createBillingClient, fetchDocuments, fetchReportDocuments } from './billing-api.service.js';
+import { createBillingClient, fetchDocuments, fetchReportDocuments, fetchSaleNotes, fetchSaleNoteDetail } from './billing-api.service.js';
 
 export interface SyncResult {
   syncedCount: number;
@@ -182,6 +182,141 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
           });
         }
       }
+      documentsSynced++;
+    }
+
+    // Sincronizar Notas de Venta (document_type_id = '80')
+    let saleNotes: any[] = [];
+    try {
+      saleNotes = await fetchSaleNotes(client, startDateStr, endDateStr);
+    } catch (e: any) {
+      console.warn(`[Sync Service] Warning: Could not fetch sale notes:`, e.message);
+    }
+
+    for (const note of saleNotes) {
+      const stateId = String(note.state_type_id);
+      // Solo procesar notas de venta con estado válido (01=registrado, 03=enviado, 05=aceptado)
+      if (!['01', '03', '05'].includes(stateId)) continue;
+
+      let issuedAt: Date;
+      try {
+        if (note.date_of_issue && note.date_of_issue.includes('-')) {
+          const parts = note.date_of_issue.split('-');
+          if (parts[0].length === 4) {
+            issuedAt = new Date(`${note.date_of_issue}T${note.time_of_issue || '00:00:00'}`);
+          } else {
+            const [day, month, year] = parts;
+            issuedAt = new Date(`${year}-${month}-${day}T${note.time_of_issue || '00:00:00'}`);
+          }
+        } else {
+          issuedAt = new Date(`${note.date_of_issue}T${note.time_of_issue || '00:00:00'}`);
+        }
+        if (isNaN(issuedAt.getTime())) {
+          issuedAt = new Date();
+        }
+      } catch (e) {
+        issuedAt = new Date();
+      }
+
+      const isVoided = ['09', '11', '13'].includes(stateId);
+      
+      let parsedSeries = note.series || '';
+      let parsedNumber = note.number || '';
+      if (!parsedSeries && note.number_full && note.number_full.includes('-')) {
+        const parts = note.number_full.split('-');
+        parsedSeries = parts[0];
+        parsedNumber = parts[1];
+      }
+
+      const [insertedSale] = await db.insert(sales).values({
+        companyId,
+        externalId: String(note.external_id || note.id),
+        documentTypeId: '80', // Codigo para Nota de Venta
+        series: parsedSeries,
+        number: parsedNumber,
+        total: note.total.toString(),
+        currency: note.currency_type_id || 'PEN',
+        sellerName: note.seller_name || 'Desconocido',
+        customerName: note.customer_name || 'Cliente Varios',
+        issuedAt,
+        status: isVoided ? 'voided' : 'active',
+        rawJson: note,
+      }).onConflictDoUpdate({
+        target: [sales.companyId, sales.externalId],
+        set: {
+          series: parsedSeries,
+          number: parsedNumber,
+          total: note.total.toString(),
+          status: isVoided ? 'voided' : 'active',
+          syncedAt: new Date(),
+        },
+      }).returning({ id: sales.id });
+
+      if (insertedSale) {
+        // Primero borrar items previos
+        await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
+
+        // Intentar obtener los items detallados desde el record endpoint
+        let detailedItems: any[] | null = null;
+        try {
+          const detail = await fetchSaleNoteDetail(client, note.external_id);
+          if (detail && Array.isArray(detail.items)) {
+            detailedItems = detail.items;
+          }
+        } catch (err: any) {
+          // Ignorar fallas del record endpoint
+        }
+
+        if (detailedItems && detailedItems.length > 0) {
+          await db.insert(saleItems).values(
+            detailedItems.map(item => ({
+              saleId: insertedSale.id,
+              description: item.item?.description || item.description,
+              quantity: item.quantity.toString(),
+              unitPrice: item.unit_price ? item.unit_price.toString() : '0',
+              total: item.total ? item.total.toString() : '0',
+              category: item.item?.item_type_id || 'GENERAL',
+            }))
+          );
+        } else if (note.items_for_report && note.items_for_report.length > 0) {
+          // Fallback a items_for_report si no hay detalle
+          await db.insert(saleItems).values(
+            note.items_for_report.map((item: any) => ({
+              saleId: insertedSale.id,
+              description: item.description,
+              quantity: item.quantity.toString(),
+              unitPrice: '0',
+              total: '0',
+              category: 'GENERAL',
+            }))
+          );
+        }
+      }
+
+      if (insertedSale) {
+        // Borrar pagos anteriores
+        await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
+
+        if (note.payments && note.payments.length > 0) {
+          await db.insert(salePayments).values(
+            note.payments.map((p: any) => ({
+              saleId: insertedSale.id,
+              paymentMethodId: p.payment_method_type_id || '01',
+              amount: (p.payment || p.amount || note.total).toString(),
+              reference: p.reference || '',
+            }))
+          );
+        } else {
+          // Fallback a Efectivo (Cash - "01")
+          await db.insert(salePayments).values({
+            saleId: insertedSale.id,
+            paymentMethodId: '01',
+            amount: note.total.toString(),
+            reference: 'Default Cash Payment (Synced NV)',
+          });
+        }
+      }
+
       documentsSynced++;
     }
   } catch (error: any) {

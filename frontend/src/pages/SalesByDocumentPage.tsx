@@ -11,6 +11,7 @@ export const SalesByDocumentPage: React.FC = () => {
   const tableData = data ? [
     { name: 'Facturas', amount: data.facturas.amount, count: data.facturas.count },
     { name: 'Boletas', amount: data.boletas.amount, count: data.boletas.count },
+    { name: 'Notas de Venta', amount: data.notasVenta.amount, count: data.notasVenta.count },
     { name: 'Notas de Crédito', amount: data.notasCredito.amount, count: data.notasCredito.count },
   ] : [];
 

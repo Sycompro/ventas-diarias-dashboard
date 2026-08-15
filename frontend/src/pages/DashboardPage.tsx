@@ -226,7 +226,7 @@ export const DashboardPage: React.FC = () => {
           />
         </div>
         <div className="lg:col-span-1">
-          <DocumentBarChart data={documentData || { facturas: {count:0, amount:0}, boletas: {count:0, amount:0}, notasCredito: {count:0, amount:0} }} isLoading={loadingDocument} />
+          <DocumentBarChart data={documentData || { facturas: {count:0, amount:0}, boletas: {count:0, amount:0}, notasCredito: {count:0, amount:0}, notasVenta: {count:0, amount:0} }} isLoading={loadingDocument} />
         </div>
         <div className="lg:col-span-1">
           <HourlyHeatmap isLoading={loadingTrend} />

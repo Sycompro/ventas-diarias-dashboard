@@ -9,7 +9,12 @@ export interface DashboardMetrics {
   totalSales: number;
   documentsCount: number;
   averageTicket: number;
-  byDocumentType: { facturas: number; boletas: number; notasCredito: number };
+  byDocumentType: { 
+    facturas: { amount: number; count: number }; 
+    boletas: { amount: number; count: number }; 
+    notasCredito: { amount: number; count: number };
+    notasVenta: { amount: number; count: number };
+  };
   byPaymentMethod: Record<string, { amount: number, description: string }>;
   topProducts: Array<{ description: string; quantity: number; total: number; category: string }>;
   salesBySeller: Array<{ name: string; total: number; count: number; avgTicket: number }>;
@@ -26,21 +31,31 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
   const salesRes = companyId
     ? await sqlClient`
         SELECT 
-          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+          COALESCE(SUM(CASE WHEN document_type_id = '07' THEN -total::numeric ELSE total::numeric END), 0) as total_sales,
           COUNT(*) as count,
-          COALESCE(SUM(CASE WHEN document_type_id = '01' THEN total::numeric ELSE 0 END), 0) as facturas,
-          COALESCE(SUM(CASE WHEN document_type_id = '03' THEN total::numeric ELSE 0 END), 0) as boletas,
-          COALESCE(SUM(CASE WHEN document_type_id = '07' THEN total::numeric ELSE 0 END), 0) as notas_credito
+          COALESCE(SUM(CASE WHEN document_type_id = '01' THEN total::numeric ELSE 0 END), 0) as facturas_amount,
+          COUNT(CASE WHEN document_type_id = '01' THEN 1 END) as facturas_count,
+          COALESCE(SUM(CASE WHEN document_type_id = '03' THEN total::numeric ELSE 0 END), 0) as boletas_amount,
+          COUNT(CASE WHEN document_type_id = '03' THEN 1 END) as boletas_count,
+          COALESCE(SUM(CASE WHEN document_type_id = '07' THEN total::numeric ELSE 0 END), 0) as notas_credito_amount,
+          COUNT(CASE WHEN document_type_id = '07' THEN 1 END) as notas_credito_count,
+          COALESCE(SUM(CASE WHEN document_type_id = '80' THEN total::numeric ELSE 0 END), 0) as notas_venta_amount,
+          COUNT(CASE WHEN document_type_id = '80' THEN 1 END) as notas_venta_count
         FROM sales 
         WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
       `
     : await sqlClient`
         SELECT 
-          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+          COALESCE(SUM(CASE WHEN document_type_id = '07' THEN -total::numeric ELSE total::numeric END), 0) as total_sales,
           COUNT(*) as count,
-          COALESCE(SUM(CASE WHEN document_type_id = '01' THEN total::numeric ELSE 0 END), 0) as facturas,
-          COALESCE(SUM(CASE WHEN document_type_id = '03' THEN total::numeric ELSE 0 END), 0) as boletas,
-          COALESCE(SUM(CASE WHEN document_type_id = '07' THEN total::numeric ELSE 0 END), 0) as notas_credito
+          COALESCE(SUM(CASE WHEN document_type_id = '01' THEN total::numeric ELSE 0 END), 0) as facturas_amount,
+          COUNT(CASE WHEN document_type_id = '01' THEN 1 END) as facturas_count,
+          COALESCE(SUM(CASE WHEN document_type_id = '03' THEN total::numeric ELSE 0 END), 0) as boletas_amount,
+          COUNT(CASE WHEN document_type_id = '03' THEN 1 END) as boletas_count,
+          COALESCE(SUM(CASE WHEN document_type_id = '07' THEN total::numeric ELSE 0 END), 0) as notas_credito_amount,
+          COUNT(CASE WHEN document_type_id = '07' THEN 1 END) as notas_credito_count,
+          COALESCE(SUM(CASE WHEN document_type_id = '80' THEN total::numeric ELSE 0 END), 0) as notas_venta_amount,
+          COUNT(CASE WHEN document_type_id = '80' THEN 1 END) as notas_venta_count
         FROM sales 
         WHERE status = 'active' AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
       `;
@@ -160,9 +175,22 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
     documentsCount,
     averageTicket: documentsCount > 0 ? totalSales / documentsCount : 0,
     byDocumentType: {
-      facturas: parseFloat(row.facturas as string || '0'),
-      boletas: parseFloat(row.boletas as string || '0'),
-      notasCredito: parseFloat(row.notas_credito as string || '0'),
+      facturas: {
+        amount: parseFloat(row.facturas_amount as string || '0'),
+        count: parseInt(row.facturas_count as string || '0', 10),
+      },
+      boletas: {
+        amount: parseFloat(row.boletas_amount as string || '0'),
+        count: parseInt(row.boletas_count as string || '0', 10),
+      },
+      notasCredito: {
+        amount: parseFloat(row.notas_credito_amount as string || '0'),
+        count: parseInt(row.notas_credito_count as string || '0', 10),
+      },
+      notasVenta: {
+        amount: parseFloat(row.notas_venta_amount as string || '0'),
+        count: parseInt(row.notas_venta_count as string || '0', 10),
+      },
     },
     byPaymentMethod,
     topProducts: productsRes.map(r => ({

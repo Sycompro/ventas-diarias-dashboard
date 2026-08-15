@@ -19,6 +19,7 @@ export interface DashboardMetrics {
     facturas: { count: number; amount: number };
     boletas: { count: number; amount: number };
     notasCredito: { count: number; amount: number };
+    notasVenta: { count: number; amount: number };
   };
   byPaymentMethod: Record<string, { count: number; amount: number; description?: string }>;
   topProducts: Array<{ name: string; quantity: number; total: number; category: string }>;

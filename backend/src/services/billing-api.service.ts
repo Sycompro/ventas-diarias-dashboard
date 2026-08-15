@@ -106,3 +106,45 @@ export async function fetchReportDocuments(client: AxiosInstance, dateStart: str
     return [];
   }
 }
+
+export async function fetchSaleNotes(client: AxiosInstance, dateStart: string, dateEnd: string): Promise<any[]> {
+  const allSaleNotes: any[] = [];
+  let currentPage = 1;
+  let hasMorePages = true;
+
+  while (hasMorePages) {
+    try {
+      const response = await client.get(`/sale-note/lists?page=${currentPage}`, {
+        params: {
+          date_start: dateStart,
+          date_end: dateEnd
+        }
+      });
+      
+      const { data, meta } = response.data;
+      if (data && Array.isArray(data)) {
+        allSaleNotes.push(...data);
+      }
+      
+      if (meta && meta.last_page > currentPage) {
+        currentPage++;
+      } else {
+        hasMorePages = false;
+      }
+    } catch (error: any) {
+      console.error(`[Billing API Service] Error fetching sale notes on page ${currentPage}:`, error.message);
+      hasMorePages = false;
+    }
+  }
+
+  return allSaleNotes;
+}
+
+export async function fetchSaleNoteDetail(client: AxiosInstance, externalId: string): Promise<any | null> {
+  try {
+    const response = await client.get(`/sale-note/record/${externalId}`);
+    return response.data?.data || null;
+  } catch (error: any) {
+    return null;
+  }
+}

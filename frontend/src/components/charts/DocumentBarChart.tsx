@@ -7,6 +7,7 @@ interface DocumentBarChartProps {
     facturas: { count: number; amount: number };
     boletas: { count: number; amount: number };
     notasCredito: { count: number; amount: number };
+    notasVenta: { count: number; amount: number };
   };
   isLoading?: boolean;
 }
@@ -21,6 +22,7 @@ export const DocumentBarChart: React.FC<DocumentBarChartProps> = ({ data, isLoad
       name: 'Documentos', 
       Facturas: data?.facturas?.amount || 0, 
       Boletas: data?.boletas?.amount || 0, 
+      'Notas de Venta': data?.notasVenta?.amount || 0,
       'Notas de Crédito': Math.abs(data?.notasCredito?.amount || 0) 
     }
   ];
@@ -66,6 +68,7 @@ export const DocumentBarChart: React.FC<DocumentBarChartProps> = ({ data, isLoad
             <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '13px' }} iconType="circle" />
             <Bar dataKey="Facturas" fill="#3b82f6" radius={[6, 6, 0, 0]} />
             <Bar dataKey="Boletas" fill="#10b981" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="Notas de Venta" fill="#f59e0b" radius={[6, 6, 0, 0]} />
             <Bar dataKey="Notas de Crédito" fill="#ef4444" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
