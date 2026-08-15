@@ -1,12 +1,16 @@
 import { db, sqlClient } from '../config/database.js';
 import { redis } from '../config/redis.js';
+import { eq } from 'drizzle-orm';
+import { companies } from '../db/schema.js';
+import { decrypt } from './crypto.service.js';
+import { createBillingClient } from './billing-api.service.js';
 
 export interface DashboardMetrics {
   totalSales: number;
   documentsCount: number;
   averageTicket: number;
   byDocumentType: { facturas: number; boletas: number; notasCredito: number };
-  byPaymentMethod: Record<string, number>;
+  byPaymentMethod: Record<string, { amount: number, description: string }>;
   topProducts: Array<{ description: string; quantity: number; total: number; category: string }>;
   salesBySeller: Array<{ name: string; total: number; count: number; avgTicket: number }>;
 }
@@ -62,9 +66,51 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
         GROUP BY p.payment_method_id
       `;
 
-  const byPaymentMethod: Record<string, number> = {};
+  // Get active payment methods from facturador config
+  let configMethods: any[] = [];
+  if (companyId) {
+    try {
+      const company = await db.query.companies.findFirst({
+        where: eq(companies.id, companyId)
+      });
+      if (company) {
+        const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
+        const client = createBillingClient(company.subdomain, decryptedToken);
+        const res = await client.get('/company');
+        configMethods = res.data?.payment_method_types || [];
+      }
+    } catch (e: any) {
+      console.warn(`[Metrics Service] Warning: Could not fetch company config for descriptions:`, e.message);
+    }
+  }
+
+  const byPaymentMethod: Record<string, { amount: number, description: string }> = {};
+
+  // Pre-fill with all config methods as 0 to ensure they are listed on the donut chart
+  configMethods.forEach((m: any) => {
+    byPaymentMethod[m.id] = { amount: 0, description: m.description };
+  });
+
   paymentsRes.forEach(r => {
-    byPaymentMethod[r.payment_method_id as string] = parseFloat(r.total as string);
+    const methodId = r.payment_method_id as string;
+    const amount = parseFloat(r.total as string);
+    const configMethod = configMethods.find((m: any) => m.id === methodId);
+    
+    // Nice description fallbacks
+    const defaultDescriptions: Record<string, string> = {
+      '01': 'Efectivo',
+      '02': 'Yape',
+      '03': 'Tarjeta de débito',
+      '04': 'Transferencia',
+      '06': 'Tarjeta crédito visa',
+      '10': 'Contado'
+    };
+    const description = configMethod?.description || defaultDescriptions[methodId] || `Método ${methodId}`;
+
+    byPaymentMethod[methodId] = {
+      amount,
+      description
+    };
   });
 
   // Top productos

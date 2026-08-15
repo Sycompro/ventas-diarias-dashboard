@@ -3,8 +3,11 @@ import { getDashboardMetrics } from '../services/metrics.service.js';
 import { getSalesTrend, getSalesByHour, getRankingBySeller, getRankingByCompany } from '../services/analytics.service.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { db, sqlClient } from '../config/database.js';
-import { sales } from '../db/schema.js';
-import { eq, and, sql, gte, lte } from 'drizzle-orm';
+import { sales, companies } from '../db/schema.js';
+import { eq, and, sql, gte, lte, inArray } from 'drizzle-orm';
+import { redis } from '../config/redis.js';
+import { decrypt } from '../services/crypto.service.js';
+import { createBillingClient } from '../services/billing-api.service.js';
 
 const router = Router();
 router.use(authenticate);
@@ -14,6 +17,37 @@ const parseDateRange = (req: any) => {
   const dateStart = (req.query.dateStart as string) || new Date().toISOString().split('T')[0];
   const dateEnd = (req.query.dateEnd as string) || new Date().toISOString().split('T')[0];
   return { companyId, dateStart, dateEnd };
+};
+
+// Cached company config resolver
+const getCompanyConfig = async (companyId: string) => {
+  const cacheKey = `company_config_v2:${companyId}`;
+  const cached = await redis.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+  
+  try {
+    const company = await db.query.companies.findFirst({
+      where: eq(companies.id, companyId)
+    });
+    
+    if (!company) throw new Error('Company not found');
+    
+    const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
+    const client = createBillingClient(company.subdomain, decryptedToken);
+    
+    const res = await client.get('/company');
+    const data = {
+      establishments: res.data?.establishments || [],
+      series: res.data?.series || [],
+      paymentMethods: res.data?.payment_method_types || []
+    };
+    
+    await redis.setex(cacheKey, 600, JSON.stringify(data)); // 10 minutes cache
+    return data;
+  } catch (error: any) {
+    console.error(`[Sales Route] Error loading company config:`, error.message);
+    return { establishments: [], series: [], paymentMethods: [] };
+  }
 };
 
 router.get('/metrics', async (req, res) => {
@@ -53,16 +87,53 @@ router.get('/by-payment-detailed', async (req, res) => {
       SELECT 
         p.payment_method_id as "paymentMethodId",
         COALESCE(s.seller_name, 'Sin Vendedor') as "seller",
+        s.series as "series",
         COUNT(DISTINCT s.id)::int as "count",
         SUM(p.amount::numeric)::numeric as "amount"
       FROM sale_payments p
       JOIN sales s ON p.sale_id = s.id
       WHERE s.company_id = ${companyId} AND s.status = 'active'
         AND s.issued_at::date >= ${dateStart}::date AND s.issued_at::date <= ${dateEnd}::date
-      GROUP BY p.payment_method_id, s.seller_name
+      GROUP BY p.payment_method_id, s.seller_name, s.series
       ORDER BY amount DESC
     `;
-    res.json(result);
+
+    // Map series to Sede description dynamically
+    const config = await getCompanyConfig(companyId);
+    const getSedeName = (seriesName: string): string => {
+      const seriesObj = config.series.find((s: any) => s.number === seriesName);
+      if (seriesObj) {
+        const estObj = config.establishments.find((e: any) => e.id === seriesObj.establishment_id);
+        if (estObj && estObj.description) {
+          return estObj.description;
+        }
+      }
+      return 'Sede Principal';
+    };
+
+    const mappedResult = result.map(r => {
+      const configMethod = config.paymentMethods.find((m: any) => m.id === r.paymentMethodId);
+      const defaultDescriptions: Record<string, string> = {
+        '01': 'Efectivo',
+        '02': 'Yape',
+        '03': 'Tarjeta de débito',
+        '04': 'Transferencia',
+        '06': 'Tarjeta crédito visa',
+        '10': 'Contado'
+      };
+      const methodName = configMethod?.description || defaultDescriptions[r.paymentMethodId] || `Método ${r.paymentMethodId}`;
+
+      return {
+        paymentMethodId: r.paymentMethodId,
+        paymentMethodName: methodName,
+        seller: r.seller,
+        branch: getSedeName(r.series),
+        count: r.count,
+        amount: parseFloat(r.amount || 0)
+      };
+    });
+
+    res.json(mappedResult);
   } catch (err: any) {
     console.error('Error fetching detailed payment metrics:', err.message);
     res.status(500).json({ message: 'Error fetching detailed payment metrics' });
@@ -82,8 +153,10 @@ router.get('/by-seller', async (req, res) => {
 router.get('/pivot', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
-    const branch = req.query.branch as string;
+    const branch = req.query.branch as string; // establishment_id (e.g. "1")
     const seller = req.query.seller as string;
+    
+    const config = await getCompanyConfig(companyId);
     
     let conditions = and(
       eq(sales.companyId, companyId),
@@ -93,8 +166,23 @@ router.get('/pivot', async (req, res) => {
     );
     
     if (branch) {
-      conditions = and(conditions, eq(sales.series, branch));
+      // Find all series numbers belonging to this establishment
+      const branchId = parseInt(branch, 10);
+      const matchedSeries = config.series
+        .filter((s: any) => s.establishment_id === branchId)
+        .map((s: any) => s.number);
+      
+      if (matchedSeries.length > 0) {
+        conditions = and(conditions, inArray(sales.series, matchedSeries));
+      } else {
+        // If no series match, return empty to avoid leaking other branches
+        return res.json({
+          paymentMethods: config.paymentMethods.map((m: any) => ({ id: m.id, description: m.description })),
+          pivotData: []
+        });
+      }
     }
+    
     if (seller) {
       conditions = and(conditions, eq(sales.sellerName, seller));
     }
@@ -106,56 +194,67 @@ router.get('/pivot', async (req, res) => {
       }
     });
 
+    // Helper to map series name to Sede description
+    const getSedeName = (seriesName: string): string => {
+      const seriesObj = config.series.find((s: any) => s.number === seriesName);
+      if (seriesObj) {
+        const estObj = config.establishments.find((e: any) => e.id === seriesObj.establishment_id);
+        if (estObj && estObj.description) {
+          return estObj.description;
+        }
+      }
+      return 'Sede Principal';
+    };
+
+    // Pre-populate active payment methods list for response
+    const activePaymentMethods = config.paymentMethods.map((m: any) => ({
+      id: m.id,
+      description: m.description
+    }));
+
     const pivotMap: Record<string, {
       sede: string;
+      payments: Record<string, number>;
       vendedores: Record<string, {
         vendedor: string;
-        efectivo: number;
-        tarjeta: number;
-        transferencia: number;
-        yapePlin: number;
-        otros: number;
+        payments: Record<string, number>;
         total: number;
       }>;
-      efectivo: number;
-      tarjeta: number;
-      transferencia: number;
-      yapePlin: number;
-      otros: number;
       total: number;
     }> = {};
 
     for (const sale of salesList) {
-      let series = sale.series;
-      if (!series && sale.number && sale.number.includes('-')) {
-        series = sale.number.split('-')[0];
+      let seriesName = sale.series;
+      if (!seriesName && sale.number && sale.number.includes('-')) {
+        seriesName = sale.number.split('-')[0];
       }
-      const Sede = series || 'Sede Principal';
-      const seller = sale.sellerName || 'Sin Vendedor';
+      
+      const Sede = getSedeName(seriesName);
+      const sellerName = sale.sellerName || 'Sin Vendedor';
 
       if (!pivotMap[Sede]) {
         pivotMap[Sede] = {
           sede: Sede,
+          payments: {},
           vendedores: {},
-          efectivo: 0,
-          tarjeta: 0,
-          transferencia: 0,
-          yapePlin: 0,
-          otros: 0,
           total: 0
         };
+        // Initialize payments record
+        activePaymentMethods.forEach((m: any) => {
+          pivotMap[Sede].payments[m.id] = 0;
+        });
       }
 
-      if (!pivotMap[Sede].vendedores[seller]) {
-        pivotMap[Sede].vendedores[seller] = {
-          vendedor: seller,
-          efectivo: 0,
-          tarjeta: 0,
-          transferencia: 0,
-          yapePlin: 0,
-          otros: 0,
+      if (!pivotMap[Sede].vendedores[sellerName]) {
+        pivotMap[Sede].vendedores[sellerName] = {
+          vendedor: sellerName,
+          payments: {},
           total: 0
         };
+        // Initialize payments record
+        activePaymentMethods.forEach((m: any) => {
+          pivotMap[Sede].vendedores[sellerName].payments[m.id] = 0;
+        });
       }
 
       const saleTotal = parseFloat(sale.total);
@@ -165,33 +264,47 @@ router.get('/pivot', async (req, res) => {
           const amount = parseFloat(payment.amount);
           const method = payment.paymentMethodId;
 
-          let category: 'efectivo' | 'tarjeta' | 'transferencia' | 'yapePlin' | 'otros' = 'otros';
-          if (method === '01') category = 'efectivo';
-          else if (['02', '04', '06'].includes(method)) category = 'tarjeta';
-          else if (method === '03') category = 'transferencia';
-          else if (method === '05') category = 'yapePlin';
+          // Ensure the payment method ID exists in the map
+          if (pivotMap[Sede].payments[method] === undefined) {
+            pivotMap[Sede].payments[method] = 0;
+          }
+          if (pivotMap[Sede].vendedores[sellerName].payments[method] === undefined) {
+            pivotMap[Sede].vendedores[sellerName].payments[method] = 0;
+          }
 
-          pivotMap[Sede][category] += amount;
+          pivotMap[Sede].payments[method] += amount;
           pivotMap[Sede].total += amount;
 
-          pivotMap[Sede].vendedores[seller][category] += amount;
-          pivotMap[Sede].vendedores[seller].total += amount;
+          pivotMap[Sede].vendedores[sellerName].payments[method] += amount;
+          pivotMap[Sede].vendedores[sellerName].total += amount;
         }
       } else {
-        pivotMap[Sede].efectivo += saleTotal;
+        // Fallback: If no payments recorded in db, put the whole total as Cash ("01")
+        const defaultMethod = '01';
+        if (pivotMap[Sede].payments[defaultMethod] === undefined) {
+          pivotMap[Sede].payments[defaultMethod] = 0;
+        }
+        if (pivotMap[Sede].vendedores[sellerName].payments[defaultMethod] === undefined) {
+          pivotMap[Sede].vendedores[sellerName].payments[defaultMethod] = 0;
+        }
+
+        pivotMap[Sede].payments[defaultMethod] += saleTotal;
         pivotMap[Sede].total += saleTotal;
 
-        pivotMap[Sede].vendedores[seller].efectivo += saleTotal;
-        pivotMap[Sede].vendedores[seller].total += saleTotal;
+        pivotMap[Sede].vendedores[sellerName].payments[defaultMethod] += saleTotal;
+        pivotMap[Sede].vendedores[sellerName].total += saleTotal;
       }
     }
 
-    const result = Object.values(pivotMap).map(Sede => ({
+    const pivotData = Object.values(pivotMap).map(Sede => ({
       ...Sede,
       vendedores: Object.values(Sede.vendedores).sort((a, b) => b.total - a.total)
     })).sort((a, b) => b.total - a.total);
 
-    res.json(result);
+    res.json({
+      paymentMethods: activePaymentMethods,
+      pivotData
+    });
   } catch (err: any) {
     console.error('Error fetching sales pivot metrics:', err.message);
     res.status(500).json({ message: 'Error fetching sales pivot metrics' });
@@ -203,8 +316,10 @@ router.get('/documents', async (req, res) => {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
     const limit = parseInt(req.query.limit as string || '50', 10);
     const offset = parseInt(req.query.offset as string || '0', 10);
-    const branch = req.query.branch as string;
+    const branch = req.query.branch as string; // establishment_id (e.g. "1")
     const seller = req.query.seller as string;
+    
+    const config = await getCompanyConfig(companyId);
     
     let conditions = and(
       eq(sales.companyId, companyId),
@@ -213,7 +328,16 @@ router.get('/documents', async (req, res) => {
     );
     
     if (branch) {
-      conditions = and(conditions, eq(sales.series, branch));
+      const branchId = parseInt(branch, 10);
+      const matchedSeries = config.series
+        .filter((s: any) => s.establishment_id === branchId)
+        .map((s: any) => s.number);
+      
+      if (matchedSeries.length > 0) {
+        conditions = and(conditions, inArray(sales.series, matchedSeries));
+      } else {
+        return res.json([]);
+      }
     }
     if (seller) {
       conditions = and(conditions, eq(sales.sellerName, seller));

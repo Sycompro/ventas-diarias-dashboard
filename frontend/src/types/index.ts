@@ -20,13 +20,7 @@ export interface DashboardMetrics {
     boletas: { count: number; amount: number };
     notasCredito: { count: number; amount: number };
   };
-  byPaymentMethod: {
-    efectivo: { count: number; amount: number };
-    tarjeta: { count: number; amount: number };
-    transferencia: { count: number; amount: number };
-    yapePlin: { count: number; amount: number };
-    otros: { count: number; amount: number };
-  };
+  byPaymentMethod: Record<string, { count: number; amount: number; description?: string }>;
   topProducts: Array<{ name: string; quantity: number; total: number; category: string }>;
   byCategory: Array<{ category: string; total: number; count: number }>;
   bySeller: Array<{ sellerName: string; total: number; count: number; avgTicket: number }>;

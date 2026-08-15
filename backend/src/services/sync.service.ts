@@ -2,7 +2,7 @@ import { db } from '../config/database.js';
 import { companies, sales, saleItems, salePayments, syncLogs } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { decrypt } from './crypto.service.js';
-import { createBillingClient, fetchDocuments } from './billing-api.service.js';
+import { createBillingClient, fetchDocuments, fetchReportDocuments } from './billing-api.service.js';
 
 export interface SyncResult {
   syncedCount: number;
@@ -24,6 +24,32 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
+    // Fetch company configuration to get active payment methods
+    let paymentMethods: any[] = [];
+    try {
+      const companyConfigRes = await client.get('/company');
+      paymentMethods = companyConfigRes.data?.payment_method_types || [];
+    } catch (e: any) {
+      console.warn(`[Sync Service] Warning: Could not fetch company config for payment methods mapping:`, e.message);
+    }
+    
+    // Helper to resolve paymentMethodId from description
+    const getPaymentMethodId = (description: string): string => {
+      const descUpper = description.trim().toUpperCase();
+      const match = paymentMethods.find((m: any) => m.description.trim().toUpperCase() === descUpper);
+      if (match) return match.id;
+      
+      // Fallbacks
+      if (descUpper === 'EFECTIVO') return '01';
+      if (descUpper === 'YAPE') return '02';
+      if (descUpper === 'TARJETA DE DÉBITO' || descUpper === 'TARJETA DE DEBITO') return '03';
+      if (descUpper === 'TRANSFERENCIA') return '04';
+      if (descUpper.includes('VISA') || descUpper.includes('TARJETA') || descUpper.includes('CREDITO') || descUpper.includes('CRÉDITO')) return '06';
+      if (descUpper === 'CONTADO') return '10';
+      
+      return '01'; // Default to Efectivo
+    };
+    
     // Sincronizamos por defecto los últimos 30 días
     const dateEnd = new Date();
     const dateStart = new Date();
@@ -32,7 +58,20 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
     const startDateStr = dateStart.toISOString().split('T')[0];
     const endDateStr = dateEnd.toISOString().split('T')[0];
     
+    // Fetch documents list (main metadata)
     const documents = await fetchDocuments(client, startDateStr, endDateStr);
+    
+    // Fetch report documents (contains desgloses de pagos in PAGOS key)
+    const reportDocs = await fetchReportDocuments(client, startDateStr, endDateStr);
+    
+    // Build a map of key -> payments array
+    const paymentsLookup = new Map<string, any[]>();
+    for (const rd of reportDocs) {
+      const key = `${rd.document_type_id}_${rd.number}`;
+      if (rd.payments && Array.isArray(rd.payments.PAGOS)) {
+        paymentsLookup.set(key, rd.payments.PAGOS);
+      }
+    }
     
     for (const doc of documents) {
       const stateId = String(doc.state_type_id);
@@ -116,18 +155,31 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
         }
       }
       
-      if (insertedSale && doc.payments) {
+      if (insertedSale) {
+        // Delete any existing payments for this sale to avoid duplicates
         await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
         
-        if (doc.payments.length > 0) {
+        // Search payments in report lookup map
+        const lookupKey = `${doc.document_type_id}_${doc.number}`;
+        const reportPayments = paymentsLookup.get(lookupKey);
+        
+        if (reportPayments && reportPayments.length > 0) {
           await db.insert(salePayments).values(
-            doc.payments.map(payment => ({
+            reportPayments.map(p => ({
               saleId: insertedSale.id,
-              paymentMethodId: payment.payment_method_type_id,
-              amount: payment.amount.toString(),
-              reference: payment.reference,
+              paymentMethodId: getPaymentMethodId(p.description),
+              amount: p.amount.toString(),
+              reference: p.reference || '',
             }))
           );
+        } else {
+          // Fallback: If no payments are registered, insert a default payment as Cash (Efectivo - "01")
+          await db.insert(salePayments).values({
+            saleId: insertedSale.id,
+            paymentMethodId: '01',
+            amount: doc.total.toString(),
+            reference: 'Default Cash Payment (Synced)',
+          });
         }
       }
       documentsSynced++;

@@ -174,7 +174,7 @@ export const DashboardPage: React.FC = () => {
       {/* Distribución de Medios de Pago - Panel Amplio */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 animate-in fade-in duration-700 delay-250 fill-mode-both">
         <div className="lg:col-span-1">
-          <PaymentDonutChart data={paymentData || {}} isLoading={loadingPayment} />
+          <PaymentDonutChart data={paymentData || {}} detailedPayments={detailedPayments} isLoading={loadingPayment || loadingDetailed} />
         </div>
         <div className="lg:col-span-2">
           <DataTable 
@@ -186,8 +186,15 @@ export const DashboardPage: React.FC = () => {
                 render: (item: any) => {
                   const colorClassMap: Record<string, string> = {
                     'tarjeta': 'bg-indigo-50 text-indigo-700',
+                    'tarjeta de débito': 'bg-indigo-50 text-indigo-700',
+                    'tarjeta de debito': 'bg-indigo-50 text-indigo-700',
+                    'tarjeta crédito visa': 'bg-indigo-50 text-indigo-700',
+                    'tarjeta credito visa': 'bg-indigo-50 text-indigo-700',
                     'efectivo': 'bg-emerald-50 text-emerald-700',
+                    'contado': 'bg-emerald-50 text-emerald-700',
                     'transferencia': 'bg-blue-50 text-blue-700',
+                    'yape': 'bg-purple-50 text-purple-700',
+                    'plin': 'bg-teal-50 text-teal-700',
                     'yape / plin': 'bg-violet-50 text-violet-700'
                   };
                   const colorClass = colorClassMap[item.method.toLowerCase()] || 'bg-slate-50 text-slate-700';

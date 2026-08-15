@@ -91,3 +91,18 @@ export async function testConnection(subdomain: string, token: string): Promise<
     return false;
   }
 }
+
+export async function fetchReportDocuments(client: AxiosInstance, dateStart: string, dateEnd: string): Promise<any[]> {
+  try {
+    const response = await client.get('/reports/documents', {
+      params: {
+        date_start: dateStart,
+        date_end: dateEnd
+      }
+    });
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    console.error('❌ [Billing API Service] Error fetching report documents:', error.message);
+    return [];
+  }
+}

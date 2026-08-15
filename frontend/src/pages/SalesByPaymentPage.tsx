@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CreditCard, Search, SlidersHorizontal, TrendingUp } from 'lucide-react';
 import { PaymentDonutChart } from '../components/charts/PaymentDonutChart';
 import { useSalesByPayment, useDetailedPaymentMetrics } from '../hooks/useSalesMetrics';
@@ -12,8 +12,12 @@ export const SalesByPaymentPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [methodFilter, setMethodFilter] = useState('Todos');
 
-  // Obtener métodos únicos para el selector
-  const methods = ['Todos', 'Tarjeta', 'Efectivo', 'Transferencia', 'Yape / Plin'];
+  // Obtener métodos únicos para el selector dinámicamente
+  const methods = useMemo<string[]>(() => {
+    if (!detailedData) return ['Todos'];
+    const unique = Array.from(new Set(detailedData.map((item: any) => item.method as string))) as string[];
+    return ['Todos', ...unique];
+  }, [detailedData]);
 
   // Calcular total general de la recaudación
   const totalRevenue = detailedData?.reduce((acc: number, item: any) => acc + item.amount, 0) || 1;
@@ -44,8 +48,15 @@ export const SalesByPaymentPage: React.FC = () => {
       render: (item: any) => {
         const colorClassMap: Record<string, string> = {
           'tarjeta': 'bg-indigo-50 text-indigo-700',
+          'tarjeta de débito': 'bg-indigo-50 text-indigo-700',
+          'tarjeta de debito': 'bg-indigo-50 text-indigo-700',
+          'tarjeta crédito visa': 'bg-indigo-50 text-indigo-700',
+          'tarjeta credito visa': 'bg-indigo-50 text-indigo-700',
           'efectivo': 'bg-emerald-50 text-emerald-700',
+          'contado': 'bg-emerald-50 text-emerald-700',
           'transferencia': 'bg-blue-50 text-blue-700',
+          'yape': 'bg-purple-50 text-purple-700',
+          'plin': 'bg-teal-50 text-teal-700',
           'yape / plin': 'bg-violet-50 text-violet-700'
         };
         const colorClass = colorClassMap[item.method.toLowerCase()] || 'bg-slate-50 text-slate-700';
@@ -123,7 +134,7 @@ export const SalesByPaymentPage: React.FC = () => {
             <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
               <SlidersHorizontal className="w-4 h-4 text-slate-400 shrink-0" />
               <div className="flex gap-1.5">
-                {methods.map((method) => (
+                {methods.map((method: string) => (
                   <button
                     key={method}
                     onClick={() => setMethodFilter(method)}

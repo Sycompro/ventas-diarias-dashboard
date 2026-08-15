@@ -4,62 +4,37 @@ import { ChevronDown, ChevronUp, Building2, User } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
 interface PaymentDonutProps {
-  data: Record<string, { count: number; amount: number }>;
+  data: Record<string, { count: number; amount: number; description?: string }>;
+  detailedPayments?: Array<{ method: string; company: string; seller: string; amount: number }>;
   isLoading?: boolean;
 }
 
-const COLORS: Record<string, string> = {
-  efectivo: '#10b981',
-  tarjeta: '#6366f1',
-  transferencia: '#3b82f6',
-  yapePlin: '#8b5cf6',
-  otros: '#94a3b8'
+const getPaymentMethodColor = (name: string): string => {
+  const nameLower = name.toLowerCase();
+  if (nameLower.includes('efectivo') || nameLower.includes('contado')) return '#10b981'; // green
+  if (nameLower.includes('yape')) return '#8b5cf6'; // purple
+  if (nameLower.includes('plin')) return '#06b6d4'; // cyan/turquoise
+  if (nameLower.includes('transferencia')) return '#3b82f6'; // blue
+  if (nameLower.includes('tarjeta') || nameLower.includes('visa') || nameLower.includes('mastercard')) return '#6366f1'; // indigo
+  
+  return '#94a3b8'; // grey
 };
 
-const LABELS: Record<string, string> = {
-  efectivo: 'Efectivo',
-  tarjeta: 'Tarjeta',
-  transferencia: 'Transferencia',
-  yapePlin: 'Yape / Plin',
-  otros: 'Otros'
-};
-
-// Datos del desglose por Sede y Vendedor para cada medio de pago
-const BREAKDOWN_DATA: Record<string, Array<{ company: string; seller: string; amount: number }>> = {
-  'Tarjeta': [
-    { company: 'Sede Principal - Lima', seller: 'Ana García', amount: 8000 },
-    { company: 'Sede Principal - Lima', seller: 'Carlos López', amount: 6200 },
-    { company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', amount: 3800 }
-  ],
-  'Efectivo': [
-    { company: 'Sede Principal - Lima', seller: 'Ana García', amount: 3500 },
-    { company: 'Sede Principal - Lima', seller: 'Carlos López', amount: 3200 },
-    { company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', amount: 3300 }
-  ],
-  'Transferencia': [
-    { company: 'Sede Principal - Lima', seller: 'Ana García', amount: 5000 },
-    { company: 'Sede Principal - Lima', seller: 'Carlos López', amount: 4000 },
-    { company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', amount: 3000 }
-  ],
-  'Yape / Plin': [
-    { company: 'Sede Principal - Lima', seller: 'Ana García', amount: 1000 },
-    { company: 'Sede Principal - Lima', seller: 'Carlos López', amount: 900 },
-    { company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', amount: 600 }
-  ]
-};
-
-export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, isLoading }) => {
+export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, detailedPayments, isLoading }) => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   if (isLoading) return <div className="h-[360px] w-full animate-pulse bg-slate-100 rounded-xl"></div>;
 
   const chartData = Object.entries(data || {})
     .filter(([_, val]) => val.amount > 0)
-    .map(([key, val]) => ({
-      name: LABELS[key] || key,
-      value: val.amount,
-      color: COLORS[key] || COLORS.otros
-    }))
+    .map(([key, val]) => {
+      const description = val.description || (key === '01' ? 'Efectivo' : `Método ${key}`);
+      return {
+        name: description,
+        value: val.amount,
+        color: getPaymentMethodColor(description)
+      };
+    })
     .sort((a, b) => b.value - a.value);
 
   const total = chartData.reduce((acc, curr) => acc + curr.value, 0);
@@ -93,6 +68,17 @@ export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, isLoading
 
   const toggleExpand = (index: number) => {
     setExpandedIndex(expandedIndex === index ? null : index);
+  };
+
+  const getBreakdown = (methodName: string) => {
+    if (!detailedPayments) return [];
+    return detailedPayments
+      .filter((item: any) => item.method.toLowerCase() === methodName.toLowerCase())
+      .map((item: any) => ({
+        company: item.company,
+        seller: item.seller,
+        amount: item.amount
+      }));
   };
 
   return (
@@ -130,7 +116,7 @@ export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, isLoading
       <div className="flex flex-col gap-2">
         {chartData.map((item, idx) => {
           const isExpanded = expandedIndex === idx;
-          const breakdown = BREAKDOWN_DATA[item.name] || [];
+          const breakdown = getBreakdown(item.name);
           
           return (
             <div key={idx} className="flex flex-col rounded-lg overflow-hidden transition-all duration-200">
@@ -139,7 +125,7 @@ export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, isLoading
               <button 
                 onClick={() => toggleExpand(idx)}
                 className={`flex items-center justify-between p-2 rounded-lg transition-colors cursor-pointer ${
-                  isExpanded ? 'bg-slate-50 text-slate-900' : 'text-slate-700 hover:bg-slate-50/50'
+                  isExpanded ? 'bg-slate-50 text-slate-900' : 'text-slate-700 hover:bg-slate-50/55'
                 }`}
               >
                 <div className="flex items-center gap-2.5">

@@ -24,9 +24,12 @@ export const SalesPage: React.FC = () => {
   const { companyId, dateStart, dateEnd } = useFilters();
   const token = useAuthStore((state) => state.accessToken);
   
-  const { data: pivotData, isLoading: loadingPivot } = useSalesPivot();
+  const { data: pivotResponse, isLoading: loadingPivot } = useSalesPivot();
   const { data: documentsData, isLoading: loadingDocs } = useSalesDocuments(100, 0);
   
+  const pivotData = pivotResponse?.pivotData || [];
+  const paymentMethods = pivotResponse?.paymentMethods || [];
+
   const [expandedSedes, setExpandedSedes] = useState<Record<string, boolean>>({});
   const [docSearch, setDocSearch] = useState('');
 
@@ -62,8 +65,8 @@ export const SalesPage: React.FC = () => {
       'Detalle de Ventas',
       'Cuadro estadístico de ingresos consolidado por sedes, vendedores y métodos de pago.',
       <button 
-        onClick={handleExport}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-[11px] font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+         onClick={handleExport}
+         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-[11px] font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
       >
         <Download size={12} />
         Exportar Excel
@@ -72,28 +75,21 @@ export const SalesPage: React.FC = () => {
     return () => clearHeader();
   }, [companyId, dateStart, dateEnd, token]);
 
-  // Calcular totales generales
+  // Calcular totales generales dinámicamente
   const grandTotals = useMemo(() => {
-    const totals = {
-      efectivo: 0,
-      tarjeta: 0,
-      transferencia: 0,
-      yapePlin: 0,
-      otros: 0,
-      total: 0
-    };
-    if (pivotData) {
-      pivotData.forEach((s: any) => {
-        totals.efectivo += parseFloat(s.efectivo || 0);
-        totals.tarjeta += parseFloat(s.tarjeta || 0);
-        totals.transferencia += parseFloat(s.transferencia || 0);
-        totals.yapePlin += parseFloat(s.yapePlin || 0);
-        totals.otros += parseFloat(s.otros || 0);
-        totals.total += parseFloat(s.total || 0);
+    const totals: Record<string, number> = { total: 0 };
+    paymentMethods.forEach((m: any) => {
+      totals[m.id] = 0;
+    });
+
+    pivotData.forEach((s: any) => {
+      paymentMethods.forEach((m: any) => {
+        totals[m.id] += parseFloat(s.payments?.[m.id] || 0);
       });
-    }
+      totals.total += parseFloat(s.total || 0);
+    });
     return totals;
-  }, [pivotData]);
+  }, [pivotData, paymentMethods]);
 
   // Filtrar documentos en el cliente para el buscador
   const filteredDocs = useMemo(() => {
@@ -133,34 +129,37 @@ export const SalesPage: React.FC = () => {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                 <th className="py-3.5 px-4 font-semibold text-slate-700 min-w-[220px]">Sede / Vendedor</th>
-                <th className="py-3.5 px-3 text-right font-semibold text-slate-700">
-                  <span className="inline-flex items-center gap-1"><DollarSign size={11} className="text-emerald-500" /> Efectivo</span>
-                </th>
-                <th className="py-3.5 px-3 text-right font-semibold text-slate-700">
-                  <span className="inline-flex items-center gap-1"><CreditCard size={11} className="text-blue-500" /> Tarjeta</span>
-                </th>
-                <th className="py-3.5 px-3 text-right font-semibold text-slate-700">
-                  <span className="inline-flex items-center gap-1"><ArrowLeftRight size={11} className="text-indigo-500" /> Transferencia</span>
-                </th>
-                <th className="py-3.5 px-3 text-right font-semibold text-slate-700">
-                  <span className="inline-flex items-center gap-1"><Smartphone size={11} className="text-violet-500" /> Yape / Plin</span>
-                </th>
-                <th className="py-3.5 px-3 text-right font-semibold text-slate-700">
-                  <span className="inline-flex items-center gap-1"><HelpCircle size={11} className="text-slate-500" /> Otros</span>
-                </th>
+                {paymentMethods.map((m: any) => {
+                  const descUpper = m.description.toUpperCase();
+                  let icon = <HelpCircle size={11} className="text-slate-500" />;
+                  if (descUpper.includes('EFECTIVO') || descUpper.includes('CONTADO')) {
+                    icon = <DollarSign size={11} className="text-emerald-500" />;
+                  } else if (descUpper.includes('TARJETA') || descUpper.includes('VISA') || descUpper.includes('MASTERCARD') || descUpper.includes('CREDITO') || descUpper.includes('DEBITO')) {
+                    icon = <CreditCard size={11} className="text-blue-500" />;
+                  } else if (descUpper.includes('TRANSFERENCIA') || descUpper.includes('BANCO') || descUpper.includes('BCP') || descUpper.includes('BBVA')) {
+                    icon = <ArrowLeftRight size={11} className="text-indigo-500" />;
+                  } else if (descUpper.includes('YAPE') || descUpper.includes('PLIN')) {
+                    icon = <Smartphone size={11} className="text-violet-500" />;
+                  }
+                  return (
+                    <th key={m.id} className="py-3.5 px-3 text-right font-semibold text-slate-700">
+                      <span className="inline-flex items-center gap-1">{icon} {m.description}</span>
+                    </th>
+                  );
+                })}
                 <th className="py-3.5 px-4 text-right font-semibold text-slate-900 bg-slate-50/80">Total General</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {loadingPivot ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                  <td colSpan={(paymentMethods.length || 5) + 2} className="py-8 text-center text-slate-400">
                     <span className="inline-block animate-pulse">Cargando estadísticas...</span>
                   </td>
                 </tr>
               ) : !pivotData || pivotData.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                  <td colSpan={(paymentMethods.length || 5) + 2} className="py-8 text-center text-slate-400">
                     No se encontraron transacciones en el rango de fechas seleccionado.
                   </td>
                 </tr>
@@ -181,14 +180,14 @@ export const SalesPage: React.FC = () => {
                             </button>
                             <span className="inline-flex items-center gap-1.5">
                               <Building2 size={14} className="text-slate-400 shrink-0" />
-                              Sede {sede.sede}
+                              {sede.sede}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(sede.efectivo)}</td>
-                          <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(sede.tarjeta)}</td>
-                          <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(sede.transferencia)}</td>
-                          <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(sede.yapePlin)}</td>
-                          <td className="py-3 px-3 text-right tabular-nums">{formatCurrency(sede.otros)}</td>
+                          {paymentMethods.map((m: any) => (
+                            <td key={m.id} className="py-3 px-3 text-right tabular-nums">
+                              {formatCurrency(sede.payments?.[m.id] || 0)}
+                            </td>
+                          ))}
                           <td className="py-3 px-4 text-right font-bold text-slate-900 bg-slate-50/55 tabular-nums">{formatCurrency(sede.total)}</td>
                         </tr>
 
@@ -199,11 +198,11 @@ export const SalesPage: React.FC = () => {
                               <User size={13} className="text-slate-400 shrink-0" />
                               <span>{vendedor.vendedor}</span>
                             </td>
-                            <td className="py-2.5 px-3 text-right text-xs tabular-nums text-slate-500">{formatCurrency(vendedor.efectivo)}</td>
-                            <td className="py-2.5 px-3 text-right text-xs tabular-nums text-slate-500">{formatCurrency(vendedor.tarjeta)}</td>
-                            <td className="py-2.5 px-3 text-right text-xs tabular-nums text-slate-500">{formatCurrency(vendedor.transferencia)}</td>
-                            <td className="py-2.5 px-3 text-right text-xs tabular-nums text-slate-500">{formatCurrency(vendedor.yapePlin)}</td>
-                            <td className="py-2.5 px-3 text-right text-xs tabular-nums text-slate-500">{formatCurrency(vendedor.otros)}</td>
+                            {paymentMethods.map((m: any) => (
+                              <td key={m.id} className="py-2.5 px-3 text-right text-xs tabular-nums text-slate-500">
+                                {formatCurrency(vendedor.payments?.[m.id] || 0)}
+                              </td>
+                            ))}
                             <td className="py-2.5 px-4 text-right font-medium text-slate-800 bg-slate-50/10 tabular-nums">{formatCurrency(vendedor.total)}</td>
                           </tr>
                         ))}
@@ -214,11 +213,11 @@ export const SalesPage: React.FC = () => {
                   {/* Fila de Totales Generales */}
                   <tr className="bg-slate-100/90 font-bold border-t-2 border-slate-300 text-slate-900">
                     <td className="py-3.5 px-4">TOTAL GENERAL</td>
-                    <td className="py-3.5 px-3 text-right tabular-nums">{formatCurrency(grandTotals.efectivo)}</td>
-                    <td className="py-3.5 px-3 text-right tabular-nums">{formatCurrency(grandTotals.tarjeta)}</td>
-                    <td className="py-3.5 px-3 text-right tabular-nums">{formatCurrency(grandTotals.transferencia)}</td>
-                    <td className="py-3.5 px-3 text-right tabular-nums">{formatCurrency(grandTotals.yapePlin)}</td>
-                    <td className="py-3.5 px-3 text-right tabular-nums">{formatCurrency(grandTotals.otros)}</td>
+                    {paymentMethods.map((m: any) => (
+                      <td key={m.id} className="py-3.5 px-3 text-right tabular-nums">
+                        {formatCurrency(grandTotals[m.id] || 0)}
+                      </td>
+                    ))}
                     <td className="py-3.5 px-4 text-right font-extrabold text-primary-900 bg-slate-100 tabular-nums">{formatCurrency(grandTotals.total)}</td>
                   </tr>
                 </>

@@ -64,16 +64,14 @@ const mapBackendMetricsToFrontend = (data: any, filters: any): DashboardMetrics 
 
   // Payment methods
   const bp = data.byPaymentMethod || {};
-  const byPaymentMethod = {
-    efectivo: { count: 0, amount: parseFloat(bp['01'] || 0) },
-    tarjeta: { count: 0, amount: parseFloat((bp['02'] || 0) + (bp['04'] || 0) + (bp['06'] || 0)) },
-    transferencia: { count: 0, amount: parseFloat(bp['03'] || 0) },
-    yapePlin: { count: 0, amount: parseFloat(bp['05'] || 0) },
-    otros: { count: 0, amount: Object.entries(bp).reduce((sum, [k, v]) => {
-      if (!['01', '02', '03', '04', '05', '06'].includes(k)) return sum + parseFloat(v as string);
-      return sum;
-    }, 0) }
-  };
+  const byPaymentMethod: Record<string, { count: number; amount: number; description?: string }> = {};
+  Object.entries(bp).forEach(([id, val]: [string, any]) => {
+    byPaymentMethod[id] = {
+      count: 0,
+      amount: typeof val === 'object' ? parseFloat(val.amount || 0) : parseFloat(val || 0),
+      description: typeof val === 'object' ? val.description : (id === '01' ? 'Efectivo' : `Método ${id}`)
+    };
+  });
 
   // Top products
   const topProducts = (data.topProducts || []).map((p: any) => ({
@@ -242,19 +240,10 @@ export const useDetailedPaymentMetrics = () => {
           seller: filters.seller
         });
         
-        const methodNames: Record<string, string> = { 
-          '01': 'Efectivo', 
-          '02': 'Tarjeta', 
-          '03': 'Transferencia', 
-          '04': 'Tarjeta',
-          '05': 'Yape / Plin',
-          '06': 'Tarjeta' 
-        };
-
         return (data || []).map((item: any, idx: number) => ({
           id: String(idx + 1),
-          method: methodNames[item.paymentMethodId] || 'Otros',
-          company: 'Sede Principal',
+          method: item.paymentMethodName || 'Otros',
+          company: item.branch || 'Sede Principal',
           seller: item.seller,
           count: item.count,
           amount: parseFloat(item.amount || 0)
@@ -281,10 +270,10 @@ export const useSalesPivot = () => {
           branch: filters.branch,
           seller: filters.seller
         });
-        return data || [];
+        return data || { paymentMethods: [], pivotData: [] };
       } catch (err) {
         console.error("Sales pivot API offline/empty:", err);
-        return [];
+        return { paymentMethods: [], pivotData: [] };
       }
     },
     ...queryOptions,

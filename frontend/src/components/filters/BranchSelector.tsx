@@ -6,12 +6,10 @@ import { CustomSelect } from '../ui/CustomSelect';
 
 export const BranchSelector: React.FC = () => {
   const { branch, setBranch } = useFilters();
-  const { data: branches } = useCompanyBranches();
-
-  const options = useMemo(() => {
-    return (branches || []).map((b: string) => ({
-      value: b,
-      label: `Sede ${b}`
+  const { data: branches } = useCompanyBranches();  const options = useMemo(() => {
+    return (branches || []).map((b: { id: string; name: string }) => ({
+      value: b.id,
+      label: b.name
     }));
   }, [branches]);
 
