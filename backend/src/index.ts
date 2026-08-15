@@ -28,6 +28,12 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Syscom Dashboard API' });
+});
 app.use('/api/', generalLimiter);
 
 // Rutas
