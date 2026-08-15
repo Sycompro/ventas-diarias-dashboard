@@ -20,19 +20,19 @@ export const GoalProgress: React.FC<GoalProgressProps> = ({ title, current, targ
   const displayCurrent = format === 'currency' ? formatCurrency(current) : current.toLocaleString('es-PE');
   const displayTarget = format === 'currency' ? formatCurrency(target) : target.toLocaleString('es-PE');
   
-  let statusBadge = { text: 'En progreso', colors: 'bg-blue-50 text-blue-700 border-blue-200' };
-  if (percentage >= 100) statusBadge = { text: 'Cumplida', colors: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-  else if (percentage >= 80) statusBadge = { text: 'Cerca', colors: 'bg-amber-50 text-amber-700 border-amber-200' };
-  else if (percentage < 30) statusBadge = { text: 'En riesgo', colors: 'bg-red-50 text-red-700 border-red-200' };
+  let statusBadge = { text: 'En progreso', colors: 'bg-blue-50 text-blue-700 -blue-200' };
+  if (percentage >= 100) statusBadge = { text: 'Cumplida', colors: 'bg-emerald-50 text-emerald-700 -emerald-200' };
+  else if (percentage >= 80) statusBadge = { text: 'Cerca', colors: 'bg-amber-50 text-amber-700 -amber-200' };
+  else if (percentage < 30) statusBadge = { text: 'En riesgo', colors: 'bg-red-50 text-red-700 -red-200' };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+    <div className="bg-white rounded-xl shadow-sm  -slate-200 p-5">
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
           <p className="text-xs text-slate-500 mt-1">Meta: {displayTarget}</p>
         </div>
-        <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${statusBadge.colors}`}>
+        <span className={`px-2.5 py-1 text-xs font-medium rounded-full  ${statusBadge.colors}`}>
           {statusBadge.text}
         </span>
       </div>

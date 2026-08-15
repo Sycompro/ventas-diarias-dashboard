@@ -39,7 +39,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
       
       {/* Modal Content */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col animate-in zoom-in-95 fade-in duration-300">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-6 py-4  -slate-100">
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
           <button 
             onClick={onClose}
@@ -55,7 +55,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
         </div>
         
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
+          <div className="px-6 py-4  -slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
             {footer}
           </div>
         )}

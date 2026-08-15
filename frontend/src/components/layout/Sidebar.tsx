@@ -72,20 +72,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          className="fixed inset-0 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[4px_0_24px_rgba(0,0,0,0.1)]/50 backdrop-blur-sm z-40 lg:hidden transition-opacity"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside 
-        className={`fixed top-0 left-0 h-screen bg-gradient-to-b from-slate-900 to-slate-950 border-r border-white/5 z-50 transition-all duration-300 ease-in-out flex flex-col
+        className={`fixed top-0 left-0 h-screen bg-gradient-to-b from-slate-900 to-slate-950  -white/5 z-50 transition-all duration-300 ease-in-out flex flex-col
           ${isCollapsed ? 'w-[72px]' : 'w-64'}
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo Area */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 shrink-0">
+        <div className="h-16 flex items-center justify-between px-4  -white/5 shrink-0">
           {!isCollapsed && (
             <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-glow-primary">
@@ -167,7 +167,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* User Profile Footer */}
-        <div className="p-4 border-t border-white/5 shrink-0">
+        <div className="p-4  -white/5 shrink-0">
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
             <div className={`flex items-center gap-3 ${isCollapsed ? 'hidden' : 'flex'}`}>
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary-600 to-violet-500 flex items-center justify-center text-white font-semibold text-sm shadow-sm ring-2 ring-white/10">

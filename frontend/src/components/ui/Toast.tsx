@@ -19,10 +19,10 @@ const icons = {
 };
 
 const borders = {
-  success: 'border-l-emerald-500',
-  error: 'border-l-red-500',
-  warning: 'border-l-amber-500',
-  info: 'border-l-blue-500'
+  success: '-emerald-500',
+  error: '-red-500',
+  warning: '-amber-500',
+  info: '-blue-500'
 };
 
 const progressColors = {
@@ -52,7 +52,7 @@ export const Toast: React.FC<ToastProps> = ({ id, type, message, onClose, durati
   }, [duration, id, onClose]);
 
   return (
-    <div className={`relative flex items-center gap-3 w-80 bg-white shadow-xl rounded-xl border border-slate-200 p-4 border-l-4 ${borders[type]} animate-in slide-in-from-right-8 fade-in duration-300`}>
+    <div className={`relative flex items-center gap-3 w-80 bg-white shadow-xl rounded-xl  -slate-200 p-4 -4 ${borders[type]} animate-in slide-in-from-right-8 fade-in duration-300`}>
       <div className="flex-shrink-0">
         {icons[type]}
       </div>

@@ -63,7 +63,7 @@ export const ComparatorPage: React.FC = () => {
       </div>
 
       <div className="card">
-        <div className="p-4 border-b border-border-subtle bg-neutral-50">
+        <div className="p-4  bg-neutral-50">
           <h3 className="font-semibold text-neutral-900">Detalle de Variaciones</h3>
         </div>
         <div className="p-4">

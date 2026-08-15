@@ -19,11 +19,11 @@ export const TemporalAnalysisPage: React.FC = () => {
         <div className="card p-5">
           <h3 className="text-lg font-semibold text-neutral-900 mb-4">Resumen de Actividad</h3>
           <div className="space-y-4">
-            <div className="p-3 bg-primary-light/50 rounded-lg border border-primary/10">
+            <div className="p-3 bg-primary-light/50 rounded-lg  -primary/10">
               <span className="block text-sm text-neutral-600 mb-1">Hora Pico Promedio</span>
               <span className="block text-xl font-bold text-primary-dark">14:00 - 15:00</span>
             </div>
-            <div className="p-3 bg-success-light/50 rounded-lg border border-success/10">
+            <div className="p-3 bg-success-light/50 rounded-lg  -success/10">
               <span className="block text-sm text-neutral-600 mb-1">Mejor Día de la Semana</span>
               <span className="block text-xl font-bold text-success-dark">Viernes</span>
             </div>

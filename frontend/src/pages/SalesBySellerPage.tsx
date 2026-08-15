@@ -52,7 +52,7 @@ export const SalesBySellerPage: React.FC = () => {
       </div>
 
       <div className="card">
-        <div className="p-4 border-b border-border-subtle bg-neutral-50">
+        <div className="p-4  bg-neutral-50">
           <h3 className="font-semibold text-neutral-900">Desglose por Vendedor</h3>
         </div>
         <div className="p-4">

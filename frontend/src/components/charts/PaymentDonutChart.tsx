@@ -39,7 +39,7 @@ export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, isLoading
 
   if (chartData.length === 0) {
     return (
-      <div className="h-[360px] w-full flex items-center justify-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+      <div className="h-[360px] w-full flex items-center justify-center -2 -dashed -slate-200 rounded-xl bg-slate-50">
         <span className="text-slate-400 text-sm">Sin datos de pago</span>
       </div>
     );
@@ -49,13 +49,13 @@ export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, isLoading
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100 min-w-[140px]">
+        <div className="bg-white p-3 rounded-xl shadow-xl  -slate-100 min-w-[140px]">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }}></span>
             <span className="text-sm font-semibold text-slate-900">{data.name}</span>
           </div>
           <p className="text-sm font-medium text-slate-700">{formatCurrency(data.value)}</p>
-          <p className="text-xs text-slate-500 mt-1 pt-1 border-t border-slate-50">
+          <p className="text-xs text-slate-500 mt-1 pt-1  -slate-50">
             {((data.value / total) * 100).toFixed(1)}% del total
           </p>
         </div>
@@ -65,7 +65,7 @@ export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, isLoading
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm  -slate-200 p-6 flex flex-col h-full">
       <h3 className="text-lg font-semibold text-slate-900 mb-2">Medios de Pago</h3>
       <p className="text-sm text-slate-500 mb-6">Distribución de ingresos</p>
       

@@ -12,12 +12,12 @@ export const CompanySelector: React.FC = () => {
 
   return (
     <div className="relative group">
-      <div className="flex items-center gap-2 px-3 py-2 bg-white border border-border-subtle rounded-lg shadow-sm hover:border-primary transition-colors cursor-pointer">
+      <div className="flex items-center gap-2 px-3 py-2 bg-white  rounded-lg shadow-sm transition-colors cursor-pointer">
         <Building2 size={18} className="text-neutral-500" />
         <select
           value={companyId || ''}
           onChange={(e) => setCompany(e.target.value || null)}
-          className="appearance-none bg-transparent border-none text-sm font-medium text-neutral-700 focus:ring-0 pr-6 cursor-pointer outline-none w-full min-w-[180px]"
+          className="appearance-none bg-transparent text-sm font-medium text-neutral-700 focus:ring-0 pr-6 cursor-pointer outline-none w-full min-w-[180px]"
         >
           <option value="">Todas las empresas (Consolidado)</option>
           {companies?.map((company) => (

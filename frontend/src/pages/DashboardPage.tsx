@@ -60,7 +60,7 @@ export const DashboardPage: React.FC = () => {
   const productColumns: Column<any>[] = [
     { key: 'name', header: 'Producto', sortable: true, render: (item) => <span className="font-medium text-slate-800">{item.name}</span> },
     { key: 'category', header: 'Categoría', sortable: true, render: (item) => (
-      <span className="px-2.5 py-1 bg-slate-100/80 text-slate-600 rounded-full text-xs font-medium border border-slate-200">{item.category}</span>
+      <span className="px-2.5 py-1 bg-slate-100/80 text-slate-600 rounded-full text-xs font-medium  -slate-200">{item.category}</span>
     )},
     { key: 'quantity', header: 'Cantidad', sortable: true, render: (item) => <span className="tabular-nums">{item.quantity} unds.</span> },
     { key: 'total', header: 'Ingresos', sortable: true, render: (item) => <span className="font-semibold text-slate-900 tabular-nums">{formatCurrency(item.total)}</span> }
@@ -85,7 +85,7 @@ export const DashboardPage: React.FC = () => {
           <button 
             onClick={handleSync}
             disabled={isSyncing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white  -slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
             {isSyncing ? 'Sincronizando...' : 'Sincronizar'}

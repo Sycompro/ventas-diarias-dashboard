@@ -36,8 +36,8 @@ export const ComparisonChart: React.FC<ComparisonChartProps> = ({ data, isLoadin
       const isPositive = diff >= 0;
 
       return (
-        <div className="bg-white p-4 rounded-xl shadow-xl border border-slate-100 min-w-[200px]">
-          <p className="text-sm font-semibold text-slate-900 mb-3 border-b border-slate-100 pb-2">{label}</p>
+        <div className="bg-white p-4 rounded-xl shadow-xl  -slate-100 min-w-[200px]">
+          <p className="text-sm font-semibold text-slate-900 mb-3  -slate-100 pb-2">{label}</p>
           
           <div className="space-y-2.5">
             <div className="flex justify-between items-center gap-4">
@@ -57,7 +57,7 @@ export const ComparisonChart: React.FC<ComparisonChartProps> = ({ data, isLoadin
             </div>
           </div>
           
-          <div className={`mt-3 pt-2.5 border-t border-slate-100 text-xs font-bold flex justify-between ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+          <div className={`mt-3 pt-2.5  -slate-100 text-xs font-bold flex justify-between ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
             <span>Diferencia</span>
             <span>{isPositive ? '+' : ''}{formatCurrency(diff)} ({isPositive ? '+' : ''}{((diff/previous)*100).toFixed(1)}%)</span>
           </div>
@@ -68,7 +68,7 @@ export const ComparisonChart: React.FC<ComparisonChartProps> = ({ data, isLoadin
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm  -slate-200 p-6 flex flex-col h-full">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-slate-900 mb-1">Comparativa de Periodos</h3>
         <p className="text-sm text-slate-500">Actual vs Anterior</p>

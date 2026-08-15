@@ -88,7 +88,7 @@ export const SalesPage: React.FC = () => {
       </div>
 
       <div className="card">
-        <div className="p-4 border-b border-border-subtle flex justify-between items-center bg-neutral-50">
+        <div className="p-4  flex justify-between items-center bg-neutral-50">
           <h3 className="font-semibold text-neutral-900">Registro de Documentos</h3>
           <input 
             type="text" 
