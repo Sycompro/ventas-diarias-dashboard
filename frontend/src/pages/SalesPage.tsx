@@ -108,8 +108,49 @@ export const SalesPage: React.FC = () => {
         <GlobalFilters />
       </div>
 
-      {/* Cuadro Estadístico Pivot - Solicitud de Usuario */}
+      {/* Resumen por Tipo de Comprobante - Solicitud de Usuario */}
       <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-100">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="font-bold text-slate-900 text-sm">Resumen por Tipo de Comprobante</h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">Ingresos acumulados y cantidad de documentos emitidos.</p>
+        </div>
+
+        <div className="p-5">
+          {loadingDocTypes ? (
+            <div className="py-6 text-center text-slate-400 animate-pulse">
+              Cargando resumen de comprobantes...
+            </div>
+          ) : docSummaryData.length === 0 ? (
+            <div className="py-6 text-center text-slate-400">
+              No se encontraron comprobantes registrados en el rango seleccionado.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {docSummaryData.map((doc) => {
+                const isNegative = doc.amount < 0;
+                return (
+                  <div key={doc.name} className="p-4 rounded-xl border border-slate-200/60 bg-slate-50/40 hover:bg-slate-50 transition-all duration-300 flex flex-col justify-between">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-bold text-slate-500 tracking-wide uppercase">{doc.name}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${doc.colorBg}`}>
+                        {doc.count} emitidos
+                      </span>
+                    </div>
+                    <div className="mt-4">
+                      <span className={`text-xl font-extrabold tabular-nums ${isNegative ? 'text-rose-600' : 'text-slate-900'}`}>
+                        {formatCurrency(doc.amount)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cuadro Estadístico Pivot - Solicitud de Usuario */}
+      <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-200">
         <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
           <div>
             <h3 className="font-bold text-slate-900 text-sm">Resumen de Ventas por Método de Pago</h3>
@@ -220,47 +261,6 @@ export const SalesPage: React.FC = () => {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Resumen por Tipo de Comprobante - Solicitud de Usuario */}
-      <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-200">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="font-bold text-slate-900 text-sm">Resumen por Tipo de Comprobante</h3>
-          <p className="text-[11px] text-slate-500 mt-0.5">Ingresos acumulados y cantidad de documentos emitidos.</p>
-        </div>
-
-        <div className="p-5">
-          {loadingDocTypes ? (
-            <div className="py-6 text-center text-slate-400 animate-pulse">
-              Cargando resumen de comprobantes...
-            </div>
-          ) : docSummaryData.length === 0 ? (
-            <div className="py-6 text-center text-slate-400">
-              No se encontraron comprobantes registrados en el rango seleccionado.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {docSummaryData.map((doc) => {
-                const isNegative = doc.amount < 0;
-                return (
-                  <div key={doc.name} className="p-4 rounded-xl border border-slate-200/60 bg-slate-50/40 hover:bg-slate-50 transition-all duration-300 flex flex-col justify-between">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-bold text-slate-500 tracking-wide uppercase">{doc.name}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${doc.colorBg}`}>
-                        {doc.count} emitidos
-                      </span>
-                    </div>
-                    <div className="mt-4">
-                      <span className={`text-xl font-extrabold tabular-nums ${isNegative ? 'text-rose-600' : 'text-slate-900'}`}>
-                        {formatCurrency(doc.amount)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
 
