@@ -164,21 +164,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* User Profile Footer */}
-        <div className="p-4  -white/5 shrink-0">
-          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-            <div className={`flex items-center gap-3 ${isCollapsed ? 'hidden' : 'flex'}`}>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary-600 to-violet-500 flex items-center justify-center text-white font-semibold text-sm shadow-sm ring-2 ring-white/10">
+        <div className="p-4  -white/5 shrink-0 overflow-hidden">
+          <div className={`flex items-center gap-2 ${isCollapsed ? 'justify-center' : 'justify-between'} min-w-0`}>
+            <div className={`flex items-center gap-2 min-w-0 ${isCollapsed ? 'hidden' : 'flex'}`}>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary-600 to-violet-500 flex items-center justify-center text-white font-semibold text-sm shadow-sm ring-2 ring-white/10 shrink-0">
                 {user?.name?.charAt(0) || 'U'}
               </div>
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-sm font-medium text-white truncate">{user?.name || 'Usuario'}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-medium text-white truncate" title={user?.name}>{user?.name || 'Usuario'}</span>
                 <span className="text-xs text-slate-400 truncate">{user?.role || 'Admin'}</span>
               </div>
             </div>
             
             <button 
               onClick={logout}
-              className={`flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-white hover:bg-danger-500/10 hover:text-danger-400 transition-colors
+              className={`flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-white hover:bg-danger-500/10 hover:text-danger-400 transition-colors shrink-0
                 ${isCollapsed ? 'w-full' : ''}
               `}
               title="Cerrar sesión"
