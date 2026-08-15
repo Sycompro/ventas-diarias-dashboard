@@ -30,8 +30,8 @@ export const SalesPage: React.FC = () => {
   const [expandedSedes, setExpandedSedes] = useState<Record<string, boolean>>({});
   const [docSearch, setDocSearch] = useState('');
 
-  const setHeader = useHeaderStore((state) => state.setHeader);
-  const clearHeader = useHeaderStore((state) => state.clearHeader);
+  const setHeader = useHeaderStore((state: any) => state.setHeader);
+  const clearHeader = useHeaderStore((state: any) => state.clearHeader);
 
   const toggleSede = (sede: string) => {
     setExpandedSedes(prev => ({ ...prev, [sede]: !prev[sede] }));

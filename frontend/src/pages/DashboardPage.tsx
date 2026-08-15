@@ -51,8 +51,8 @@ export const DashboardPage: React.FC = () => {
   const { data: sellersData, isLoading: loadingSellers } = useSalesBySeller();
   const { data: detailedPayments, isLoading: loadingDetailed } = useDetailedPaymentMetrics();
 
-  const setHeader = useHeaderStore((state) => state.setHeader);
-  const clearHeader = useHeaderStore((state) => state.clearHeader);
+  const setHeader = useHeaderStore((state: any) => state.setHeader);
+  const clearHeader = useHeaderStore((state: any) => state.clearHeader);
 
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
