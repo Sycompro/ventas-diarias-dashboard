@@ -207,50 +207,38 @@ export const useSalesTrend = () => {
 
 export const useSalesByPayment = () => {
   const filters = useFilters();
-  const { data: metrics } = useDashboardMetrics();
-  return useQuery({
-    queryKey: ['sales-by-payment', filters],
-    queryFn: async () => {
-      return metrics?.byPaymentMethod || generateDynamicMockMetrics(filters).byPaymentMethod;
-    },
-    ...queryOptions,
-  });
+  const query = useDashboardMetrics();
+  return {
+    ...query,
+    data: query.data ? query.data.byPaymentMethod : generateDynamicMockMetrics(filters).byPaymentMethod
+  } as any;
 };
 
 export const useSalesByDocumentType = () => {
   const filters = useFilters();
-  const { data: metrics } = useDashboardMetrics();
-  return useQuery({
-    queryKey: ['sales-by-document-type', filters],
-    queryFn: async () => {
-      return metrics?.byDocumentType || generateDynamicMockMetrics(filters).byDocumentType;
-    },
-    ...queryOptions,
-  });
+  const query = useDashboardMetrics();
+  return {
+    ...query,
+    data: query.data ? query.data.byDocumentType : generateDynamicMockMetrics(filters).byDocumentType
+  } as any;
 };
 
 export const useTopProducts = () => {
   const filters = useFilters();
-  const { data: metrics } = useDashboardMetrics();
-  return useQuery({
-    queryKey: ['sales-top-products', filters],
-    queryFn: async () => {
-      return metrics?.topProducts || generateDynamicMockMetrics(filters).topProducts;
-    },
-    ...queryOptions,
-  });
+  const query = useDashboardMetrics();
+  return {
+    ...query,
+    data: query.data ? query.data.topProducts : generateDynamicMockMetrics(filters).topProducts
+  } as any;
 };
 
 export const useSalesBySeller = () => {
   const filters = useFilters();
-  const { data: metrics } = useDashboardMetrics();
-  return useQuery({
-    queryKey: ['sales-by-seller', filters],
-    queryFn: async () => {
-      return metrics?.bySeller || generateDynamicMockMetrics(filters).bySeller;
-    },
-    ...queryOptions,
-  });
+  const query = useDashboardMetrics();
+  return {
+    ...query,
+    data: query.data ? query.data.bySeller : generateDynamicMockMetrics(filters).bySeller
+  } as any;
 };
 
 export const useDetailedPaymentMetrics = () => {
