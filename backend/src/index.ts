@@ -18,7 +18,12 @@ const app = express();
 
 // Middlewares
 app.use(helmet());
-app.use(cors({ origin: env.FRONTEND_URL }));
+app.use(cors({
+  origin: (origin, callback) => {
+    callback(null, true);
+  },
+  credentials: true
+}));
 app.use(express.json());
 app.use('/api/', generalLimiter);
 
