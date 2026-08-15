@@ -55,9 +55,11 @@ export async function fetchDocuments(client: AxiosInstance, dateStart: string, d
   let hasMorePages = true;
 
   while (hasMorePages) {
-    const response = await client.post(`/documents/lists?page=${currentPage}`, {
-      date_start: dateStart,
-      date_end: dateEnd
+    const response = await client.get(`/documents/lists?page=${currentPage}`, {
+      params: {
+        date_start: dateStart,
+        date_end: dateEnd
+      }
     });
     
     const { data, meta } = response.data;
@@ -78,11 +80,7 @@ export async function fetchDocuments(client: AxiosInstance, dateStart: string, d
 export async function testConnection(subdomain: string, token: string): Promise<boolean> {
   try {
     const client = createBillingClient(subdomain, token);
-    const today = new Date().toISOString().split('T')[0];
-    await client.post('/documents/lists', {
-      date_start: today,
-      date_end: today
-    });
+    await client.get('/company');
     return true;
   } catch (error: any) {
     console.error(`❌ [Test Connection Error] para ${subdomain}:`, error.message);
