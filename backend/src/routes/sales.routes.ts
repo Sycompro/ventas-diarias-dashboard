@@ -415,21 +415,16 @@ router.get('/debug-sync-one', async (req: any, res) => {
     
     if (xmlUrl) {
       try {
-        const httpUrl = xmlUrl.replace('https://', 'http://');
-        const xmlRes = await axios.get(httpUrl, {
-          responseType: 'text',
-          timeout: 5000,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/xml, text/xml, */*',
-            'Authorization': `Bearer ${decryptedToken}`
-          },
-          httpsAgent: new https.Agent({ rejectUnauthorized: false })
-        });
-        xmlContent = xmlRes.data;
-        success = true;
+        const { execSync } = await import('child_process');
+        const curlCmd = `curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -H "Authorization: Bearer ${decryptedToken}" "${xmlUrl}"`;
+        const curlOut = execSync(curlCmd).toString();
+        xmlContent = curlOut;
+        success = xmlContent.includes('<');
+        if (!success) {
+          errorMsg = "Curl output did not contain XML: " + xmlContent.substring(0, 300);
+        }
       } catch (err: any) {
-        errorMsg = err.message + ' ' + (err.response?.data || '');
+        errorMsg = "Curl failed: " + err.message;
       }
     }
     
