@@ -155,19 +155,17 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
 
           if (doc.download_xml) {
             try {
-              // Descargar XML directamente con bypass de SSL y esquema HTTP para evitar bloqueo de Cloudflare
-              const xmlUrl = doc.download_xml.replace('https://', 'http://');
-              const xmlRes = await axios.get(xmlUrl, { 
-                responseType: 'text', 
-                timeout: 5000,
+              const response = await fetch(doc.download_xml, {
+                method: 'GET',
                 headers: {
                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                  'Accept': 'application/xml, text/xml, */*',
-                  'Authorization': `Bearer ${decryptedToken}`
-                },
-                httpsAgent: new https.Agent({ rejectUnauthorized: false })
+                  'Accept': 'application/xml, text/xml, */*'
+                }
               });
-              const xmlText = xmlRes.data;
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              const xmlText = await response.text();
               
               // Parsear items desde XML
               let startIdx = 0;

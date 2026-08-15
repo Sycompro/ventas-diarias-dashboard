@@ -415,16 +415,23 @@ router.get('/debug-sync-one', async (req: any, res) => {
     
     if (xmlUrl) {
       try {
-        const { execSync } = await import('child_process');
-        const curlCmd = `curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" -H "Authorization: Bearer ${decryptedToken}" "${xmlUrl}"`;
-        const curlOut = execSync(curlCmd).toString();
-        xmlContent = curlOut;
+        const response = await fetch(xmlUrl, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/xml, text/xml, */*'
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        xmlContent = await response.text();
         success = xmlContent.includes('<');
         if (!success) {
-          errorMsg = "Curl output did not contain XML: " + xmlContent.substring(0, 300);
+          errorMsg = "Fetch output did not contain XML: " + xmlContent.substring(0, 300);
         }
       } catch (err: any) {
-        errorMsg = "Curl failed: " + err.message;
+        errorMsg = "Fetch failed: " + err.message;
       }
     }
     
