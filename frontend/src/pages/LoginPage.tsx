@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Shield, BarChart3, Zap, Loader2, Building2 } from 'lucide-react';
+import { Lock, Eye, EyeOff, Shield, BarChart3, Zap, Loader2, Building2 } from 'lucide-react';
 import { useAuthStore } from '../hooks/useAuth';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [subdomain, setSubdomain] = useState('');
+  const [apiToken, setApiToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -20,20 +19,19 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     
     try {
-      if (!email || !password) {
-        setError('Por favor, ingresa correo y contraseña.');
+      if (!subdomain || !apiToken) {
+        setError('Por favor, ingresa el subdominio y el Token de la API.');
         setIsLoading(false);
         return;
       }
       
       await login({ 
-        email, 
-        password, 
-        subdomain: subdomain.trim() || undefined 
+        subdomain: subdomain.trim(),
+        apiToken: apiToken.trim()
       });
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Credenciales inválidas. Intenta nuevamente.');
+      setError(err.message || 'Credenciales inválidas o error de conexión.');
     } finally {
       setIsLoading(false);
     }
@@ -115,7 +113,7 @@ export const LoginPage: React.FC = () => {
 
           <div className="mb-10 text-center md:text-left">
             <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Bienvenido</h2>
-            <p className="text-slate-500">Inicia sesión en tu cuenta para continuar</p>
+            <p className="text-slate-500">Conéctate al facturador para acceder al panel</p>
           </div>
 
           {error && (
@@ -128,56 +126,39 @@ export const LoginPage: React.FC = () => {
           )}
 
           <form onSubmit={handleLogin} className={`space-y-5 ${error ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+            
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700 ml-1">Subdominio de la Sede (Opcional)</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <label className="text-xs font-semibold text-slate-500 tracking-wider">SUBDOMINIO DE LA EMPRESA</label>
+              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl focus-within:border-slate-400 focus-within:bg-white transition-all overflow-hidden">
+                <div className="pl-3.5 text-slate-400 shrink-0">
                   <Building2 size={18} />
                 </div>
                 <input
                   type="text"
                   value={subdomain}
                   onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/\s+/g, ''))}
-                  className="input pl-10 py-2.5 bg-slate-50 focus:bg-white"
-                  placeholder="ej: central (dejar vacío si eres Admin)"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700 ml-1">Correo Electrónico</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail size={18} />
-                </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input pl-10 py-2.5 bg-slate-50 focus:bg-white"
-                  placeholder="tu@empresa.com"
+                  className="w-full pl-3 pr-2 py-2.5 bg-transparent border-0 outline-none text-slate-800 placeholder-slate-400 text-sm"
+                  placeholder="ej: restauranteestrellamarina"
                   required
                 />
+                <span className="pr-3.5 text-slate-500 text-xs font-medium border-l border-slate-200 pl-3 bg-slate-100/50 py-2.5 shrink-0 select-none">
+                  .syscomecosistemadigital.com
+                </span>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between ml-1">
-                <label className="text-sm font-medium text-slate-700">Contraseña</label>
-                <a href="#" className="text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors">
-                  ¿Olvidaste tu contraseña?
-                </a>
-              </div>
+              <label className="text-xs font-semibold text-slate-500 tracking-wider">TOKEN DE LA API (API TOKEN)</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock size={18} />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input pl-10 pr-10 py-2.5 bg-slate-50 focus:bg-white"
-                  placeholder="••••••••"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-slate-400 focus:bg-white outline-none transition-all text-sm text-slate-800 placeholder-slate-400"
+                  placeholder="Ingresa tu API Token"
                   required
                 />
                 <button
@@ -190,17 +171,6 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center pt-2">
-              <input
-                id="remember-me"
-                type="checkbox"
-                className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 cursor-pointer"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600 cursor-pointer select-none">
-                Mantener sesión iniciada
-              </label>
-            </div>
-
             <button
               type="submit"
               disabled={isLoading}
@@ -209,19 +179,13 @@ export const LoginPage: React.FC = () => {
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="w-5 h-5 animate-spin text-white" />
-                  <span>Iniciando sesión...</span>
+                  <span>Conectando y sincronizando...</span>
                 </div>
               ) : (
-                'Iniciar Sesión'
+                'Iniciar Sesión / Conectar'
               )}
             </button>
           </form>
-
-          <div className="mt-8 flex items-center justify-center">
-            <p className="text-sm text-slate-500">
-              ¿No tienes cuenta? <a href="#" className="font-medium text-primary-600 hover:text-primary-700 transition-colors">Contacta al administrador</a>
-            </p>
-          </div>
         </div>
       </div>
 

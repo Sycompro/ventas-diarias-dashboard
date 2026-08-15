@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { db } from '../config/database.js';
-import { companies, userCompanies } from '../db/schema.js';
+import { companies } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { encrypt, decrypt } from '../services/crypto.service.js';
-import { testConnection } from '../services/billing-api.service.js';
+import { testConnection, createBillingClient } from '../services/billing-api.service.js';
 import { syncCompany } from '../services/sync.service.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
@@ -12,18 +12,28 @@ router.use(authenticate);
 
 router.get('/', async (req: any, res) => {
   try {
-    const userComps = await db.query.userCompanies.findMany({
-      where: eq(userCompanies.userId, req.user.id),
-      with: { company: true }
+    const comp = await db.query.companies.findFirst({
+      where: eq(companies.id, req.user.companyId)
     });
-    const comps = userComps.map(uc => uc.company).filter(c => c.isActive);
-    res.json(comps.map(c => ({ id: c.id, name: c.name, ruc: c.ruc, subdomain: c.subdomain })));
+    
+    if (!comp || !comp.isActive) {
+      return res.json([]);
+    }
+    
+    res.json([{ 
+      id: comp.id, 
+      name: comp.name, 
+      ruc: comp.ruc, 
+      subdomain: comp.subdomain,
+      currencySymbol: comp.currencySymbol,
+      timezone: comp.timezone
+    }]);
   } catch (error) {
-    res.status(500).json({ message: 'Error retrieving companies' });
+    res.status(500).json({ message: 'Error retrieving company' });
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', async (req: any, res) => {
   try {
     const { name, ruc, subdomain, apiToken, timezone, currencySymbol } = req.body;
     const { encrypted, iv, tag } = encrypt(apiToken);
@@ -37,28 +47,50 @@ router.post('/', async (req, res) => {
       currencySymbol: currencySymbol || 'S/.'
     }).returning();
     
-    // Asignar al usuario actual si es necesario
-    await db.insert(userCompanies).values({
-      userId: (req as any).user.id,
-      companyId: company.id
-    });
-    
     res.status(201).json({ id: company.id, name, ruc, subdomain });
   } catch (error) {
     res.status(500).json({ message: 'Error creating company' });
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req: any, res) => {
   try {
-    const { name, subdomain, apiToken } = req.body;
-    const updateData: any = { name, subdomain };
+    if (req.params.id !== req.user.companyId) {
+      return res.status(403).json({ message: 'Forbidden: Cannot modify other companies' });
+    }
+    
+    const { subdomain, apiToken } = req.body;
+    const updateData: any = {};
+    if (subdomain) updateData.subdomain = subdomain;
     
     if (apiToken) {
       const { encrypted, iv, tag } = encrypt(apiToken);
       updateData.apiTokenEncrypted = encrypted;
       updateData.apiTokenIv = iv;
       updateData.apiTokenTag = tag;
+    }
+    
+    // Si cambió el subdomain o el apiToken, re-consultar el perfil para actualizar RUC/Razón Social
+    if (subdomain || apiToken) {
+      const company = await db.query.companies.findFirst({ where: eq(companies.id, req.user.companyId) });
+      if (company) {
+        const activeSubdomain = subdomain || company.subdomain;
+        let activeToken = apiToken;
+        if (!activeToken) {
+          activeToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
+        }
+        
+        try {
+          const client = createBillingClient(activeSubdomain, activeToken);
+          const profileRes = await client.get('/company');
+          if (profileRes.data && profileRes.data.data) {
+            updateData.name = profileRes.data.data.name || company.name;
+            updateData.ruc = profileRes.data.data.number || company.ruc;
+          }
+        } catch (profileError) {
+          console.warn(`[Warning] No se pudo actualizar perfil de empresa en PUT`);
+        }
+      }
     }
     
     updateData.updatedAt = new Date();
@@ -70,17 +102,31 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req: any, res) => {
   try {
-    await db.update(companies).set({ isActive: false }).where(eq(companies.id, req.params.id));
-    res.json({ message: 'Company deactivated' });
+    if (req.params.id !== req.user.companyId) {
+      return res.status(403).json({ message: 'Forbidden: Cannot modify other companies' });
+    }
+    
+    await db.update(companies).set({ 
+      isActive: false,
+      apiTokenEncrypted: '',
+      apiTokenIv: '',
+      apiTokenTag: ''
+    }).where(eq(companies.id, req.params.id));
+    
+    res.json({ message: 'Company deactivated and disconnected' });
   } catch (error) {
     res.status(500).json({ message: 'Error deactivating company' });
   }
 });
 
-router.post('/:id/test', async (req, res) => {
+router.post('/:id/test', async (req: any, res) => {
   try {
+    if (req.params.id !== req.user.companyId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    
     const { apiToken } = req.body;
     const company = await db.query.companies.findFirst({ where: eq(companies.id, req.params.id) });
     if (!company) return res.status(404).json({ message: 'Company not found' });
@@ -97,8 +143,12 @@ router.post('/:id/test', async (req, res) => {
   }
 });
 
-router.post('/:id/sync', async (req, res) => {
+router.post('/:id/sync', async (req: any, res) => {
   try {
+    if (req.params.id !== req.user.companyId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    
     const result = await syncCompany(req.params.id);
     res.json(result);
   } catch (error) {

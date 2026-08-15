@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Building2, Plus, RefreshCw, Trash2, Edit, Check, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
 import { useCompanies } from '../hooks/useCompany';
+import { useAuthStore } from '../hooks/useAuth';
 import { companyService } from '../services/api';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -59,16 +60,12 @@ export const CompaniesPage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !ruc || !subdomain) {
-      addToast('error', 'Por favor, completa los campos requeridos.');
-      return;
-    }
-    if (ruc.length !== 11 || isNaN(Number(ruc))) {
-      addToast('error', 'El RUC debe tener exactamente 11 dígitos numéricos.');
+    if (!subdomain) {
+      addToast('error', 'Por favor, completa el subdominio de la empresa.');
       return;
     }
     if (!editingCompany && !apiToken) {
-      addToast('error', 'Debes ingresar el token de API para configurar una nueva empresa.');
+      addToast('error', 'Debes ingresar el token de API para configurar la empresa.');
       return;
     }
 
@@ -77,22 +74,21 @@ export const CompaniesPage: React.FC = () => {
       if (editingCompany) {
         // Edit mode
         await companyService.update(editingCompany.id, {
-          name,
           subdomain,
           apiToken: apiToken || undefined, // Overwrite if provided
         });
-        addToast('success', `Empresa "${name}" actualizada correctamente.`);
+        addToast('success', `Facturador actualizado correctamente.`);
       } else {
         // Create mode
         await companyService.create({
-          name,
-          ruc,
+          name: subdomain.toUpperCase(),
+          ruc: '00000000000',
           subdomain,
           apiToken,
           timezone,
           currencySymbol,
         });
-        addToast('success', `Empresa "${name}" configurada e integrada.`);
+        addToast('success', `Facturador configurado e integrado.`);
       }
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       setIsModalOpen(false);
@@ -103,31 +99,37 @@ export const CompaniesPage: React.FC = () => {
     }
   };
 
+  const logout = useAuthStore((state: any) => state.logout);
+
   const handleDelete = async (id: string, companyName: string) => {
-    if (!window.confirm(`¿Estás seguro de que deseas desactivar la integración de "${companyName}"? Se detendrán los despliegues de sincronización.`)) {
+    if (!window.confirm(`¿Estás seguro de que deseas desconectar el facturador de "${companyName}"? Se detendrán las sincronizaciones automáticas y se cerrará tu sesión.`)) {
       return;
     }
 
     try {
       await companyService.delete(id);
-      addToast('success', `Integración con "${companyName}" desactivada exitosamente.`);
+      addToast('success', `Facturador "${companyName}" desconectado correctamente.`);
       queryClient.invalidateQueries({ queryKey: ['companies'] });
+      setTimeout(() => {
+        logout();
+        window.location.href = '/login';
+      }, 1500);
     } catch (err: any) {
-      addToast('error', `Error al eliminar: ${err.message}`);
+      addToast('error', `Error al desconectar: ${err.message}`);
     }
   };
 
   const handleTestConnection = async (id: string, companyName: string) => {
-    setTestingId(id);
+    setTestingId(id || 'new');
     try {
-      const res = await companyService.testConnection(id, ''); // Backend decrypts DB credentials automatically
+      const res = await companyService.testConnection(id, apiToken);
       if (res.success) {
-        addToast('success', `¡Conexión Exitosa con "${companyName}"! El facturador respondió correctamente.`);
+        addToast('success', `¡Conexión Exitosa! El facturador respondió correctamente.`);
       } else {
-        addToast('error', `Fallo de autenticación: El token de la empresa "${companyName}" no fue aceptado.`);
+        addToast('error', `Fallo de autenticación: El token de la empresa no fue aceptado.`);
       }
     } catch (err: any) {
-      addToast('error', `Fallo de conexión con "${companyName}": RUC/subdominio incorrectos o sin internet.`);
+      addToast('error', `Fallo de conexión: Verifica el subdominio o el token.`);
     } finally {
       setTestingId(null);
     }
@@ -137,7 +139,7 @@ export const CompaniesPage: React.FC = () => {
     setSyncingId(id);
     try {
       const res = await companyService.sync(id);
-      addToast('success', `¡Sincronización Completada! Se importaron ${res.documentsSynced || 0} documentos nuevos para "${companyName}".`);
+      addToast('success', `¡Sincronización Completada! Se importaron ${res.documentsSynced || 0} comprobantes nuevos para "${companyName}".`);
       queryClient.invalidateQueries({ queryKey: ['sales-metrics'] });
     } catch (err: any) {
       addToast('error', `Error al sincronizar datos de "${companyName}": ${err.message}`);
@@ -154,22 +156,23 @@ export const CompaniesPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Building2 className="text-primary-600" /> Integración de Empresas y Sedes
+            <Building2 className="text-primary-600" /> Integración del Facturador
           </h2>
-          <p className="text-sm text-slate-500 mt-1">Conecta múltiples sucursales a la API de facturación electrónica SUNAT.</p>
+          <p className="text-sm text-slate-500 mt-1">Conecta y gestiona la sincronización con la API de tu facturador electrónico.</p>
         </div>
-        <button 
-          onClick={openAddModal}
-          className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all font-medium flex items-center gap-2 shadow-sm shadow-primary-600/10 hover:shadow-primary-600/20 active:scale-95 cursor-pointer text-sm"
-        >
-          <Plus size={16} /> Configurar Nueva Sede
-        </button>
+        {(!companies || companies.length === 0) && (
+          <button 
+            onClick={openAddModal}
+            className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all font-medium flex items-center gap-2 shadow-sm shadow-primary-600/10 hover:shadow-primary-600/20 active:scale-95 cursor-pointer text-sm"
+          >
+            <Plus size={16} /> Configurar Nueva Sede
+          </button>
+        )}
       </div>
 
       {/* Loader */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-48 bg-white rounded-xl shadow-sm animate-pulse"></div>
           <div className="h-48 bg-white rounded-xl shadow-sm animate-pulse"></div>
         </div>
       ) : (
@@ -225,7 +228,7 @@ export const CompaniesPage: React.FC = () => {
                     onClick={() => handleForceSync(company.id, company.name)}
                     disabled={syncingId === company.id}
                     className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
-                    title="Descargar y sincronizar comprobantes del día"
+                    title="Descargar y sincronizar comprobantes"
                   >
                     <RefreshCw size={14} className={syncingId === company.id ? 'animate-spin' : ''} />
                     {syncingId === company.id ? 'Sincronizando...' : 'Sincronizar'}
@@ -243,7 +246,7 @@ export const CompaniesPage: React.FC = () => {
                   <button 
                     onClick={() => handleDelete(company.id, company.name)}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                    title="Desactivar integración"
+                    title="Desconectar integración"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -264,7 +267,7 @@ export const CompaniesPage: React.FC = () => {
                 onClick={openAddModal}
                 className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
               >
-                Configurar Primera Empresa
+                Configurar Primera Sede
               </button>
             </div>
           )}
@@ -274,136 +277,94 @@ export const CompaniesPage: React.FC = () => {
       {/* CRUD / Integration Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6 relative">
+            {/* Close button */}
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors text-xl font-bold"
+            >
+              &times;
+            </button>
+
             {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-50 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Building2 size={20} className="text-primary-600" />
-                {editingCompany ? 'Editar Configuración de Sede' : 'Conectar Nueva Sede'}
-              </h3>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors text-lg font-bold"
-              >
-                &times;
-              </button>
+            <div className="flex items-start gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+                <Building2 size={22} className="text-slate-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                  Configurar Facturador Electrónico
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Vincula tu cuenta del facturador del ecosistema digital para cargar tus comprobantes y analizarlos en tiempo real.
+                </p>
+              </div>
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-500">Razón Social / Nombre Comercial *</label>
-                <input 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
-                  placeholder="Ej. Comercializadora San José" 
-                  className="w-full px-3 py-2 bg-slate-50 border-0 rounded-lg text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:bg-white outline-none transition-all shadow-inner text-sm"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500">RUC de la Empresa *</label>
+            <form onSubmit={handleSave} className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 tracking-wider">SUBDOMINIO DE LA EMPRESA</label>
+                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl focus-within:border-slate-400 focus-within:bg-white transition-all overflow-hidden">
                   <input 
                     type="text" 
-                    value={ruc} 
-                    onChange={(e) => setRuc(e.target.value)} 
-                    placeholder="11 dígitos" 
-                    maxLength={11}
-                    className="w-full px-3 py-2 bg-slate-50 border-0 rounded-lg text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:bg-white outline-none transition-all shadow-inner text-sm disabled:opacity-60"
-                    disabled={!!editingCompany} // Block RUC modification to maintain database integrity
+                    value={subdomain} 
+                    onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/\s+/g, ''))} 
+                    placeholder="restauranteestrellamarina" 
+                    className="w-full px-3 py-2.5 bg-transparent border-0 outline-none text-slate-800 placeholder-slate-400 text-sm"
                     required
                   />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-500">Subdominio Facturador *</label>
-                  <div className="relative flex items-center">
-                    <input 
-                      type="text" 
-                      value={subdomain} 
-                      onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/\s+/g, ''))} 
-                      placeholder="ej. miempresa" 
-                      className="w-full px-3 py-2 bg-slate-50 border-0 rounded-lg text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:bg-white outline-none transition-all shadow-inner text-sm"
-                      required
-                    />
-                  </div>
+                  <span className="pr-3 text-slate-500 text-xs font-semibold border-l border-slate-200 pl-3 bg-slate-100/50 py-2.5 shrink-0 select-none">
+                    .syscomecosistemadigital.com
+                  </span>
                 </div>
               </div>
 
-              {/* API Connection Information box */}
-              {subdomain && (
-                <div className="p-3 bg-primary-50/50 rounded-lg text-xs text-primary-800 flex items-start gap-2">
-                  <HelpCircle size={16} className="shrink-0 mt-0.5 text-primary-600" />
-                  <p>
-                    Se establecerá comunicación con:<br />
-                    <strong className="font-mono break-all text-primary-900">
-                      https://{subdomain}.syscomecosistemadigital.com/api
-                    </strong>
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-500">
-                  Token de Autorización API (Bearer Token) *
-                </label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 tracking-wider">TOKEN DE LA API (API TOKEN)</label>
                 <input 
                   type="password" 
                   value={apiToken} 
                   onChange={(e) => setApiToken(e.target.value)} 
-                  placeholder={editingCompany ? '•••••••••••••••• (Guardado - Dejar vacío para no cambiar)' : 'Ingresa el token de seguridad provisto por el facturador'} 
-                  className="w-full px-3 py-2 bg-slate-50 border-0 rounded-lg text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:bg-white outline-none transition-all shadow-inner text-sm"
+                  placeholder={editingCompany ? '••••••••••••••••' : 'bJ7A••••••••kHEw'} 
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-slate-400 focus:bg-white outline-none transition-all text-sm text-slate-800 placeholder-slate-400"
                   required={!editingCompany}
                 />
               </div>
 
-              {!editingCompany && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Moneda por Defecto</label>
-                    <select 
-                      value={currencySymbol} 
-                      onChange={(e) => setCurrencySymbol(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border-0 rounded-lg text-slate-800 focus:ring-2 focus:ring-primary-500 focus:bg-white outline-none transition-all shadow-inner text-sm"
-                    >
-                      <option value="S/.">Soles (S/.)</option>
-                      <option value="$">Dólares ($)</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Zona Horaria</label>
-                    <select 
-                      value={timezone} 
-                      onChange={(e) => setTimezone(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border-0 rounded-lg text-slate-800 focus:ring-2 focus:ring-primary-500 focus:bg-white outline-none transition-all shadow-inner text-sm"
-                    >
-                      <option value="America/Lima">America/Lima (UTC-5)</option>
-                      <option value="America/Santiago">America/Santiago</option>
-                      <option value="America/Bogota">America/Bogota</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {/* Modal Footer */}
-              <div className="pt-4 flex gap-3 justify-end border-t border-slate-100 mt-6">
+              {/* Main Actions Row */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
                 <button 
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg font-medium text-xs cursor-pointer transition-colors"
+                  onClick={() => handleTestConnection(editingCompany?.id || '', name)}
+                  disabled={testingId !== null}
+                  className="px-4 py-2.5 bg-slate-105 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer text-center"
                 >
-                  Cancelar
+                  {testingId ? 'Probando...' : 'Probar Conexión'}
                 </button>
                 <button 
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all font-medium text-xs cursor-pointer disabled:opacity-60"
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer text-center shadow-sm"
                 >
-                  {saving ? 'Guardando...' : 'Guardar Sede'}
+                  {saving ? 'Guardando...' : 'Guardar Conexión'}
                 </button>
               </div>
+
+              {/* Disconnect Action */}
+              {editingCompany && (
+                <div className="pt-3 border-t border-slate-100 mt-2">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      handleDelete(editingCompany.id, editingCompany.name);
+                    }}
+                    className="w-full px-4 py-2.5 border border-red-250 hover:bg-red-50 text-red-600 rounded-xl font-semibold text-sm transition-colors cursor-pointer text-center"
+                  >
+                    Desconectar Facturador
+                  </button>
+                </div>
+              )}
             </form>
           </div>
         </div>

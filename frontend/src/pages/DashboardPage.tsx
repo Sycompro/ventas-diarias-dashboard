@@ -33,6 +33,7 @@ import { DataTable, Column } from '../components/ui/DataTable';
 import { InsightCard } from '../components/ui/InsightCard';
 import { useFilters } from '../hooks/useFilters';
 import { formatCurrency } from '../utils/formatters';
+import { useAuthStore } from '../hooks/useAuth';
 
 export const DashboardPage: React.FC = () => {
   const { datePreset, dateStart, dateEnd, granularity } = useFilters();
@@ -52,7 +53,8 @@ export const DashboardPage: React.FC = () => {
   };
 
   const today = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
-  const userName = "Carlos";
+  const user = useAuthStore((state) => state.user);
+  const userName = user?.name || "Empresa";
 
   const sellersRanking = sellersData?.map((s: any) => ({
     id: s.sellerName,

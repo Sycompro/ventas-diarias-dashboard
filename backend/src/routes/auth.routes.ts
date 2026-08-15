@@ -1,105 +1,120 @@
 import { Router } from 'express';
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import axios from 'axios';
 import { db } from '../config/database.js';
-import { users, companies } from '../db/schema.js';
+import { companies } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { env } from '../config/env.js';
+import { createBillingClient, testConnection } from '../services/billing-api.service.js';
+import { encrypt } from '../services/crypto.service.js';
 
 const router = Router();
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password, subdomain } = req.body;
+    const { subdomain, apiToken } = req.body;
     
-    if (!email || !password) {
-      return res.status(400).json({ message: 'El correo y la contraseña son obligatorios' });
+    if (!subdomain || !apiToken) {
+      return res.status(400).json({ message: 'El subdominio y el Token de la API son obligatorios' });
     }
-    
-    // 1. Caso de Administrador Maestro / Local (Bypass de subdominio)
-    const localUser = await db.query.users.findFirst({
-      where: eq(users.email, email.toLowerCase().trim())
-    });
-    
-    if (localUser && (!subdomain || localUser.role === 'admin')) {
-      const isValid = await bcrypt.compare(password, localUser.passwordHash);
-      if (isValid && localUser.isActive) {
-        const tokenPayload = {
-          id: localUser.id,
-          email: localUser.email,
-          name: localUser.name,
-          role: localUser.role,
-          companyId: null // Acceso consolidado de administrador maestro
-        };
-        
-        // 8 horas de duración para la sesión de consulta
-        const accessToken = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '8h' });
-        const refreshToken = jwt.sign(tokenPayload, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-        
-        return res.json({ accessToken, refreshToken, user: tokenPayload });
-      }
+
+    const cleanSubdomain = subdomain.toLowerCase().trim().replace(/\s+/g, '');
+    const cleanToken = apiToken.trim();
+
+    // 1. Probar conexión en vivo con el Facturador
+    const isConnected = await testConnection(cleanSubdomain, cleanToken);
+    if (!isConnected) {
+      return res.status(401).json({ message: 'Conexión fallida: El subdominio o el Token de la API son incorrectos.' });
     }
-    
-    // 2. Caso de Usuario de Empresa / Facturador
-    if (!subdomain) {
-      return res.status(400).json({ message: 'El subdominio de la empresa es requerido para ingresar' });
-    }
-    
-    // Buscar si la empresa existe en el dashboard
-    const company = await db.query.companies.findFirst({
-      where: eq(companies.subdomain, subdomain.toLowerCase().trim())
-    });
-    
-    if (!company || !company.isActive) {
-      return res.status(404).json({ message: 'La empresa especificada no está registrada en el Dashboard' });
-    }
-    
-    // Intentar loguear contra la API del Facturador de la empresa
-    const targetUrl = `https://${company.subdomain}.syscomecosistemadigital.com/api/login`;
-    
+
+    // 2. Intentar obtener el perfil de la empresa desde el Facturador para registrar RUC y Razón Social reales
+    let companyName = cleanSubdomain.toUpperCase();
+    let companyRuc = '00000000000';
+
     try {
-      const response = await axios.post(targetUrl, {
-        email,
-        password
-      }, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
-        timeout: 10000
-      });
-      
-      if (response.data && response.data.success) {
-        const tokenPayload = {
-          id: `fact_${email}`,
-          email: email.toLowerCase().trim(),
-          name: response.data.user?.name || email.split('@')[0],
-          role: 'viewer', // Rol de consulta
-          companyId: company.id,
-          companySubdomain: company.subdomain
-        };
-        
-        const accessToken = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '8h' });
-        const refreshToken = jwt.sign(tokenPayload, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-        
-        return res.json({ accessToken, refreshToken, user: tokenPayload });
-      } else {
-        return res.status(401).json({ message: 'Las credenciales de facturador son incorrectas' });
+      const client = createBillingClient(cleanSubdomain, cleanToken);
+      const profileRes = await client.get('/company');
+      if (profileRes.data && profileRes.data.data) {
+        companyName = profileRes.data.data.name || companyName;
+        companyRuc = profileRes.data.data.number || companyRuc;
       }
-    } catch (apiError: any) {
-      console.warn(`[Login Error] para ${email} en facturador ${subdomain}:`, apiError.message);
-      const status = apiError.response?.status;
-      if (status === 401 || status === 422) {
-        return res.status(401).json({ message: 'Correo o contraseña incorrectos en el Facturador' });
-      }
-      return res.status(502).json({ 
-        message: `No se pudo conectar al servidor de facturación (${subdomain}). Verifica la conexión o el subdominio.` 
-      });
+    } catch (profileError) {
+      console.warn(`[Warning] No se pudo obtener perfil de empresa (/company) para ${cleanSubdomain}. Se usará fallback.`);
     }
+
+    // 3. Cifrar el token para almacenarlo
+    const { encrypted, iv, tag } = encrypt(cleanToken);
+
+    // 4. Buscar si la empresa existe en el Dashboard
+    let company = await db.query.companies.findFirst({
+      where: eq(companies.subdomain, cleanSubdomain)
+    });
+
+    if (!company) {
+      // Registrar nueva empresa
+      const [newCompany] = await db.insert(companies).values({
+        name: companyName,
+        ruc: companyRuc,
+        subdomain: cleanSubdomain,
+        apiTokenEncrypted: encrypted,
+        apiTokenIv: iv,
+        apiTokenTag: tag,
+        timezone: 'America/Lima',
+        currencySymbol: 'S/.',
+        isActive: true
+      }).returning();
+      
+      company = newCompany;
+      console.log(`🚀 Nueva empresa registrada automáticamente: ${companyName} (${cleanSubdomain})`);
+    } else {
+      // Actualizar token si existe pero ha cambiado
+      await db.update(companies).set({
+        apiTokenEncrypted: encrypted,
+        apiTokenIv: iv,
+        apiTokenTag: tag,
+        name: companyName,
+        ruc: companyRuc,
+        isActive: true,
+        updatedAt: new Date()
+      }).where(eq(companies.id, company.id));
+      
+      company = {
+        ...company,
+        apiTokenEncrypted: encrypted,
+        apiTokenIv: iv,
+        apiTokenTag: tag,
+        name: companyName,
+        ruc: companyRuc,
+        isActive: true
+      };
+    }
+
+    // 5. Generar JWT para la sesión
+    const tokenPayload = {
+      id: company.id,
+      companyId: company.id,
+      subdomain: company.subdomain,
+      name: company.name,
+      role: 'manager' // Todos los clientes entran como manager de su propia sede
+    };
+
+    const accessToken = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '8h' });
+    const refreshToken = jwt.sign(tokenPayload, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+
+    return res.json({ 
+      accessToken, 
+      refreshToken, 
+      user: {
+        id: company.id,
+        name: company.name,
+        email: `${cleanSubdomain}@syscomecosistemadigital.com`, // Email virtual para compatibilidad del front
+        role: 'manager',
+        companyId: company.id,
+        companySubdomain: company.subdomain
+      } 
+    });
+
   } catch (error) {
-    console.error(error);
+    console.error('[Login Error]:', error);
     res.status(500).json({ message: 'Error interno en el servidor de autenticación' });
   }
 });
@@ -116,11 +131,13 @@ router.post('/refresh', async (req, res) => {
     
     const tokenPayload = {
       id: decoded.id,
-      email: decoded.email,
+      companyId: decoded.companyId,
+      subdomain: decoded.subdomain,
+      name: decoded.name,
       role: decoded.role
     };
     
-    const newAccessToken = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '15m' });
+    const newAccessToken = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '8h' });
     
     res.json({ accessToken: newAccessToken });
   } catch (error) {

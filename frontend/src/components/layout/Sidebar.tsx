@@ -31,7 +31,7 @@ const navGroups = [
       { name: 'Dashboard', path: '/', icon: LayoutDashboard },
       { name: 'Ventas', path: '/ventas', icon: ShoppingCart },
       { name: 'Vendedores', path: '/ventas/vendedores', icon: Users },
-      { name: 'Empresas', path: '/configuracion/empresas', icon: Building2 },
+      { name: 'Facturador', path: '/configuracion/empresas', icon: Building2 },
     ]
   },
   {

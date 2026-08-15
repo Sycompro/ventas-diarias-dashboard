@@ -16,6 +16,9 @@ import reportsRoutes from './routes/reports.routes.js';
 
 const app = express();
 
+// Trust proxy for Railway reverse proxy rate limiting
+app.set('trust proxy', 1);
+
 // Middlewares
 app.use(helmet());
 app.use(cors({
