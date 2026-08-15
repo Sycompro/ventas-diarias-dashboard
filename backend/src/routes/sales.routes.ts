@@ -395,9 +395,13 @@ router.get('/debug-categories', async (req, res) => {
 
 router.get('/debug-sync-one', async (req: any, res) => {
   try {
-    const config = await getCompanyConfig(req.user.companyId);
-    const decryptedToken = decrypt(config.apiTokenEncrypted, config.apiTokenIv, config.apiTokenTag);
-    const client = createBillingClient(config.subdomain, decryptedToken);
+    const company = await db.query.companies.findFirst({
+      where: eq(companies.id, req.user.companyId)
+    });
+    if (!company) return res.status(404).json({ message: 'Company not found' });
+    
+    const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
+    const client = createBillingClient(company.subdomain, decryptedToken);
     
     const docs = await fetchDocuments(client, '2026-08-01', '2026-08-15');
     if (docs.length === 0) return res.json({ message: 'No documents found' });
