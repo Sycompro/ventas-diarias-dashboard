@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -37,6 +37,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { intelligenceService, companyService } from '../services/api';
 import { GlobalFilters } from '../components/filters/GlobalFilters';
+import { useHeaderStore } from '../hooks/useHeader';
 
 export const DashboardPage: React.FC = () => {
   const { companyId, datePreset, dateStart, dateEnd, granularity } = useFilters();
@@ -50,6 +51,8 @@ export const DashboardPage: React.FC = () => {
   const { data: sellersData, isLoading: loadingSellers } = useSalesBySeller();
   const { data: detailedPayments, isLoading: loadingDetailed } = useDetailedPaymentMetrics();
 
+  const setHeader = useHeaderStore((state) => state.setHeader);
+  const clearHeader = useHeaderStore((state) => state.clearHeader);
 
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -91,6 +94,31 @@ export const DashboardPage: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const userName = user?.name || "Empresa";
 
+  useEffect(() => {
+    setHeader(
+      `Buenos días, ${userName}`,
+      today,
+      <>
+        <button 
+          onClick={handleSync}
+          disabled={isSyncing}
+          className="inline-flex items-center gap-1 py-1 px-2 bg-white border border-slate-200 text-slate-700 text-[10px] sm:text-[11px] font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200"
+        >
+          <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
+          {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+        </button>
+        <button 
+          onClick={handleExport}
+          className="inline-flex items-center gap-1 py-1 px-2.5 bg-slate-900 text-white text-[10px] sm:text-[11px] font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+        >
+          <Download className="w-3 h-3" />
+          Exportar
+        </button>
+      </>
+    );
+    return () => clearHeader();
+  }, [userName, today, isSyncing, companyId, dateStart, dateEnd, token]);
+
   const sellersRanking = sellersData?.map((s: any) => ({
     id: s.sellerName,
     name: s.sellerName,
@@ -109,30 +137,6 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Buenos días, {userName}</h1>
-          <p className="text-xs text-slate-500 mt-0.5 capitalize-first">{today}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
-            {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
-          </button>
-          <button 
-            onClick={handleExport}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Exportar
-          </button>
-        </div>
-      </div>
 
       {/* Barra de Filtros Globales */}
       <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm mb-6 animate-in fade-in duration-500">

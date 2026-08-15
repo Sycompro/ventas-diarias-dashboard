@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ShoppingCart, 
   ChevronDown, 
@@ -18,6 +18,7 @@ import { useSalesPivot, useSalesDocuments } from '../hooks/useSalesMetrics';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import { useAuthStore } from '../hooks/useAuth';
 import axios from 'axios';
+import { useHeaderStore } from '../hooks/useHeader';
 
 export const SalesPage: React.FC = () => {
   const { companyId, dateStart, dateEnd } = useFilters();
@@ -28,6 +29,9 @@ export const SalesPage: React.FC = () => {
   
   const [expandedSedes, setExpandedSedes] = useState<Record<string, boolean>>({});
   const [docSearch, setDocSearch] = useState('');
+
+  const setHeader = useHeaderStore((state) => state.setHeader);
+  const clearHeader = useHeaderStore((state) => state.clearHeader);
 
   const toggleSede = (sede: string) => {
     setExpandedSedes(prev => ({ ...prev, [sede]: !prev[sede] }));
@@ -52,6 +56,21 @@ export const SalesPage: React.FC = () => {
       URL.revokeObjectURL(href);
     }).catch(err => console.error("Error exporting report:", err));
   };
+
+  useEffect(() => {
+    setHeader(
+      'Detalle de Ventas',
+      'Cuadro estadístico de ingresos consolidado por sedes, vendedores y métodos de pago.',
+      <button 
+        onClick={handleExport}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-[11px] font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+      >
+        <Download size={12} />
+        Exportar Excel
+      </button>
+    );
+    return () => clearHeader();
+  }, [companyId, dateStart, dateEnd, token]);
 
   // Calcular totales generales
   const grandTotals = useMemo(() => {
@@ -91,23 +110,6 @@ export const SalesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
-      {/* Cabecera */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 animate-in fade-in duration-500">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2 tracking-tight">
-            <ShoppingCart className="text-primary-600" /> Detalle de Ventas
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">Cuadro estadístico de ingresos consolidado por sedes, vendedores y métodos de pago.</p>
-        </div>
-        <button 
-          onClick={handleExport}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 shrink-0"
-        >
-          <Download size={14} />
-          Exportar Excel
-        </button>
-      </div>
 
       {/* Filtros Globales */}
       <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm animate-in fade-in duration-500">
