@@ -95,13 +95,35 @@ export const SalesPage: React.FC = () => {
 
   const docSummaryData = useMemo(() => {
     if (!docTypeMetrics) return [];
-    return [
-      { name: 'Facturas', amount: docTypeMetrics.facturas.amount, count: docTypeMetrics.facturas.count, colorBg: 'bg-blue-50 text-blue-700 border-blue-100/50' },
-      { name: 'Boletas', amount: docTypeMetrics.boletas.amount, count: docTypeMetrics.boletas.count, colorBg: 'bg-emerald-50 text-emerald-700 border-emerald-100/50' },
-      { name: 'Notas de Venta', amount: docTypeMetrics.notasVenta.amount, count: docTypeMetrics.notasVenta.count, colorBg: 'bg-amber-50 text-amber-700 border-amber-100/50' },
-      { name: 'Notas de Crédito', amount: docTypeMetrics.notasCredito.amount, count: docTypeMetrics.notasCredito.count, colorBg: 'bg-rose-50 text-rose-700 border-rose-100/50' },
+    const base = [
+      { name: 'Facturas', amount: docTypeMetrics.facturas.amount, count: docTypeMetrics.facturas.count, colorBg: 'bg-blue-50 text-blue-700 border-blue-100/50', type: 'doc', icon: <DollarSign size={13} className="text-blue-500 shrink-0" /> },
+      { name: 'Boletas', amount: docTypeMetrics.boletas.amount, count: docTypeMetrics.boletas.count, colorBg: 'bg-emerald-50 text-emerald-700 border-emerald-100/50', type: 'doc', icon: <CreditCard size={13} className="text-emerald-500 shrink-0" /> },
+      { name: 'Notas de Venta', amount: docTypeMetrics.notasVenta.amount, count: docTypeMetrics.notasVenta.count, colorBg: 'bg-amber-50 text-amber-700 border-amber-100/50', type: 'doc', icon: <ArrowLeftRight size={13} className="text-amber-500 shrink-0" /> },
+      { name: 'Notas de Crédito', amount: docTypeMetrics.notasCredito.amount, count: docTypeMetrics.notasCredito.count, colorBg: 'bg-rose-50 text-rose-700 border-rose-100/50', type: 'doc', icon: <Smartphone size={13} className="text-rose-500 shrink-0" /> },
     ];
-  }, [docTypeMetrics]);
+    if (metrics?.byItemType) {
+      const totalItem = (metrics.byItemType.products || 0) + (metrics.byItemType.services || 0) || 1;
+      base.push(
+        { 
+          name: 'Productos', 
+          amount: metrics.byItemType.products, 
+          count: Math.round((metrics.byItemType.products / totalItem) * 100), 
+          colorBg: 'bg-blue-50 text-blue-700 border-blue-100/50', 
+          type: 'category', 
+          icon: <Package size={13} className="text-blue-500 shrink-0" /> 
+        },
+        { 
+          name: 'Servicios', 
+          amount: metrics.byItemType.services, 
+          count: Math.round((metrics.byItemType.services / totalItem) * 100), 
+          colorBg: 'bg-emerald-50 text-emerald-700 border-emerald-100/50', 
+          type: 'category', 
+          icon: <Briefcase size={13} className="text-emerald-500 shrink-0" /> 
+        }
+      );
+    }
+    return base;
+  }, [docTypeMetrics, metrics]);
 
   return (
     <div className="space-y-6">
@@ -111,36 +133,46 @@ export const SalesPage: React.FC = () => {
         <GlobalFilters />
       </div>
 
-      {/* Resumen por Tipo de Comprobante - Solicitud de Usuario */}
+      {/* Resumen General Unificado - Solicitud de Usuario */}
       <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-100">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="font-bold text-slate-900 text-sm">Resumen por Tipo de Comprobante</h3>
-          <p className="text-[11px] text-slate-500 mt-0.5">Ingresos acumulados y cantidad de documentos emitidos.</p>
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-slate-900 text-sm">Resumen General de Ventas</h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">Comprobantes emitidos y desglose por categorías (Productos vs Servicios).</p>
+          </div>
+          {metrics && (
+            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 py-1 px-2.5 rounded-full">
+              Consolidado: {formatCurrency((metrics?.byItemType?.products || 0) + (metrics?.byItemType?.services || 0))}
+            </span>
+          )}
         </div>
 
         <div className="p-5">
-          {loadingDocTypes ? (
-            <div className="py-6 text-center text-slate-400 animate-pulse">
-              Cargando resumen de comprobantes...
+          {loadingDocTypes || loadingPivot ? (
+            <div className="py-8 text-center text-slate-400 animate-pulse">
+              Cargando resumen general...
             </div>
           ) : docSummaryData.length === 0 ? (
-            <div className="py-6 text-center text-slate-400">
-              No se encontraron comprobantes registrados en el rango seleccionado.
+            <div className="py-8 text-center text-slate-400">
+              No se encontraron datos registrados en el rango seleccionado.
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {docSummaryData.map((doc) => {
                 const isNegative = doc.amount < 0;
                 return (
-                  <div key={doc.name} className="p-4 rounded-xl border border-slate-200/60 bg-slate-50/40 hover:bg-slate-50 transition-all duration-300 flex flex-col justify-between">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-bold text-slate-500 tracking-wide uppercase">{doc.name}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${doc.colorBg}`}>
-                        {doc.count} emitidos
+                  <div key={doc.name} className="p-4 rounded-xl border border-slate-200/60 bg-slate-50/40 hover:bg-slate-50 transition-all duration-300 flex flex-col justify-between h-[100px]">
+                    <div className="flex justify-between items-start gap-1 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {doc.icon}
+                        <span className="text-[10px] font-bold text-slate-500 truncate uppercase tracking-wider">{doc.name}</span>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase border shrink-0 ${doc.colorBg}`}>
+                        {doc.count}{doc.type === 'category' ? '%' : ' emit.'}
                       </span>
                     </div>
                     <div className="mt-4">
-                      <span className={`text-xl font-extrabold tabular-nums ${isNegative ? 'text-rose-600' : 'text-slate-900'}`}>
+                      <span className={`text-sm font-extrabold tabular-nums ${isNegative ? 'text-rose-600' : 'text-slate-900'}`}>
                         {formatCurrency(doc.amount)}
                       </span>
                     </div>
@@ -148,92 +180,6 @@ export const SalesPage: React.FC = () => {
                 );
               })}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Ventas por Categoría: Productos vs Servicios - Solicitud de Usuario */}
-      <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-150">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-          <ShoppingCart size={15} className="text-slate-500" />
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm">Ventas por Categoría</h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">Ingresos según el tipo de ítem vendido.</p>
-          </div>
-        </div>
-
-        <div className="p-5 flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {loadingPivot ? (
-            <div className="col-span-3 py-8 text-center text-slate-400 animate-pulse">
-              Cargando categorías...
-            </div>
-          ) : (
-            <>
-              {/* Tarjeta 1: Total Consolidado */}
-              <div className="bg-slate-50/60 p-5 rounded-xl border border-slate-100 flex flex-col justify-center text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Facturado Consolidado</span>
-                <div className="text-2xl font-black text-slate-900 mt-2 tabular-nums">
-                  {formatCurrency((metrics?.byItemType?.products || 0) + (metrics?.byItemType?.services || 0))}
-                </div>
-                <span className="text-[9px] font-bold text-slate-500 uppercase mt-2 bg-slate-100 py-1 px-2.5 rounded-full self-center">
-                  {(metrics?.byItemType?.products || 0) > (metrics?.byItemType?.services || 0) ? (
-                    "Predominan Productos"
-                  ) : (metrics?.byItemType?.services || 0) > (metrics?.byItemType?.products || 0) ? (
-                    "Predominan Servicios"
-                  ) : (
-                    "Distribución Equitativa"
-                  )}
-                </span>
-              </div>
-
-              {/* Tarjeta 2: Productos */}
-              <div className="bg-slate-50/20 hover:bg-slate-50/50 transition-all border border-slate-200/50 p-5 rounded-xl flex flex-col justify-between space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <Package size={16} className="text-blue-500" />
-                    <span className="font-bold text-slate-700 text-xs">Productos</span>
-                  </div>
-                  <span className="text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 tabular-nums">
-                    {(((metrics?.byItemType?.products || 0) / (((metrics?.byItemType?.products || 0) + (metrics?.byItemType?.services || 0)) || 1)) * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div>
-                  <div className="text-xl font-extrabold text-slate-900 tabular-nums">
-                    {formatCurrency(metrics?.byItemType?.products || 0)}
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 mt-3">
-                    <div 
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-500" 
-                      style={{ width: `${Math.min(100, ((metrics?.byItemType?.products || 0) / (((metrics?.byItemType?.products || 0) + (metrics?.byItemType?.services || 0)) || 1)) * 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tarjeta 3: Servicios */}
-              <div className="bg-slate-50/20 hover:bg-slate-50/50 transition-all border border-slate-200/50 p-5 rounded-xl flex flex-col justify-between space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <Briefcase size={16} className="text-emerald-500" />
-                    <span className="font-bold text-slate-700 text-xs">Servicios</span>
-                  </div>
-                  <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 tabular-nums">
-                    {(((metrics?.byItemType?.services || 0) / (((metrics?.byItemType?.products || 0) + (metrics?.byItemType?.services || 0)) || 1)) * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div>
-                  <div className="text-xl font-extrabold text-slate-900 tabular-nums">
-                    {formatCurrency(metrics?.byItemType?.services || 0)}
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 mt-3">
-                    <div 
-                      className="bg-emerald-500 h-2 rounded-full transition-all duration-500" 
-                      style={{ width: `${Math.min(100, ((metrics?.byItemType?.services || 0) / (((metrics?.byItemType?.products || 0) + (metrics?.byItemType?.services || 0)) || 1)) * 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </>
           )}
         </div>
       </div>
