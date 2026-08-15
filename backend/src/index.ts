@@ -19,13 +19,17 @@ const app = express();
 // Trust proxy for Railway reverse proxy rate limiting
 app.set('trust proxy', 1);
 
-// Middlewares
-app.use(helmet());
+// Middlewares — CORS must come BEFORE helmet and rate limiters
 app.use(cors({
-  origin: (origin, callback) => {
-    callback(null, true);
-  },
-  credentials: true
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
+app.options('*', cors()); // Explicit preflight handler for all routes
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
 }));
 app.use(express.json());
 app.get('/health', (req, res) => {
