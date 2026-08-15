@@ -101,7 +101,6 @@ export const DashboardPage: React.FC = () => {
         <KpiCard
           title="Ventas Hoy"
           value={metrics?.totalSales ? metrics.totalSales * 0.15 : 4500}
-          previousValue={4200}
           format="currency"
           icon={DollarSign}
           iconColor="text-blue-600"
@@ -110,7 +109,6 @@ export const DashboardPage: React.FC = () => {
         <KpiCard
           title="Ventas del Mes"
           value={metrics?.totalSales || 35000}
-          previousValue={30000}
           format="currency"
           icon={TrendingUp}
           iconColor="text-emerald-600"
@@ -119,7 +117,6 @@ export const DashboardPage: React.FC = () => {
         <KpiCard
           title="Operaciones"
           value={metrics?.totalDocuments || 450}
-          previousValue={420}
           format="number"
           icon={ShoppingCart}
           iconColor="text-sky-600"
@@ -128,7 +125,6 @@ export const DashboardPage: React.FC = () => {
         <KpiCard
           title="Ticket Promedio"
           value={metrics?.avgTicket || 120}
-          previousValue={125}
           format="currency"
           icon={Receipt}
           iconColor="text-violet-600"
