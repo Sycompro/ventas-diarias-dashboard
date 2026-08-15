@@ -1,55 +1,84 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '../../utils/formatters';
 
 interface HourlyData {
-  hour: number;
-  total: number;
+  hour: string;
+  amount: number;
   count: number;
 }
 
-// Generate mock data since there's no hook specifically for this
-const mockData: HourlyData[] = Array.from({ length: 14 }, (_, i) => ({
-  hour: i + 8, // 8 AM to 9 PM
-  total: Math.floor(Math.random() * 5000) + 500,
-  count: Math.floor(Math.random() * 20) + 2,
-}));
+interface HourlyHeatmapProps {
+  data?: HourlyData[];
+  isLoading?: boolean;
+}
 
-export const HourlyHeatmap: React.FC = () => {
-  
-  const maxTotal = Math.max(...mockData.map(d => d.total));
+export const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ data, isLoading }) => {
+  if (isLoading) {
+    return <div className="h-[360px] w-full animate-pulse bg-slate-100 rounded-xl"></div>;
+  }
+
+  // Generamos datos mock si no hay, para mantener la visualización requerida
+  const chartData = data || Array.from({ length: 14 }).map((_, i) => {
+    const hour = i + 8; // 8am a 9pm
+    const baseAmount = hour > 12 && hour < 15 ? 5000 : hour > 17 && hour < 20 ? 7000 : 2000;
+    const amount = baseAmount + Math.random() * 2000;
+    return {
+      hour: `${hour}:00`,
+      displayHour: `${hour > 12 ? hour - 12 : hour}${hour >= 12 ? 'pm' : 'am'}`,
+      amount,
+      count: Math.floor(amount / 50)
+    };
+  });
+
+  const maxAmount = Math.max(...chartData.map(d => d.amount));
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-4 rounded-xl shadow-xl border border-slate-100 text-center min-w-[120px]">
+          <p className="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">{data.displayHour}</p>
+          <p className="text-lg font-bold text-slate-900 mb-1">{formatCurrency(data.amount)}</p>
+          <p className="text-xs text-slate-400">{data.count} operaciones</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div className="card p-5 w-full h-[400px] flex flex-col">
-      <h3 className="text-lg font-semibold text-neutral-900 mb-4">Ventas por Hora</h3>
-      <div className="flex-1 w-full min-h-0">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full">
+      <h3 className="text-lg font-semibold text-slate-900 mb-1">Ventas por Hora</h3>
+      <p className="text-sm text-slate-500 mb-6">Mapa de calor de actividad diaria</p>
+      
+      <div className="flex-1 min-h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={mockData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <XAxis 
-              dataKey="hour" 
+              dataKey="displayHour" 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: '#6b7280', fontSize: 12 }}
-              tickFormatter={(val) => `${val.toString().padStart(2, '0')}:00`}
+              tick={{ fontSize: 11, fill: '#64748b' }} 
+              interval="preserveStartEnd"
+              dy={10}
             />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fill: '#6b7280', fontSize: 12 }}
-              tickFormatter={(val) => `S/. ${val / 1000}k`}
-            />
-            <Tooltip 
-              cursor={{ fill: '#f3f4f6' }}
-              contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-              labelFormatter={(label) => `${label.toString().padStart(2, '0')}:00 - ${(label + 1).toString().padStart(2, '0')}:00`}
-              formatter={(value: number) => [formatCurrency(value), 'Ventas']}
-            />
-            <Bar dataKey="total" radius={[4, 4, 0, 0]}>
-              {mockData.map((entry, index) => {
-                // Opacity based on value relative to max
-                const opacity = 0.4 + (entry.total / maxTotal) * 0.6;
-                return <Cell key={`cell-${index}`} fill={`rgba(79, 70, 229, ${opacity})`} />;
+            <YAxis axisLine={false} tickLine={false} tick={false} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f1f5f9', radius: 4 }} />
+            <Bar dataKey="amount" radius={[4, 4, 4, 4]}>
+              {chartData.map((entry, index) => {
+                const intensity = entry.amount / maxAmount;
+                const opacity = 0.25 + (intensity * 0.75);
+                const isMax = entry.amount === maxAmount;
+                
+                return (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={isMax ? '#6366f1' : '#818cf8'} 
+                    fillOpacity={opacity}
+                    className="transition-all duration-300"
+                  />
+                );
               })}
             </Bar>
           </BarChart>

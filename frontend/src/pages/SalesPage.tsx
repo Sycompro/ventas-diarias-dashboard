@@ -7,33 +7,34 @@ import { formatCurrency, formatDateTime } from '../utils/formatters';
 const columns = [
   {
     header: 'Fecha',
-    accessorKey: 'issuedAt',
-    cell: (info: any) => formatDateTime(info.getValue()),
+    key: 'issuedAt',
+    render: (item: any) => formatDateTime(item.issuedAt),
   },
   {
     header: 'Documento',
-    accessorFn: (row: any) => `${row.series}-${row.number}`,
+    key: 'document',
+    render: (item: any) => `${item.series}-${item.number}`,
   },
   {
     header: 'Cliente',
-    accessorKey: 'customerName',
+    key: 'customerName',
   },
   {
     header: 'Vendedor',
-    accessorKey: 'sellerName',
+    key: 'sellerName',
   },
   {
     header: 'Total',
-    accessorKey: 'total',
-    cell: (info: any) => (
-      <span className="font-medium text-neutral-900">{formatCurrency(info.getValue())}</span>
+    key: 'total',
+    render: (item: any) => (
+      <span className="font-medium text-neutral-900">{formatCurrency(item.total)}</span>
     ),
   },
   {
     header: 'Estado',
-    accessorKey: 'status',
-    cell: (info: any) => {
-      const status = info.getValue();
+    key: 'status',
+    render: (item: any) => {
+      const status = item.status;
       const config = {
         'pagado': 'bg-success-light text-success-dark',
         'pendiente': 'bg-warning-light text-warning-dark',
@@ -60,6 +61,13 @@ const mockDocuments = Array.from({ length: 20 }, (_, i) => ({
   status: i % 10 === 0 ? 'anulado' : (i % 5 === 0 ? 'pendiente' : 'pagado')
 }));
 
+const mockTrendData = Array.from({ length: 15 }, (_, i) => ({
+  date: new Date(Date.now() - (15 - i) * 24 * 60 * 60 * 1000).toISOString(),
+  total: Math.random() * 8000 + 2000,
+  count: Math.floor(Math.random() * 20) + 5,
+  avgTicket: 0
+})).map(t => ({ ...t, avgTicket: t.total / t.count }));
+
 export const SalesPage: React.FC = () => {
   return (
     <div className="space-y-6">
@@ -76,7 +84,7 @@ export const SalesPage: React.FC = () => {
       </div>
 
       <div className="card p-5">
-        <SalesTrendChart />
+        <SalesTrendChart data={mockTrendData} />
       </div>
 
       <div className="card">
@@ -90,6 +98,7 @@ export const SalesPage: React.FC = () => {
         </div>
         <div className="p-4">
           <DataTable 
+            title="Ventas Registradas"
             columns={columns} 
             data={mockDocuments} 
           />

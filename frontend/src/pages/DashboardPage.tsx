@@ -1,128 +1,216 @@
-import React from 'react';
-import { ShoppingCart, FileText, TrendingUp, CreditCard, Target, Bell } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  DollarSign, 
+  TrendingUp, 
+  ShoppingCart, 
+  Receipt, 
+  Target, 
+  Bell, 
+  RefreshCw, 
+  Download 
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+import { 
+  useDashboardMetrics, 
+  useSalesTrend, 
+  useSalesByPayment, 
+  useSalesByDocumentType,
+  useTopProducts,
+  useSalesBySeller
+} from '../hooks/useSalesMetrics';
+
 import { KpiCard } from '../components/ui/KpiCard';
-import { TrafficLight } from '../components/ui/TrafficLight';
+import { TrafficLight, TrafficStatus } from '../components/ui/TrafficLight';
 import { SalesTrendChart } from '../components/charts/SalesTrendChart';
 import { PaymentDonutChart } from '../components/charts/PaymentDonutChart';
-import { DocumentBarChart } from '../components/charts/DocumentBarChart';
 import { RankingBarChart } from '../components/charts/RankingBarChart';
-import { useDashboardMetrics } from '../hooks/useSalesMetrics';
-import { Skeleton } from '../components/ui/Skeleton';
+import { DocumentBarChart } from '../components/charts/DocumentBarChart';
+import { HourlyHeatmap } from '../components/charts/HourlyHeatmap';
+import { DataTable, Column } from '../components/ui/DataTable';
 import { InsightCard } from '../components/ui/InsightCard';
+import { formatCurrency } from '../utils/formatters';
 
 export const DashboardPage: React.FC = () => {
-  const { data: metrics, isLoading } = useDashboardMetrics();
+  const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
+  const { data: trendData, isLoading: loadingTrend } = useSalesTrend();
+  const { data: paymentData, isLoading: loadingPayment } = useSalesByPayment();
+  const { data: documentData, isLoading: loadingDocument } = useSalesByDocumentType();
+  const { data: topProducts, isLoading: loadingProducts } = useTopProducts();
+  const { data: sellersData, isLoading: loadingSellers } = useSalesBySeller();
+
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = () => {
+    setIsSyncing(true);
+    setTimeout(() => setIsSyncing(false), 1500);
+  };
+
+  const today = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
+  const userName = "Carlos";
+
+  const sellersRanking = sellersData?.map((s: any) => ({
+    id: s.sellerName,
+    name: s.sellerName,
+    value: s.total,
+    secondaryValue: `${s.count} ventas`
+  })) || [];
+
+  const productColumns: Column<any>[] = [
+    { key: 'name', header: 'Producto', sortable: true, render: (item) => <span className="font-medium text-slate-800">{item.name}</span> },
+    { key: 'category', header: 'Categoría', sortable: true, render: (item) => (
+      <span className="px-2.5 py-1 bg-slate-100/80 text-slate-600 rounded-full text-xs font-medium border border-slate-200">{item.category}</span>
+    )},
+    { key: 'quantity', header: 'Cantidad', sortable: true, render: (item) => <span className="tabular-nums">{item.quantity} unds.</span> },
+    { key: 'total', header: 'Ingresos', sortable: true, render: (item) => <span className="font-semibold text-slate-900 tabular-nums">{formatCurrency(item.total)}</span> }
+  ];
+
+  const trafficIndicators = [
+    { label: 'Ventas Mensuales', description: 'Por encima del promedio histórico (+15%)', status: 'healthy' as TrafficStatus },
+    { label: 'Cumplimiento de Meta', description: 'Meta mensual alcanzada al 85%', status: 'healthy' as TrafficStatus },
+    { label: 'Ticket Promedio', description: 'Leve caída respecto a la semana pasada', status: 'attention' as TrafficStatus },
+    { label: 'Stock Crítico', description: '12 productos estrella por agotarse', status: 'critical' as TrafficStatus },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-end">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-screen bg-slate-50/50 font-sans">
+      
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900">Dashboard General</h2>
-          <p className="text-sm text-neutral-500 mt-1">Visión general de las métricas clave de su negocio.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Buenos días, {userName}</h1>
+          <p className="text-sm text-slate-500 mt-1 capitalize-first">{today}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+          </button>
+          <button className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1">
+            <Download className="w-4 h-4" />
+            Exportar
+          </button>
         </div>
       </div>
 
-      {/* Row 1: KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <KpiCard
-          title="Ventas del Período"
-          value={metrics?.totalSales || 0}
-          previousValue={metrics?.comparison.previousTotal || 0}
-          icon={ShoppingCart}
-          color="primary"
-          isLoading={isLoading}
+          title="Ventas Hoy"
+          value={metrics?.totalSales ? metrics.totalSales * 0.15 : 4500}
+          previousValue={4200}
+          format="currency"
+          icon={DollarSign}
+          iconColor="text-blue-600"
+          iconBg="bg-blue-50"
+        />
+        <KpiCard
+          title="Ventas del Mes"
+          value={metrics?.totalSales || 35000}
+          previousValue={30000}
+          format="currency"
+          icon={TrendingUp}
+          iconColor="text-emerald-600"
+          iconBg="bg-emerald-50"
         />
         <KpiCard
           title="Operaciones"
-          value={metrics?.totalDocuments || 0}
+          value={metrics?.totalDocuments || 450}
+          previousValue={420}
           format="number"
-          previousValue={120} // Mock previous
-          icon={FileText}
-          color="info"
-          isLoading={isLoading}
+          icon={ShoppingCart}
+          iconColor="text-sky-600"
+          iconBg="bg-sky-50"
         />
         <KpiCard
           title="Ticket Promedio"
-          value={metrics?.avgTicket || 0}
-          previousValue={45} // Mock previous
-          icon={TrendingUp}
-          color="success"
-          isLoading={isLoading}
-        />
-        <KpiCard
-          title="Ventas Tarjeta"
-          value={metrics?.byPaymentMethod.tarjeta.amount || 0}
-          icon={CreditCard}
-          color="warning"
-          isLoading={isLoading}
+          value={metrics?.avgTicket || 120}
+          previousValue={125}
+          format="currency"
+          icon={Receipt}
+          iconColor="text-violet-600"
+          iconBg="bg-violet-50"
         />
         <KpiCard
           title="Cumplimiento Meta"
           value={85.4}
           format="percent"
           icon={Target}
-          color="success"
-          isLoading={isLoading}
+          iconColor="text-amber-600"
+          iconBg="bg-amber-50"
         />
         <KpiCard
-          title="Alertas Activas"
+          title="Alertas Pendientes"
           value={3}
           format="number"
           icon={Bell}
-          color="danger"
-          isLoading={isLoading}
+          iconColor="text-red-600"
+          iconBg="bg-red-50"
         />
       </div>
 
-      {/* Row 2: Traffic Light & Trend */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
-          <TrafficLight
-            items={[
-              { label: 'Volumen de Ventas', status: 'healthy', tooltip: 'Las ventas superan el promedio del mes pasado en un 15%' },
-              { label: 'Ticket Promedio', status: 'attention', tooltip: 'El ticket promedio ha bajado un 5% esta semana' },
-              { label: 'Metas de Vendedores', status: 'healthy', tooltip: 'El 80% de los vendedores están en meta' },
-              { label: 'Anomalías Detectadas', status: 'critical', tooltip: 'Caída inusual de ventas en la sucursal Norte' },
-            ]}
-          />
-          <div className="mt-6">
-            <h3 className="text-sm font-semibold text-neutral-700 mb-3 uppercase tracking-wider">Insights Rápidos</h3>
-            <div className="space-y-3">
-              <InsightCard 
-                type="opportunity"
-                category="Ventas"
-                title="Oportunidad de Upsell"
-                description="Los clientes que compran Laptops suelen comprar mouse. Considera un combo."
-              />
-            </div>
-          </div>
+      <div className="mb-8 animate-in fade-in duration-700 delay-100 fill-mode-both">
+        <h2 className="text-base font-semibold text-slate-900 mb-4">Semáforo Empresarial</h2>
+        <TrafficLight indicators={trafficIndicators} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-in fade-in duration-700 delay-200 fill-mode-both">
+        <div className="lg:col-span-2">
+          <SalesTrendChart data={trendData || []} isLoading={loadingTrend} />
         </div>
-        <div className="lg:col-span-3">
-          <SalesTrendChart />
+        <div className="lg:col-span-1">
+          <PaymentDonutChart data={paymentData || {}} isLoading={loadingPayment} />
         </div>
       </div>
 
-      {/* Row 3: Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          <>
-            <Skeleton variant="chart" />
-            <Skeleton variant="chart" />
-            <Skeleton variant="chart" />
-          </>
-        ) : (
-          <>
-            <RankingBarChart 
-              title="Top Vendedores" 
-              data={(metrics?.bySeller || []).map((s: any) => ({ name: s.name || s.sellerName, total: s.total }))} 
-              dataKey="total"
-              color="#10b981"
-            />
-            <PaymentDonutChart />
-            <DocumentBarChart />
-          </>
-        )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 animate-in fade-in duration-700 delay-300 fill-mode-both">
+        <div className="lg:col-span-1">
+          <RankingBarChart 
+            title="Top Vendedores" 
+            subtitle="Por volumen de ventas mensual"
+            data={sellersRanking} 
+            isLoading={loadingSellers} 
+          />
+        </div>
+        <div className="lg:col-span-1">
+          <DocumentBarChart data={documentData || { facturas: {count:0, amount:0}, boletas: {count:0, amount:0}, notasCredito: {count:0, amount:0} }} isLoading={loadingDocument} />
+        </div>
+        <div className="lg:col-span-1">
+          <HourlyHeatmap isLoading={loadingTrend} />
+        </div>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-700 delay-500 fill-mode-both">
+        <div className="lg:col-span-2">
+          <DataTable 
+            title="Top Productos Más Vendidos" 
+            columns={productColumns} 
+            data={topProducts || []} 
+            isLoading={loadingProducts} 
+          />
+        </div>
+        <div className="lg:col-span-1 flex flex-col gap-4">
+          <h2 className="text-base font-semibold text-slate-900 mb-1">Insights Automáticos</h2>
+          <InsightCard 
+            type="positive"
+            title="Crecimiento sostenido"
+            description="Las ventas del último trimestre muestran un incremento del 15% comparado con el periodo anterior. El rendimiento se mantiene sólido."
+            dataPoint="+15.4%"
+            dataLabel="Variación Trimestral"
+          />
+          <InsightCard 
+            type="warning"
+            title="Oportunidad en Medios de Pago"
+            description="Las transferencias bancarias están tomando más tiempo en conciliación. Se sugiere incentivar el uso de billeteras digitales."
+            dataPoint="35%"
+            dataLabel="Pagos Manuales"
+          />
+        </div>
+      </div>
+
     </div>
   );
 };

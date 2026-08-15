@@ -1,65 +1,72 @@
-import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
-import { useSalesByDocumentType } from '../../hooks/useSalesMetrics';
-import { formatCurrency, formatNumber } from '../../utils/formatters';
-import { Skeleton } from '../ui/Skeleton';
-import { EmptyState } from '../ui/EmptyState';
-import { BarChart as BarChartIcon } from 'lucide-react';
+import React from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { formatCurrency } from '../../utils/formatters';
 
-export const DocumentBarChart: React.FC = () => {
-  const { data, isLoading } = useSalesByDocumentType();
-  const [viewMode, setViewMode] = useState<'amount' | 'count'>('amount');
+interface DocumentBarChartProps {
+  data: {
+    facturas: { count: number; amount: number };
+    boletas: { count: number; amount: number };
+    notasCredito: { count: number; amount: number };
+  };
+  isLoading?: boolean;
+}
 
-  if (isLoading) return <Skeleton variant="chart" />;
-  if (!data) return <EmptyState icon={BarChartIcon} title="Sin datos" description="No hay datos de documentos." />;
+export const DocumentBarChart: React.FC<DocumentBarChartProps> = ({ data, isLoading }) => {
+  if (isLoading) {
+    return <div className="h-[360px] w-full animate-pulse bg-slate-100 rounded-xl"></div>;
+  }
 
   const chartData = [
-    { name: 'Facturas', amount: data.facturas.amount, count: data.facturas.count, color: '#3b82f6' },
-    { name: 'Boletas', amount: data.boletas.amount, count: data.boletas.count, color: '#10b981' },
-    { name: 'Notas de Crédito', amount: Math.abs(data.notasCredito.amount), count: data.notasCredito.count, color: '#ef4444' }
+    { 
+      name: 'Documentos', 
+      Facturas: data?.facturas?.amount || 0, 
+      Boletas: data?.boletas?.amount || 0, 
+      'Notas de Crédito': Math.abs(data?.notasCredito?.amount || 0) 
+    }
   ];
 
-  return (
-    <div className="card p-5 w-full h-[400px] flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-neutral-900">Por Tipo de Documento</h3>
-        <div className="flex bg-neutral-100 rounded-md p-1">
-          <button 
-            className={`px-3 py-1 text-xs font-medium rounded ${viewMode === 'amount' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}
-            onClick={() => setViewMode('amount')}
-          >
-            Monto
-          </button>
-          <button 
-            className={`px-3 py-1 text-xs font-medium rounded ${viewMode === 'count' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500'}`}
-            onClick={() => setViewMode('count')}
-          >
-            Cantidad
-          </button>
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-4 rounded-xl shadow-xl border border-slate-100 min-w-[200px]">
+          <p className="text-sm font-semibold text-slate-900 mb-3 border-b border-slate-50 pb-2">Comprobantes Emitidos</p>
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex justify-between items-center gap-6 mb-2.5 last:mb-0">
+              <div className="flex items-center gap-2.5">
+                <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.color }}></span>
+                <span className="text-sm font-medium text-slate-600">{entry.name}</span>
+              </div>
+              <span className="text-sm font-bold text-slate-900">{formatCurrency(entry.value)}</span>
+            </div>
+          ))}
         </div>
-      </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full">
+      <h3 className="text-lg font-semibold text-slate-900 mb-1">Tipos de Comprobante</h3>
+      <p className="text-sm text-slate-500 mb-6">Monto total por tipo de documento</p>
       
-      <div className="flex-1 w-full min-h-0">
+      <div className="flex-1 min-h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barSize={50}>
+            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#64748b' }} dy={10} />
             <YAxis 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fill: '#6b7280', fontSize: 12 }}
-              tickFormatter={(val) => viewMode === 'amount' ? `S/. ${val / 1000}k` : val}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              tickFormatter={(val) => `S/.${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`}
+              dx={-10}
             />
-            <Tooltip 
-              cursor={{ fill: '#f3f4f6' }}
-              contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-              formatter={(value: number) => [viewMode === 'amount' ? formatCurrency(value) : formatNumber(value), viewMode === 'amount' ? 'Monto' : 'Cantidad']}
-            />
-            <Bar dataKey={viewMode} radius={[4, 4, 0, 0]}>
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Bar>
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc', opacity: 0.5 }} />
+            <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '13px' }} iconType="circle" />
+            <Bar dataKey="Facturas" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="Boletas" fill="#10b981" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="Notas de Crédito" fill="#ef4444" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

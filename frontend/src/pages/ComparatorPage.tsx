@@ -11,22 +11,22 @@ const tableData = [
 ];
 
 const columns = [
-  { header: 'Métrica', accessorKey: 'metric' },
+  { header: 'Métrica', key: 'metric' },
   { 
     header: 'Período Actual', 
-    accessorKey: 'period1',
-    cell: (info: any) => <span className="font-medium text-neutral-900">{formatCurrency(info.getValue())}</span>
+    key: 'period1',
+    render: (item: any) => <span className="font-medium text-neutral-900">{formatCurrency(item.period1)}</span>
   },
   { 
     header: 'Período Anterior', 
-    accessorKey: 'period2',
-    cell: (info: any) => <span className="text-neutral-600">{formatCurrency(info.getValue())}</span>
+    key: 'period2',
+    render: (item: any) => <span className="text-neutral-600">{formatCurrency(item.period2)}</span>
   },
   { 
     header: 'Diferencia', 
-    accessorKey: 'diff',
-    cell: (info: any) => {
-      const val = info.getValue();
+    key: 'diff',
+    render: (item: any) => {
+      const val = item.diff;
       return (
         <span className={`font-medium ${val > 0 ? 'text-success' : val < 0 ? 'text-danger' : 'text-neutral-600'}`}>
           {val > 0 ? '+' : ''}{formatCurrency(val)}
@@ -36,9 +36,9 @@ const columns = [
   },
   { 
     header: 'Variación %', 
-    accessorKey: 'percent',
-    cell: (info: any) => {
-      const val = info.getValue();
+    key: 'percent',
+    render: (item: any) => {
+      const val = item.percent;
       return (
         <span className={`px-2 py-1 rounded text-xs font-bold ${val > 0 ? 'bg-success-light text-success-dark' : val < 0 ? 'bg-danger-light text-danger-dark' : 'bg-neutral-100 text-neutral-600'}`}>
           {formatPercent(val)}
@@ -67,7 +67,7 @@ export const ComparatorPage: React.FC = () => {
           <h3 className="font-semibold text-neutral-900">Detalle de Variaciones</h3>
         </div>
         <div className="p-4">
-          <DataTable columns={columns} data={tableData} />
+          <DataTable title="Detalle de Variaciones" columns={columns} data={tableData} />
         </div>
       </div>
     </div>

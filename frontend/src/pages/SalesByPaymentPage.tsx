@@ -20,12 +20,12 @@ export const SalesByPaymentPage: React.FC = () => {
   }).filter(item => item.amount > 0) : [];
 
   const columns = [
-    { header: 'Método de Pago', accessorKey: 'name' },
-    { header: 'Operaciones', accessorKey: 'count' },
+    { header: 'Método de Pago', key: 'name' },
+    { header: 'Operaciones', key: 'count' },
     { 
       header: 'Monto Total', 
-      accessorKey: 'amount',
-      cell: (info: any) => <span className="font-bold text-neutral-900">{formatCurrency(info.getValue())}</span>
+      key: 'amount',
+      render: (item: any) => <span className="font-bold text-neutral-900">{formatCurrency(item.amount)}</span>
     },
   ];
 
@@ -40,14 +40,14 @@ export const SalesByPaymentPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <PaymentDonutChart />
+          {data && <PaymentDonutChart data={data} />}
         </div>
         <div className="lg:col-span-2 card">
           <div className="p-4 border-b border-border-subtle bg-neutral-50">
             <h3 className="font-semibold text-neutral-900">Desglose Detallado</h3>
           </div>
           <div className="p-4">
-            <DataTable columns={columns} data={tableData} isLoading={isLoading} />
+            <DataTable title="Desglose de Medios de Pago" columns={columns} data={tableData} isLoading={isLoading} />
           </div>
         </div>
       </div>

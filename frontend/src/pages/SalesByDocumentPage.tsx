@@ -15,13 +15,13 @@ export const SalesByDocumentPage: React.FC = () => {
   ] : [];
 
   const columns = [
-    { header: 'Tipo de Documento', accessorKey: 'name' },
-    { header: 'Cantidad Emitida', accessorKey: 'count' },
+    { header: 'Tipo de Documento', key: 'name' },
+    { header: 'Cantidad Emitida', key: 'count' },
     { 
       header: 'Monto Total', 
-      accessorKey: 'amount',
-      cell: (info: any) => {
-        const val = info.getValue();
+      key: 'amount',
+      render: (item: any) => {
+        const val = item.amount;
         return (
           <span className={`font-bold ${val < 0 ? 'text-danger' : 'text-neutral-900'}`}>
             {formatCurrency(val)}
@@ -42,14 +42,14 @@ export const SalesByDocumentPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <DocumentBarChart />
+          {data && <DocumentBarChart data={data} />}
         </div>
         <div className="card">
           <div className="p-4 border-b border-border-subtle bg-neutral-50">
             <h3 className="font-semibold text-neutral-900">Resumen Consolidado</h3>
           </div>
           <div className="p-4">
-            <DataTable columns={columns} data={tableData} isLoading={isLoading} />
+            <DataTable title="Resumen de Documentos" columns={columns} data={tableData} isLoading={isLoading} />
           </div>
         </div>
       </div>

@@ -26,7 +26,15 @@ export const AlertsPage: React.FC = () => {
 
       <div className="space-y-4">
         {alerts.map(alert => (
-          <AlertBadge key={alert.id} {...alert} onMarkAsRead={handleMarkAsRead} />
+          <AlertBadge 
+            key={alert.id}
+            priority={alert.type}
+            title={alert.title}
+            description={alert.description}
+            recommendation={alert.recommendation}
+            timestamp={alert.detectedAt}
+            onMarkRead={() => handleMarkAsRead(alert.id)}
+          />
         ))}
       </div>
     </div>

@@ -1,59 +1,41 @@
 import React from 'react';
 
-export type Status = 'healthy' | 'attention' | 'critical';
+export type TrafficStatus = 'healthy' | 'attention' | 'critical';
 
-interface TrafficLightProps {
-  items: Array<{
-    label: string;
-    status: Status;
-    tooltip?: string;
-  }>;
+export interface TrafficIndicatorProps {
+  label: string;
+  description: string;
+  status: TrafficStatus;
 }
 
-export const TrafficLight: React.FC<TrafficLightProps> = ({ items }) => {
-  const getStatusColor = (status: Status) => {
-    switch (status) {
-      case 'healthy': return 'bg-success shadow-success/30';
-      case 'attention': return 'bg-warning shadow-warning/30';
-      case 'critical': return 'bg-danger shadow-danger/30';
-      default: return 'bg-neutral-300';
-    }
-  };
+const colorMap = {
+  healthy: { bg: 'bg-emerald-500', bar: 'border-emerald-500' },
+  attention: { bg: 'bg-amber-500', bar: 'border-amber-500' },
+  critical: { bg: 'bg-red-500', bar: 'border-red-500' },
+};
 
-  const getStatusText = (status: Status) => {
-    switch (status) {
-      case 'healthy': return 'text-success-dark';
-      case 'attention': return 'text-warning-dark';
-      case 'critical': return 'text-danger-dark';
-      default: return 'text-neutral-500';
-    }
-  };
-
-  const getBgColor = (status: Status) => {
-    switch (status) {
-      case 'healthy': return 'bg-success-light';
-      case 'attention': return 'bg-warning-light';
-      case 'critical': return 'bg-danger-light';
-      default: return 'bg-neutral-100';
-    }
-  };
-
+export const TrafficLight: React.FC<{ indicators: TrafficIndicatorProps[] }> = ({ indicators }) => {
   return (
-    <div className="card p-4">
-      <h3 className="text-sm font-semibold text-neutral-700 mb-4 uppercase tracking-wider">Estado del Negocio</h3>
-      <div className="flex flex-col gap-3">
-        {items.map((item, index) => (
-          <div key={index} className="flex items-center justify-between group relative" title={item.tooltip}>
-            <span className="text-sm font-medium text-neutral-600">{item.label}</span>
-            <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full ${getBgColor(item.status)}`}>
-              <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${getStatusColor(item.status)} animate-pulse`} />
-              <span className={`text-xs font-semibold capitalize ${getStatusText(item.status)}`}>
-                {item.status === 'healthy' ? 'Óptimo' : item.status === 'attention' ? 'Atención' : 'Crítico'}
-              </span>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+      {indicators.map((indicator, idx) => {
+        const colors = colorMap[indicator.status];
+        return (
+          <div key={idx} className={`relative bg-white rounded-xl shadow-sm border border-slate-200 p-4 border-t-2 ${colors.bar} hover:shadow-md transition-shadow`}>
+            <div className="flex items-start gap-3">
+              <div className="relative flex items-center justify-center w-4 h-4 mt-0.5">
+                {indicator.status === 'critical' && (
+                  <span className="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-red-400"></span>
+                )}
+                <span className={`relative inline-flex rounded-full w-3 h-3 ${colors.bg}`}></span>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">{indicator.label}</h4>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{indicator.description}</p>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 };

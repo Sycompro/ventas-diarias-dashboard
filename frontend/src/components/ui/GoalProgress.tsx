@@ -1,53 +1,58 @@
-import React from 'react';
-import { formatCurrency, formatPercent } from '../../utils/formatters';
+import React, { useEffect, useState } from 'react';
+import { formatCurrency } from '../../utils/formatters';
 
 interface GoalProgressProps {
   title: string;
-  target: number;
   current: number;
+  target: number;
   format?: 'currency' | 'number';
 }
 
-export const GoalProgress: React.FC<GoalProgressProps> = ({ title, target, current, format = 'currency' }) => {
-  const percentage = Math.min((current / target) * 100, 100);
-  const remaining = Math.max(target - current, 0);
+export const GoalProgress: React.FC<GoalProgressProps> = ({ title, current, target, format = 'currency' }) => {
+  const [width, setWidth] = useState(0);
+  const percentage = Math.min(Math.round((current / target) * 100), 100);
   
-  let colorClass = 'bg-danger';
-  if (percentage >= 80) colorClass = 'bg-success';
-  else if (percentage >= 50) colorClass = 'bg-warning';
+  useEffect(() => {
+    const timer = setTimeout(() => setWidth(percentage), 100);
+    return () => clearTimeout(timer);
+  }, [percentage]);
 
-  const formatValue = (val: number) => format === 'currency' ? formatCurrency(val) : val.toLocaleString();
+  const displayCurrent = format === 'currency' ? formatCurrency(current) : current.toLocaleString('es-PE');
+  const displayTarget = format === 'currency' ? formatCurrency(target) : target.toLocaleString('es-PE');
+  
+  let statusBadge = { text: 'En progreso', colors: 'bg-blue-50 text-blue-700 border-blue-200' };
+  if (percentage >= 100) statusBadge = { text: 'Cumplida', colors: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+  else if (percentage >= 80) statusBadge = { text: 'Cerca', colors: 'bg-amber-50 text-amber-700 border-amber-200' };
+  else if (percentage < 30) statusBadge = { text: 'En riesgo', colors: 'bg-red-50 text-red-700 border-red-200' };
 
   return (
-    <div className="card p-5">
-      <div className="flex justify-between items-center mb-2">
-        <h4 className="text-sm font-semibold text-neutral-700">{title}</h4>
-        <span className="text-sm font-bold text-neutral-900">{formatPercent(percentage)}</span>
-      </div>
-      
-      <div className="w-full bg-neutral-100 rounded-full h-2.5 mb-4 overflow-hidden">
-        <div 
-          className={`h-2.5 rounded-full ${colorClass} transition-all duration-1000 ease-out`} 
-          style={{ width: `${percentage}%` }}
-        ></div>
-      </div>
-      
-      <div className="flex justify-between text-xs text-neutral-500">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+      <div className="flex items-start justify-between mb-4">
         <div>
-          <span className="block font-medium text-neutral-700">{formatValue(current)}</span>
-          <span>Actual</span>
+          <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+          <p className="text-xs text-slate-500 mt-1">Meta: {displayTarget}</p>
         </div>
-        <div className="text-right">
-          <span className="block font-medium text-neutral-700">{formatValue(target)}</span>
-          <span>Meta</span>
-        </div>
+        <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${statusBadge.colors}`}>
+          {statusBadge.text}
+        </span>
       </div>
       
-      {remaining > 0 && (
-        <div className="mt-3 pt-3 border-t border-border-subtle text-xs text-center text-neutral-500">
-          Falta <span className="font-semibold text-neutral-700">{formatValue(remaining)}</span> para alcanzar la meta
-        </div>
-      )}
+      <div className="flex items-end gap-3 mb-3">
+        <span className="text-3xl font-bold text-slate-900 tabular-nums">{percentage}%</span>
+        <span className="text-sm text-slate-500 mb-1 pb-0.5">completado</span>
+      </div>
+
+      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-1000 ease-out"
+          style={{ width: `${width}%` }}
+        />
+      </div>
+      
+      <div className="mt-3 flex justify-between text-xs font-medium">
+        <span className="text-slate-700">{displayCurrent} actual</span>
+        <span className="text-slate-500">{format === 'currency' ? formatCurrency(Math.max(target - current, 0)) : Math.max(target - current, 0).toLocaleString('es-PE')} faltante</span>
+      </div>
     </div>
   );
 };

@@ -1,54 +1,67 @@
 import React from 'react';
-import { AlertCircle, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
-import { formatDateTime } from '../../utils/formatters';
+import { AlertTriangle, AlertCircle, Info, Check } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+export type AlertPriority = 'critical' | 'warning' | 'info';
 
 interface AlertBadgeProps {
-  id: string;
-  type: 'critical' | 'warning' | 'info';
+  priority: AlertPriority;
   title: string;
   description: string;
   recommendation?: string;
-  detectedAt: string;
-  isRead: boolean;
-  onMarkAsRead: (id: string) => void;
+  timestamp: Date | string;
+  onMarkRead?: () => void;
 }
 
-export const AlertBadge: React.FC<AlertBadgeProps> = ({
-  id, type, title, description, recommendation, detectedAt, isRead, onMarkAsRead
-}) => {
-  const config = {
-    critical: { icon: AlertCircle, color: 'danger', bg: 'bg-danger-light', text: 'text-danger-dark', border: 'border-danger/20' },
-    warning: { icon: AlertTriangle, color: 'warning', bg: 'bg-warning-light', text: 'text-warning-dark', border: 'border-warning/20' },
-    info: { icon: Info, color: 'info', bg: 'bg-info-light', text: 'text-info-dark', border: 'border-info/20' },
-  }[type];
+const styles = {
+  critical: { bar: 'border-l-red-500', icon: <AlertCircle className="w-5 h-5 text-red-600" />, iconBg: 'bg-red-50' },
+  warning: { bar: 'border-l-amber-500', icon: <AlertTriangle className="w-5 h-5 text-amber-600" />, iconBg: 'bg-amber-50' },
+  info: { bar: 'border-l-blue-500', icon: <Info className="w-5 h-5 text-blue-600" />, iconBg: 'bg-blue-50' },
+};
 
-  const Icon = config.icon;
+export const AlertBadge: React.FC<AlertBadgeProps> = ({ priority, title, description, recommendation, timestamp, onMarkRead }) => {
+  const config = styles[priority];
+  const dateObj = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  let timeAgo = '';
+  try {
+    timeAgo = formatDistanceToNow(dateObj, { addSuffix: true, locale: es });
+  } catch (e) {
+    timeAgo = 'hace poco';
+  }
 
   return (
-    <div className={`p-4 rounded-lg border relative transition-all ${isRead ? 'bg-white border-border-subtle opacity-70' : `${config.bg} ${config.border}`}`}>
-      <div className="flex gap-4">
-        <div className={`mt-1 shrink-0 ${isRead ? 'text-neutral-400' : config.text}`}>
-          <Icon size={24} />
+    <div className={`relative bg-white rounded-xl shadow-sm border border-slate-200 border-l-4 ${config.bar} p-5 hover:shadow-md transition-all`}>
+      <div className="flex items-start gap-4">
+        <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${config.iconBg}`}>
+          {config.icon}
         </div>
-        <div className="flex-1">
-          <div className="flex justify-between items-start gap-4">
-            <h4 className={`font-semibold ${isRead ? 'text-neutral-700' : 'text-neutral-900'}`}>{title}</h4>
-            <span className="text-xs text-neutral-500 whitespace-nowrap">{formatDateTime(detectedAt)}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start gap-2 mb-1">
+            <h4 className="text-sm font-semibold text-slate-900 truncate">{title}</h4>
+            <span className="text-xs text-slate-400 whitespace-nowrap capitalize-first">{timeAgo}</span>
           </div>
-          <p className="mt-1 text-sm text-neutral-600">{description}</p>
-          {recommendation && !isRead && (
-            <div className={`mt-3 p-3 rounded text-sm bg-white/60 ${config.text}`}>
-              <span className="font-medium">Recomendación:</span> {recommendation}
+          <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
+          
+          {recommendation && (
+            <div className="mt-3 bg-slate-50 border border-slate-100 rounded-lg p-3">
+              <p className="text-xs text-slate-700 font-medium">
+                <span className="text-slate-500 mr-1 font-normal">Sugerencia:</span>
+                {recommendation}
+              </p>
             </div>
           )}
-          {!isRead && (
-            <button 
-              onClick={() => onMarkAsRead(id)}
-              className="mt-3 flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-neutral-700 transition-colors"
-            >
-              <CheckCircle2 size={14} />
-              Marcar como leído
-            </button>
+          
+          {onMarkRead && (
+            <div className="mt-4 flex justify-end">
+              <button 
+                onClick={onMarkRead}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+              >
+                <Check className="w-3.5 h-3.5" />
+                Marcar como resuelta
+              </button>
+            </div>
           )}
         </div>
       </div>

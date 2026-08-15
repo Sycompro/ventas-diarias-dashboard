@@ -3,36 +3,33 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
-import { FilterChips } from '../filters/FilterChips';
-import { GlobalFilters } from '../filters/GlobalFilters';
-import { ToastContainer } from '../ui/Toast';
 
 export const MainLayout: React.FC = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex">
-      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-primary-200 selection:text-primary-900">
+      <Sidebar 
+        isCollapsed={isCollapsed} 
+        setIsCollapsed={setIsCollapsed}
+        isMobileOpen={isMobileOpen}
+        setIsMobileOpen={setIsMobileOpen}
+      />
       
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64 transition-all duration-300 pb-16 md:pb-0">
-        <Header onMenuClick={() => setIsSidebarOpen(true)} />
+      <div 
+        className={`flex flex-col min-h-screen transition-all duration-300 ease-in-out
+          ${isCollapsed ? 'lg:pl-[72px]' : 'lg:pl-64'}
+        `}
+      >
+        <Header setIsMobileOpen={setIsMobileOpen} />
         
-        <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
-          <div className="md:hidden mb-4">
-            <GlobalFilters />
-          </div>
-          <div className="mb-6">
-            <FilterChips />
-          </div>
-          
-          <div className="animate-in fade-in duration-500">
-            <Outlet />
-          </div>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 w-full max-w-7xl mx-auto animate-fade-in">
+          <Outlet />
         </main>
       </div>
 
       <MobileNav />
-      <ToastContainer />
     </div>
   );
 };

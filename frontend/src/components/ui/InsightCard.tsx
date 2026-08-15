@@ -1,42 +1,46 @@
 import React from 'react';
-import { Lightbulb, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Lightbulb, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+
+export type InsightType = 'positive' | 'negative' | 'neutral' | 'warning';
 
 interface InsightCardProps {
-  type: 'opportunity' | 'trend' | 'anomaly';
+  type: InsightType;
   title: string;
   description: string;
   dataPoint?: string;
-  category: string;
+  dataLabel?: string;
 }
 
-export const InsightCard: React.FC<InsightCardProps> = ({ type, title, description, dataPoint, category }) => {
-  const config = {
-    opportunity: { icon: Lightbulb, color: 'text-info', bg: 'bg-info-light' },
-    trend: { icon: TrendingUp, color: 'text-success', bg: 'bg-success-light' },
-    anomaly: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning-light' },
-  }[type];
+const config = {
+  positive: { icon: TrendingUp, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50', badge: 'Positivo', badgeStyle: 'bg-emerald-100 text-emerald-800' },
+  negative: { icon: TrendingDown, iconColor: 'text-red-600', iconBg: 'bg-red-50', badge: 'Negativo', badgeStyle: 'bg-red-100 text-red-800' },
+  neutral: { icon: Lightbulb, iconColor: 'text-blue-600', iconBg: 'bg-blue-50', badge: 'Neutral', badgeStyle: 'bg-blue-100 text-blue-800' },
+  warning: { icon: AlertTriangle, iconColor: 'text-amber-600', iconBg: 'bg-amber-50', badge: 'Atención', badgeStyle: 'bg-amber-100 text-amber-800' }
+};
 
-  const Icon = config.icon;
+export const InsightCard: React.FC<InsightCardProps> = ({ type, title, description, dataPoint, dataLabel }) => {
+  const { icon: Icon, iconColor, iconBg, badge, badgeStyle } = config[type];
 
   return (
-    <div className="card p-5 hover:shadow-md transition-shadow group cursor-pointer relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-neutral-50 to-neutral-100 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+    <div className="relative bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all p-5 pt-6 flex flex-col h-full group">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-80 group-hover:opacity-100 transition-opacity"></div>
       
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-2.5 rounded-lg ${config.bg} ${config.color}`}>
-          <Icon size={20} />
+      <div className="flex items-start justify-between mb-4">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBg}`}>
+          <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
-        <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-600">
-          {category}
+        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full ${badgeStyle}`}>
+          {badge}
         </span>
       </div>
       
-      <h4 className="font-semibold text-neutral-900 mb-2">{title}</h4>
-      <p className="text-sm text-neutral-600 line-clamp-3">{description}</p>
+      <h4 className="text-base font-semibold text-slate-900 mb-2">{title}</h4>
+      <p className="text-sm text-slate-600 leading-relaxed mb-5 flex-1">{description}</p>
       
       {dataPoint && (
-        <div className="mt-4 pt-4 border-t border-border-subtle">
-          <span className="text-lg font-bold text-neutral-900">{dataPoint}</span>
+        <div className="mt-auto bg-slate-50 border border-slate-100 rounded-lg p-3.5 flex items-center justify-between">
+          <span className="text-xs font-medium text-slate-500">{dataLabel || 'Dato clave'}</span>
+          <span className="text-sm font-bold text-slate-900">{dataPoint}</span>
         </div>
       )}
     </div>
