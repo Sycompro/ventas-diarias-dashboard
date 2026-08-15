@@ -6,6 +6,7 @@ import { encrypt, decrypt } from '../services/crypto.service.js';
 import { testConnection, createBillingClient } from '../services/billing-api.service.js';
 import { syncCompany } from '../services/sync.service.js';
 import { authenticate } from '../middleware/auth.middleware.js';
+import { getSalesTrend } from '../services/analytics.service.js';
 
 const router = Router();
 router.use(authenticate);
@@ -197,6 +198,22 @@ router.get('/:id/debug-sync', async (req: any, res) => {
     res.json(debugInfo);
   } catch (error: any) {
     res.status(500).json({ message: 'Error in debug-sync', error: error.message });
+  }
+});
+
+router.get('/:id/debug-trend', async (req: any, res) => {
+  try {
+    if (req.params.id !== req.user.companyId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const { dateStart, dateEnd } = req.query;
+    const granularity = (req.query.granularity || 'day') as any;
+    
+    const result = await getSalesTrend(req.params.id, dateStart || '2026-08-01', dateEnd || '2026-08-15', granularity);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 });
 
