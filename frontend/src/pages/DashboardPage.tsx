@@ -23,7 +23,6 @@ import {
 } from '../hooks/useSalesMetrics';
 
 import { KpiCard } from '../components/ui/KpiCard';
-import { TrafficLight, TrafficStatus } from '../components/ui/TrafficLight';
 import { SalesTrendChart } from '../components/charts/SalesTrendChart';
 import { PaymentDonutChart } from '../components/charts/PaymentDonutChart';
 import { RankingBarChart } from '../components/charts/RankingBarChart';
@@ -51,12 +50,6 @@ export const DashboardPage: React.FC = () => {
   const { data: sellersData, isLoading: loadingSellers } = useSalesBySeller();
   const { data: detailedPayments, isLoading: loadingDetailed } = useDetailedPaymentMetrics();
 
-  // Fetch Health Status dynamically
-  const { data: healthData } = useQuery({
-    queryKey: ['health-status', companyId],
-    queryFn: () => intelligenceService.getHealth(),
-    enabled: !!companyId
-  });
 
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -114,51 +107,6 @@ export const DashboardPage: React.FC = () => {
     { key: 'total', header: 'Ingresos', sortable: true, render: (item) => <span className="font-semibold text-slate-900 tabular-nums">{formatCurrency(item.total)}</span> }
   ];
 
-  const getTrafficStatus = (val: string | undefined): TrafficStatus => {
-    if (val === 'critical') return 'critical';
-    if (val === 'attention') return 'attention';
-    return 'healthy';
-  };
-
-  const trafficIndicators = [
-    { 
-      label: 'Ventas Mensuales', 
-      description: healthData?.sales === 'critical' 
-        ? 'Caída severa de ventas detectada' 
-        : healthData?.sales === 'attention' 
-          ? 'Leve caída respecto al promedio diario' 
-          : 'Ventas dentro del promedio saludable', 
-      status: getTrafficStatus(healthData?.sales) 
-    },
-    { 
-      label: 'Cumplimiento de Meta', 
-      description: healthData?.goals === 'critical' 
-        ? 'Crítico: Muy por debajo de la meta mensual' 
-        : healthData?.goals === 'attention' 
-          ? 'En camino a la meta, requiere atención' 
-          : 'Meta mensual en buen progreso', 
-      status: getTrafficStatus(healthData?.goals) 
-    },
-    { 
-      label: 'Tendencia de Ventas', 
-      description: healthData?.trends === 'critical' 
-        ? 'Tendencia bajista preocupante en los últimos días' 
-        : healthData?.trends === 'attention' 
-          ? 'Tendencia stable con precauciones' 
-          : 'Tendencia alcista o estable saludable', 
-      status: getTrafficStatus(healthData?.trends) 
-    },
-    { 
-      label: 'Estado Operacional', 
-      description: healthData?.overall === 'critical' 
-        ? 'Se requiere acción inmediata en las operaciones' 
-        : healthData?.overall === 'attention' 
-          ? 'Operación estable con áreas a vigilar' 
-          : 'Operación empresarial totalmente saludable', 
-      status: getTrafficStatus(healthData?.overall) 
-    },
-  ];
-
   return (
     <div className="space-y-6">
       
@@ -210,11 +158,6 @@ export const DashboardPage: React.FC = () => {
           iconColor="text-emerald-600"
           iconBg="bg-emerald-50"
         />
-      </div>
-
-      <div className="mb-5 animate-in fade-in duration-700 delay-100 fill-mode-both">
-        <h2 className="text-sm font-semibold text-slate-900 mb-2">Semáforo Empresarial</h2>
-        <TrafficLight indicators={trafficIndicators} />
       </div>
 
       {/* Evolución de Ventas - Ancho Completo */}
