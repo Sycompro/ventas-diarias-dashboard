@@ -419,6 +419,11 @@ router.get('/debug-sync-one', async (req: any, res) => {
         const xmlRes = await axios.get(httpUrl, {
           responseType: 'text',
           timeout: 5000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/xml, text/xml, */*',
+            'Authorization': `Bearer ${decryptedToken}`
+          },
           httpsAgent: new https.Agent({ rejectUnauthorized: false })
         });
         xmlContent = xmlRes.data;
