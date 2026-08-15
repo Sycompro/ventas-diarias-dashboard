@@ -104,7 +104,7 @@ export const SalesPage: React.FC = () => {
     <div className="space-y-6">
 
       {/* Filtros Globales */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 animate-in fade-in duration-500">
+      <div className="animate-in fade-in duration-500">
         <GlobalFilters />
       </div>
 

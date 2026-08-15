@@ -22,6 +22,7 @@ export const SellerSelector: React.FC = () => {
       options={options}
       placeholder="Todos los usuarios"
       icon={<User size={15} />}
+      variant="emerald"
     />
   );
 };

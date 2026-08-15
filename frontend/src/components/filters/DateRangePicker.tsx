@@ -17,6 +17,7 @@ export const DateRangePicker: React.FC = () => {
         options={DATE_PRESETS}
         placeholder="Rango de Fechas"
         icon={<Calendar size={15} />}
+        variant="amber"
       />
 
       {/* Rango de Fechas Personalizado (Manual) */}

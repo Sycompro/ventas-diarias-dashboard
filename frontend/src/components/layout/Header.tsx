@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Bell, Search, User } from 'lucide-react';
+import { Menu, Bell, User } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useHeaderStore } from '../../hooks/useHeader';
 
@@ -68,15 +68,7 @@ export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
           </div>
         )}
 
-        {/* Search - Hidden on small mobile */}
-        <div className="hidden md:flex items-center relative group">
-          <Search size={16} className="absolute left-3 text-slate-400 group-focus-within:text-primary-500 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Buscar..." 
-            className="pl-9 pr-4 py-1.5 bg-slate-100 rounded-full text-xs focus:bg-white focus:ring-2 focus:ring-primary-100 w-36 lg:w-48 transition-all duration-300 outline-none placeholder:text-slate-500"
-          />
-        </div>
+
 
         <button className="relative p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
           <Bell size={18} />

@@ -235,10 +235,14 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3 py-2 bg-white border border-slate-200/80 rounded-lg hover:bg-slate-50 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 cursor-pointer duration-200 ${isOpen ? 'ring-2 ring-primary-100 border-primary-500' : ''}`}
+        className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-all text-left focus:outline-none focus:ring-2 cursor-pointer duration-200
+          ${tempStart && tempEnd 
+            ? 'bg-amber-50/90 border-amber-200 hover:bg-amber-100/80 text-amber-900 focus:ring-amber-100 focus:border-amber-400 font-bold' 
+            : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300'
+          } ${isOpen ? 'ring-2 ring-amber-100 border-amber-500' : ''}`}
       >
-        <CalendarIcon size={14} className="text-slate-400 shrink-0" />
-        <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
+        <CalendarIcon size={14} className={`shrink-0 transition-colors ${tempStart && tempEnd ? 'text-amber-500' : 'text-slate-400'}`} />
+        <span className="text-xs font-bold whitespace-nowrap">
           {tempStart && tempEnd 
             ? `${formatUIDate(tempStart)} a ${formatUIDate(tempEnd)}`
             : 'Seleccionar fechas'

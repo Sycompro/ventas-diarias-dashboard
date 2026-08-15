@@ -20,6 +20,7 @@ export const BranchSelector: React.FC = () => {
       options={options}
       placeholder="Todas las sedes"
       icon={<MapPin size={15} />}
+      variant="blue"
     />
   );
 };

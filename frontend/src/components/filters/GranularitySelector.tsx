@@ -20,6 +20,7 @@ export const GranularitySelector: React.FC = () => {
       options={options}
       placeholder="Vista por Día"
       icon={<Calendar size={15} />}
+      variant="violet"
     />
   );
 };

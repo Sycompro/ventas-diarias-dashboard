@@ -139,7 +139,7 @@ export const DashboardPage: React.FC = () => {
     <div className="space-y-6">
 
       {/* Barra de Filtros Globales */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 mb-6 animate-in fade-in duration-500">
+      <div className="mb-6 animate-in fade-in duration-500">
         <GlobalFilters />
       </div>
 

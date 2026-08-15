@@ -13,6 +13,7 @@ interface CustomSelectProps {
   placeholder: string;
   icon?: React.ReactNode;
   className?: string;
+  variant?: 'blue' | 'emerald' | 'violet' | 'amber' | 'primary';
 }
 
 export const CustomSelect: React.FC<CustomSelectProps> = ({
@@ -21,7 +22,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   options,
   placeholder,
   icon,
-  className = ''
+  className = '',
+  variant
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,21 +41,54 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   const selectedOption = options.find((opt) => opt.value === value);
 
+  let variantClasses = '';
+  let iconClasses = '';
+  
+  if (variant === 'blue') {
+    variantClasses = value 
+      ? 'bg-blue-50/90 border-blue-200 hover:bg-blue-100/80 text-blue-900 focus:ring-blue-100 focus:border-blue-400' 
+      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
+    iconClasses = value ? 'text-blue-500' : 'text-slate-400';
+  } else if (variant === 'emerald') {
+    variantClasses = value 
+      ? 'bg-emerald-50/90 border-emerald-200 hover:bg-emerald-100/80 text-emerald-900 focus:ring-emerald-100 focus:border-emerald-400' 
+      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
+    iconClasses = value ? 'text-emerald-500' : 'text-slate-400';
+  } else if (variant === 'violet') {
+    variantClasses = value 
+      ? 'bg-violet-50/90 border-violet-200 hover:bg-violet-100/80 text-violet-900 focus:ring-violet-100 focus:border-violet-400' 
+      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
+    iconClasses = value ? 'text-violet-500' : 'text-slate-400';
+  } else if (variant === 'amber') {
+    variantClasses = value 
+      ? 'bg-amber-50/90 border-amber-200 hover:bg-amber-100/80 text-amber-900 focus:ring-amber-100 focus:border-amber-400' 
+      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
+    iconClasses = value ? 'text-amber-500' : 'text-slate-400';
+  } else if (variant === 'primary') {
+    variantClasses = value 
+      ? 'bg-primary-50/90 border-primary-200 hover:bg-primary-100/80 text-primary-900 focus:ring-primary-100 focus:border-primary-400' 
+      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
+    iconClasses = value ? 'text-primary-500' : 'text-slate-400';
+  } else {
+    variantClasses = 'bg-white border-slate-200/80 hover:bg-slate-50 text-slate-700 focus:ring-primary-100 focus:border-primary-500';
+    iconClasses = 'text-slate-400';
+  }
+
   return (
     <div ref={containerRef} className={`relative min-w-[160px] ${className}`}>
       {/* Clickable button/trigger */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white border border-slate-200/80 rounded-lg hover:bg-slate-50 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 cursor-pointer"
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg transition-all text-left focus:outline-none focus:ring-2 cursor-pointer duration-200 ${variantClasses}`}
       >
         <div className="flex items-center gap-2 min-w-0">
-          {icon && <span className="text-slate-400 shrink-0">{icon}</span>}
-          <span className="text-xs font-semibold text-slate-700 truncate">
+          {icon && <span className={`shrink-0 transition-colors ${iconClasses}`}>{icon}</span>}
+          <span className="text-xs font-bold truncate">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         </div>
-        <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`transition-transform duration-200 shrink-0 ${iconClasses} ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Floating Dropdown List */}
