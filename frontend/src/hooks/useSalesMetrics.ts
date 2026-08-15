@@ -267,3 +267,51 @@ export const useDetailedPaymentMetrics = () => {
     ...queryOptions,
   });
 };
+
+export const useSalesPivot = () => {
+  const filters = useFilters();
+  return useQuery({
+    queryKey: ['sales-pivot', filters],
+    queryFn: async () => {
+      try {
+        const data = await salesService.getPivot({
+          companyId: filters.companyId,
+          dateStart: filters.dateStart,
+          dateEnd: filters.dateEnd,
+          branch: filters.branch,
+          seller: filters.seller
+        });
+        return data || [];
+      } catch (err) {
+        console.error("Sales pivot API offline/empty:", err);
+        return [];
+      }
+    },
+    ...queryOptions,
+  });
+};
+
+export const useSalesDocuments = (limit = 50, offset = 0) => {
+  const filters = useFilters();
+  return useQuery({
+    queryKey: ['sales-documents', filters, limit, offset],
+    queryFn: async () => {
+      try {
+        const data = await salesService.getDocuments({
+          companyId: filters.companyId,
+          dateStart: filters.dateStart,
+          dateEnd: filters.dateEnd,
+          branch: filters.branch,
+          seller: filters.seller,
+          limit,
+          offset
+        });
+        return data || [];
+      } catch (err) {
+        console.error("Sales documents API offline/empty:", err);
+        return [];
+      }
+    },
+    ...queryOptions,
+  });
+};

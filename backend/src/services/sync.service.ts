@@ -64,12 +64,23 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
 
       const isVoided = ['09', '11', '13'].includes(stateId);
       
+      let parsedSeries = '';
+      let parsedNumber = '';
+      if (doc.number && doc.number.includes('-')) {
+        const parts = doc.number.split('-');
+        parsedSeries = parts[0];
+        parsedNumber = parts[1];
+      } else {
+        parsedSeries = doc.series || '';
+        parsedNumber = doc.number || '';
+      }
+      
       const [insertedSale] = await db.insert(sales).values({
         companyId,
         externalId: String(doc.external_id || doc.id),
         documentTypeId: doc.document_type_id,
-        series: doc.series || '',
-        number: doc.number || '',
+        series: parsedSeries,
+        number: parsedNumber,
         total: doc.total.toString(),
         currency: 'PEN',
         sellerName: doc.user_name || 'Desconocido',
@@ -80,6 +91,8 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
       }).onConflictDoUpdate({
         target: [sales.companyId, sales.externalId],
         set: {
+          series: parsedSeries,
+          number: parsedNumber,
           total: doc.total.toString(),
           status: isVoided ? 'voided' : 'active',
           syncedAt: new Date(),

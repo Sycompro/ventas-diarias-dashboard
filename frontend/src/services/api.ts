@@ -119,6 +119,14 @@ export const salesService = {
   getDetailedPayments: async (params: any) => {
     const { data } = await api.get('/sales/by-payment-detailed', { params });
     return data;
+  },
+  getPivot: async (params: any) => {
+    const { data } = await api.get('/sales/pivot', { params });
+    return data;
+  },
+  getDocuments: async (params: any) => {
+    const { data } = await api.get('/sales/documents', { params });
+    return data;
   }
 };
 

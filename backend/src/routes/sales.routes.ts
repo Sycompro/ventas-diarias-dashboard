@@ -79,6 +79,114 @@ router.get('/by-seller', async (req, res) => {
   }
 });
 
+router.get('/pivot', async (req, res) => {
+  try {
+    const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    
+    const salesList = await db.query.sales.findMany({
+      where: and(
+        eq(sales.companyId, companyId),
+        eq(sales.status, 'active'),
+        gte(sales.issuedAt, new Date(dateStart)),
+        lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999Z'))
+      ),
+      with: {
+        payments: true
+      }
+    });
+
+    const pivotMap: Record<string, {
+      sede: string;
+      vendedores: Record<string, {
+        vendedor: string;
+        efectivo: number;
+        tarjeta: number;
+        transferencia: number;
+        yapePlin: number;
+        otros: number;
+        total: number;
+      }>;
+      efectivo: number;
+      tarjeta: number;
+      transferencia: number;
+      yapePlin: number;
+      otros: number;
+      total: number;
+    }> = {};
+
+    for (const sale of salesList) {
+      let series = sale.series;
+      if (!series && sale.number && sale.number.includes('-')) {
+        series = sale.number.split('-')[0];
+      }
+      const Sede = series || 'Sede Principal';
+      const seller = sale.sellerName || 'Sin Vendedor';
+
+      if (!pivotMap[Sede]) {
+        pivotMap[Sede] = {
+          sede: Sede,
+          vendedores: {},
+          efectivo: 0,
+          tarjeta: 0,
+          transferencia: 0,
+          yapePlin: 0,
+          otros: 0,
+          total: 0
+        };
+      }
+
+      if (!pivotMap[Sede].vendedores[seller]) {
+        pivotMap[Sede].vendedores[seller] = {
+          vendedor: seller,
+          efectivo: 0,
+          tarjeta: 0,
+          transferencia: 0,
+          yapePlin: 0,
+          otros: 0,
+          total: 0
+        };
+      }
+
+      const saleTotal = parseFloat(sale.total);
+
+      if (sale.payments && sale.payments.length > 0) {
+        for (const payment of sale.payments) {
+          const amount = parseFloat(payment.amount);
+          const method = payment.paymentMethodId;
+
+          let category: 'efectivo' | 'tarjeta' | 'transferencia' | 'yapePlin' | 'otros' = 'otros';
+          if (method === '01') category = 'efectivo';
+          else if (['02', '04', '06'].includes(method)) category = 'tarjeta';
+          else if (method === '03') category = 'transferencia';
+          else if (method === '05') category = 'yapePlin';
+
+          pivotMap[Sede][category] += amount;
+          pivotMap[Sede].total += amount;
+
+          pivotMap[Sede].vendedores[seller][category] += amount;
+          pivotMap[Sede].vendedores[seller].total += amount;
+        }
+      } else {
+        pivotMap[Sede].efectivo += saleTotal;
+        pivotMap[Sede].total += saleTotal;
+
+        pivotMap[Sede].vendedores[seller].efectivo += saleTotal;
+        pivotMap[Sede].vendedores[seller].total += saleTotal;
+      }
+    }
+
+    const result = Object.values(pivotMap).map(Sede => ({
+      ...Sede,
+      vendedores: Object.values(Sede.vendedores).sort((a, b) => b.total - a.total)
+    })).sort((a, b) => b.total - a.total);
+
+    res.json(result);
+  } catch (err: any) {
+    console.error('Error fetching sales pivot metrics:', err.message);
+    res.status(500).json({ message: 'Error fetching sales pivot metrics' });
+  }
+});
+
 router.get('/documents', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
