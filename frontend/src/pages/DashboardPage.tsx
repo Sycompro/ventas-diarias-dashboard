@@ -18,7 +18,8 @@ import {
   useSalesByPayment, 
   useSalesByDocumentType,
   useTopProducts,
-  useSalesBySeller
+  useSalesBySeller,
+  useDetailedPaymentMetrics
 } from '../hooks/useSalesMetrics';
 
 import { KpiCard } from '../components/ui/KpiCard';
@@ -41,6 +42,7 @@ export const DashboardPage: React.FC = () => {
   const { data: documentData, isLoading: loadingDocument } = useSalesByDocumentType();
   const { data: topProducts, isLoading: loadingProducts } = useTopProducts();
   const { data: sellersData, isLoading: loadingSellers } = useSalesBySeller();
+  const { data: detailedPayments, isLoading: loadingDetailed } = useDetailedPaymentMetrics();
 
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -164,21 +166,8 @@ export const DashboardPage: React.FC = () => {
               { key: 'count', header: 'Operaciones', render: (item: any) => <span className="tabular-nums">{item.count} ops</span> },
               { key: 'amount', header: 'Total Recaudado', render: (item: any) => <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(item.amount)}</span> }
             ]}
-            data={[
-              { id: '1', method: 'Tarjeta', company: 'Sede Principal - Lima', seller: 'Ana García', count: 45, amount: 8000 },
-              { id: '2', method: 'Tarjeta', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 32, amount: 6200 },
-              { id: '3', method: 'Tarjeta', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 28, amount: 3800 },
-              { id: '4', method: 'Efectivo', company: 'Sede Principal - Lima', seller: 'Ana García', count: 70, amount: 3500 },
-              { id: '5', method: 'Efectivo', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 65, amount: 3200 },
-              { id: '6', method: 'Efectivo', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 65, amount: 3300 },
-              { id: '7', method: 'Transferencia', company: 'Sede Principal - Lima', seller: 'Ana García', count: 25, amount: 5000 },
-              { id: '8', method: 'Transferencia', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 20, amount: 4000 },
-              { id: '9', method: 'Transferencia', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 35, amount: 3000 },
-              { id: '10', method: 'Yape / Plin', company: 'Sede Principal - Lima', seller: 'Ana García', count: 20, amount: 1000 },
-              { id: '11', method: 'Yape / Plin', company: 'Sede Principal - Lima', seller: 'Carlos López', count: 18, amount: 900 },
-              { id: '12', method: 'Yape / Plin', company: 'Sede Sur - Arequipa', seller: 'María Rodríguez', count: 12, amount: 600 }
-            ]}
-            isLoading={loadingPayment}
+            data={detailedPayments || []}
+            isLoading={loadingDetailed || loadingPayment}
           />
         </div>
       </div>
