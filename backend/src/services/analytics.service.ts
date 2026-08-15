@@ -8,24 +8,70 @@ export interface TrendPoint {
 }
 
 export async function getSalesTrend(companyId: string, dateStart: string, dateEnd: string, granularity: 'hour'|'day'|'week'|'month'): Promise<TrendPoint[]> {
-  const truncFmt = granularity === 'hour' ? 'hour' : granularity === 'week' ? 'week' : granularity === 'month' ? 'month' : 'day';
-
-  const res = await sqlClient`
-    SELECT 
-      date_trunc(${truncFmt}, issued_at) as period,
-      COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
-      COUNT(*) as count
-    FROM sales
-    WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
-    GROUP BY period
-    ORDER BY period ASC
-  `;
+  let res;
+  if (granularity === 'hour') {
+    res = await sqlClient`
+      SELECT 
+        date_trunc('hour', issued_at) as period,
+        COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+        COUNT(*) as count
+      FROM sales
+      WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+      GROUP BY period
+      ORDER BY period ASC
+    `;
+  } else if (granularity === 'week') {
+    res = await sqlClient`
+      SELECT 
+        date_trunc('week', issued_at) as period,
+        COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+        COUNT(*) as count
+      FROM sales
+      WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+      GROUP BY period
+      ORDER BY period ASC
+    `;
+  } else if (granularity === 'month') {
+    res = await sqlClient`
+      SELECT 
+        date_trunc('month', issued_at) as period,
+        COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+        COUNT(*) as count
+      FROM sales
+      WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+      GROUP BY period
+      ORDER BY period ASC
+    `;
+  } else {
+    res = await sqlClient`
+      SELECT 
+        date_trunc('day', issued_at) as period,
+        COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+        COUNT(*) as count
+      FROM sales
+      WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+      GROUP BY period
+      ORDER BY period ASC
+    `;
+  }
 
   return res.map(r => {
     const total = parseFloat(r.total_sales as string || '0');
     const count = parseInt(r.count as string || '0', 10);
+    
+    let dateStr = '';
+    if (r.period instanceof Date) {
+      dateStr = r.period.toISOString();
+    } else if (typeof r.period === 'string') {
+      dateStr = new Date(r.period).toISOString();
+    } else if (r.period) {
+      dateStr = new Date(String(r.period)).toISOString();
+    } else {
+      dateStr = new Date().toISOString();
+    }
+
     return {
-      date: (r.period as Date).toISOString(),
+      date: dateStr,
       total,
       count,
       avgTicket: count > 0 ? total / count : 0
