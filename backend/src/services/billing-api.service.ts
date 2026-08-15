@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import https from 'https';
 
 export interface BillingItem {
   description: string;
@@ -37,7 +38,8 @@ export function createBillingClient(subdomain: string, decryptedToken: string): 
     
   return axios.create({
     baseURL,
-    timeout: 12000,
+    timeout: 15000,
+    httpsAgent: new https.Agent({ rejectUnauthorized: false }), // Bypass certificate issues
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
@@ -82,7 +84,12 @@ export async function testConnection(subdomain: string, token: string): Promise<
       date_end: today
     });
     return true;
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`❌ [Test Connection Error] para ${subdomain}:`, error.message);
+    if (error.response) {
+      console.error(`Status de Respuesta: ${error.response.status}`);
+      console.error(`Datos de Respuesta:`, JSON.stringify(error.response.data));
+    }
     return false;
   }
 }
