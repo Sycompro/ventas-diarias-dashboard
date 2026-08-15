@@ -75,8 +75,8 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
     
     for (const doc of documents) {
       const stateId = String(doc.state_type_id);
-      // Solo procesar documentos con estado válido (01=registrado, 03=enviado, 05=aceptado)
-      if (!['01', '03', '05'].includes(stateId)) continue;
+      // Procesar documentos con estado válido o anulados/rechazados (01=registrado, 03=enviado, 05=aceptado, 11=anulado, 09=anulado, 13=anulado)
+      if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
       
       let issuedAt: Date;
       try {
@@ -195,8 +195,8 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
 
     for (const note of saleNotes) {
       const stateId = String(note.state_type_id);
-      // Solo procesar notas de venta con estado válido (01=registrado, 03=enviado, 05=aceptado)
-      if (!['01', '03', '05'].includes(stateId)) continue;
+      // Procesar notas de venta con estado válido o anuladas/rechazadas (01=registrado, 03=enviado, 05=aceptado, 11=anulado, 09=anulado, 13=anulado)
+      if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
 
       let issuedAt: Date;
       try {
