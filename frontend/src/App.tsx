@@ -26,6 +26,7 @@ const ComparatorPage = lazy(() => import('./pages/ComparatorPage').then(m => ({ 
 const GoalsPage = lazy(() => import('./pages/GoalsPage').then(m => ({ default: m.GoalsPage })));
 const AlertsPage = lazy(() => import('./pages/AlertsPage').then(m => ({ default: m.AlertsPage })));
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })));
+const CompaniesPage = lazy(() => import('./pages/CompaniesPage').then(m => ({ default: m.CompaniesPage })));
 // Placeholder components for routing
 const Placeholder = ({ title }: { title: string }) => <div className="p-8 text-center text-xl text-neutral-500 font-medium">{title} - Próximamente</div>;
 
@@ -70,7 +71,7 @@ export const App: React.FC = () => {
               <Route path="alertas" element={<AlertsPage />} />
               <Route path="insights" element={<InsightsPage />} />
               <Route path="reportes" element={<Placeholder title="Reportes" />} />
-              <Route path="configuracion/empresas" element={<Placeholder title="Empresas" />} />
+              <Route path="configuracion/empresas" element={<CompaniesPage />} />
             </Route>
             
             <Route path="*" element={<Navigate to="/" replace />} />

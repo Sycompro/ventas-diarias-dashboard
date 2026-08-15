@@ -56,6 +56,26 @@ export const companyService = {
   getAll: async () => {
     const { data } = await api.get('/companies');
     return data;
+  },
+  create: async (company: any) => {
+    const { data } = await api.post('/companies', company);
+    return data;
+  },
+  update: async (id: string, company: any) => {
+    const { data } = await api.put(`/companies/${id}`, company);
+    return data;
+  },
+  delete: async (id: string) => {
+    const { data } = await api.delete(`/companies/${id}`);
+    return data;
+  },
+  testConnection: async (id: string, apiToken: string) => {
+    const { data } = await api.post(`/companies/${id}/test`, { apiToken });
+    return data;
+  },
+  sync: async (id: string) => {
+    const { data } = await api.post(`/companies/${id}/sync`);
+    return data;
   }
 };
 

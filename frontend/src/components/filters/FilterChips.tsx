@@ -8,7 +8,7 @@ export const FilterChips: React.FC = () => {
   const { companyId, datePreset, setCompany, setDatePreset } = useFilters();
   const { data: companies } = useCompanies();
 
-  const activeCompany = companies?.find(c => c.id === companyId);
+  const activeCompany = companies?.find((c: any) => c.id === companyId);
   const activePreset = DATE_PRESETS.find(p => p.value === datePreset);
 
   return (

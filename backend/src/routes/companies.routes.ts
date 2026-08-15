@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../config/database.js';
 import { companies, userCompanies } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { encrypt } from '../services/crypto.service.js';
+import { encrypt, decrypt } from '../services/crypto.service.js';
 import { testConnection } from '../services/billing-api.service.js';
 import { syncCompany } from '../services/sync.service.js';
 import { authenticate } from '../middleware/auth.middleware.js';
@@ -85,7 +85,12 @@ router.post('/:id/test', async (req, res) => {
     const company = await db.query.companies.findFirst({ where: eq(companies.id, req.params.id) });
     if (!company) return res.status(404).json({ message: 'Company not found' });
     
-    const success = await testConnection(company.subdomain, apiToken);
+    let tokenToUse = apiToken;
+    if (!tokenToUse) {
+      tokenToUse = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
+    }
+    
+    const success = await testConnection(company.subdomain, tokenToUse);
     res.json({ success });
   } catch (error) {
     res.status(500).json({ message: 'Error testing connection' });

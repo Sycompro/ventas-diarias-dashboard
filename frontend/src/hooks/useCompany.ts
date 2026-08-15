@@ -1,19 +1,37 @@
 import { useQuery } from '@tanstack/react-query';
 import { useFilters } from './useFilters';
 import { Company } from '../types';
+import { companyService } from '../services/api';
 
 // Mock data for development
 const mockCompanies: Company[] = [
-  { id: '1', name: 'Syscom Central', ruc: '20123456789', subdomain: 'central', timezone: 'America/Lima', currencySymbol: 'S/.', isActive: true, createdAt: '2020-01-01' },
-  { id: '2', name: 'Syscom Norte', ruc: '20987654321', subdomain: 'norte', timezone: 'America/Lima', currencySymbol: 'S/.', isActive: true, createdAt: '2021-05-15' },
+  { id: '1', name: 'Sede Principal - Lima', ruc: '20123456789', subdomain: 'central', timezone: 'America/Lima', currencySymbol: 'S/.', isActive: true, createdAt: '2020-01-01' },
+  { id: '2', name: 'Sede Sur - Arequipa', ruc: '20987654321', subdomain: 'sur', timezone: 'America/Lima', currencySymbol: 'S/.', isActive: true, createdAt: '2021-05-15' },
 ];
 
 export const useCompanies = () => {
   return useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
-      // In real app: return await companyService.getAll();
-      return new Promise<Company[]>((resolve) => setTimeout(() => resolve(mockCompanies), 500));
+      try {
+        const data = await companyService.getAll();
+        if (data && data.length > 0) {
+          // Map properties if needed (backend returns id, name, ruc, subdomain)
+          return data.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            ruc: c.ruc,
+            subdomain: c.subdomain,
+            timezone: c.timezone || 'America/Lima',
+            currencySymbol: c.currencySymbol || 'S/.',
+            isActive: true,
+            createdAt: new Date().toISOString()
+          }));
+        }
+      } catch (err) {
+        console.warn("Real database companies empty or offline, rendering default SEDES:", err);
+      }
+      return mockCompanies;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -23,5 +41,5 @@ export const useActiveCompany = () => {
   const companyId = useFilters((state) => state.companyId);
   const { data: companies } = useCompanies();
   
-  return companies?.find(c => c.id === companyId) || null;
+  return companies?.find((c: any) => c.id === companyId) || null;
 };

@@ -20,7 +20,7 @@ export const CompanySelector: React.FC = () => {
           className="appearance-none bg-transparent text-sm font-medium text-neutral-700 focus:ring-0 pr-6 cursor-pointer outline-none w-full min-w-[180px]"
         >
           <option value="">Todas las empresas (Consolidado)</option>
-          {companies?.map((company) => (
+          {companies?.map((company: any) => (
             <option key={company.id} value={company.id}>
               {company.name}
             </option>
