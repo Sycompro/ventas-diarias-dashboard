@@ -380,7 +380,12 @@ router.get('/debug-categories', async (req, res) => {
       FROM sale_items
       GROUP BY category
     `;
-    res.json(categories);
+    const sampleItems = await sqlClient`
+      SELECT description, quantity, total, category
+      FROM sale_items
+      LIMIT 30
+    `;
+    res.json({ categories, sampleItems });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
