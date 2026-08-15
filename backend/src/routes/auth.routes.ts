@@ -33,9 +33,10 @@ router.post('/login', async (req, res) => {
     try {
       const client = createBillingClient(cleanSubdomain, cleanToken);
       const profileRes = await client.get('/company');
-      if (profileRes.data && profileRes.data.data) {
-        companyName = profileRes.data.data.name || companyName;
-        companyRuc = profileRes.data.data.number || companyRuc;
+      const companyData = profileRes.data?.company || profileRes.data?.data || profileRes.data;
+      if (companyData) {
+        companyName = companyData.name || companyName;
+        companyRuc = companyData.number || companyRuc;
       }
     } catch (profileError) {
       console.warn(`[Warning] No se pudo obtener perfil de empresa (/company) para ${cleanSubdomain}. Se usará fallback.`);

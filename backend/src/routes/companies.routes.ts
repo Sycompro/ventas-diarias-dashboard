@@ -83,9 +83,10 @@ router.put('/:id', async (req: any, res) => {
         try {
           const client = createBillingClient(activeSubdomain, activeToken);
           const profileRes = await client.get('/company');
-          if (profileRes.data && profileRes.data.data) {
-            updateData.name = profileRes.data.data.name || company.name;
-            updateData.ruc = profileRes.data.data.number || company.ruc;
+          const companyData = profileRes.data?.company || profileRes.data?.data || profileRes.data;
+          if (companyData) {
+            updateData.name = companyData.name || company.name;
+            updateData.ruc = companyData.number || company.ruc;
           }
         } catch (profileError) {
           console.warn(`[Warning] No se pudo actualizar perfil de empresa en PUT`);

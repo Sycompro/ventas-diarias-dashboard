@@ -39,7 +39,29 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
       // Solo procesar documentos con estado válido (01=registrado, 03=enviado, 05=aceptado)
       if (!['01', '03', '05'].includes(stateId)) continue;
       
-      const issuedAt = new Date(`${doc.date_of_issue}T${doc.time_of_issue || '00:00:00'}`);
+      let issuedAt: Date;
+      try {
+        if (doc.date_of_issue && doc.date_of_issue.includes('-')) {
+          const parts = doc.date_of_issue.split('-');
+          if (parts[0].length === 4) {
+            // YYYY-MM-DD
+            issuedAt = new Date(`${doc.date_of_issue}T${doc.time_of_issue || '00:00:00'}`);
+          } else {
+            // DD-MM-YYYY
+            const [day, month, year] = parts;
+            issuedAt = new Date(`${year}-${month}-${day}T${doc.time_of_issue || '00:00:00'}`);
+          }
+        } else {
+          issuedAt = new Date(`${doc.date_of_issue}T${doc.time_of_issue || '00:00:00'}`);
+        }
+        
+        if (isNaN(issuedAt.getTime())) {
+          issuedAt = new Date();
+        }
+      } catch (e) {
+        issuedAt = new Date();
+      }
+
       const isVoided = ['09', '11', '13'].includes(stateId);
       
       const [insertedSale] = await db.insert(sales).values({
