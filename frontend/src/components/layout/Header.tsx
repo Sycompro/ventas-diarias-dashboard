@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
 
   return (
     <header 
-      className="min-h-16 py-2.5 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-30 transition-all duration-200 flex items-center justify-between px-4 sm:px-6 lg:px-8"
+      className="min-h-16 py-2.5 bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 transition-all duration-200 flex items-center justify-between px-4 sm:px-6 lg:px-8"
     >
       <div className="flex items-center gap-4 min-w-0">
         <button 
@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
         <div className="h-6 w-px bg-slate-200 mx-0.5 hidden sm:block"></div>
 
         <button className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-colors">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary-600 to-violet-500 flex items-center justify-center text-white shadow-sm">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary-600 to-violet-500 flex items-center justify-center text-white">
             <User size={14} />
           </div>
         </button>

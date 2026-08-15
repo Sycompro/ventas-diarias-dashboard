@@ -28,7 +28,7 @@ export const DocumentBarChart: React.FC<DocumentBarChartProps> = ({ data, isLoad
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-4 rounded-xl shadow-xl min-w-[200px]">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 min-w-[200px]">
           <p className="text-sm font-semibold text-slate-900 mb-3 pb-2">Comprobantes Emitidos</p>
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex justify-between items-center gap-6 mb-2.5 last:mb-0">
@@ -46,7 +46,7 @@ export const DocumentBarChart: React.FC<DocumentBarChartProps> = ({ data, isLoad
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-full">
+    <div className="bg-white rounded-xl border border-slate-200/80 p-6 flex flex-col h-full">
       <h3 className="text-lg font-semibold text-slate-900 mb-1">Tipos de Comprobante</h3>
       <p className="text-sm text-slate-500 mb-6">Monto total por tipo de documento</p>
       

@@ -80,7 +80,7 @@ export const TemporalAnalysisPage: React.FC = () => {
           <HourlyHeatmap data={formattedHourlyData} isLoading={loadingHourly} />
         </div>
         
-        <div className="card p-6 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+        <div className="card p-6 flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-800 mb-4 pb-2 border-b border-slate-50">Resumen de Actividad</h3>
             <div className="space-y-4">

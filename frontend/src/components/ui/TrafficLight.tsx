@@ -20,7 +20,7 @@ export const TrafficLight: React.FC<{ indicators: TrafficIndicatorProps[] }> = (
       {indicators.map((indicator, idx) => {
         const colors = colorMap[indicator.status];
         return (
-          <div key={idx} className="relative bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-all">
+          <div key={idx} className="relative bg-white rounded-xl border border-slate-200/80 p-4 hover:border-slate-300 hover:bg-slate-50/20 transition-all">
             <div className="flex items-start gap-3">
               <div className="relative flex items-center justify-center w-4 h-4 mt-0.5">
                 {indicator.status === 'critical' && (

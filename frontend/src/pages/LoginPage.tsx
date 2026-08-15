@@ -50,7 +50,7 @@ export const LoginPage: React.FC = () => {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-glow-primary">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center border border-white/10">
               <span className="text-white font-bold text-2xl leading-none">S</span>
             </div>
             <span className="text-3xl font-bold tracking-tight">
@@ -103,7 +103,7 @@ export const LoginPage: React.FC = () => {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="md:hidden flex items-center justify-center gap-2 mb-10">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-glow-primary">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center border border-slate-200">
               <span className="text-white font-bold text-lg leading-none">S</span>
             </div>
             <span className="text-2xl font-bold text-slate-900 tracking-tight">

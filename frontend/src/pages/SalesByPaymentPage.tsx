@@ -116,7 +116,7 @@ export const SalesByPaymentPage: React.FC = () => {
 
         {/* Tabla Detallada Multidimensional */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-xl shadow-sm p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="bg-white rounded-xl border border-slate-200/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             
             {/* Buscador de Texto */}
             <div className="relative w-full sm:w-72">
@@ -140,7 +140,7 @@ export const SalesByPaymentPage: React.FC = () => {
                     onClick={() => setMethodFilter(method)}
                     className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all shrink-0 cursor-pointer ${
                       methodFilter === method
-                        ? 'bg-slate-900 text-white shadow-sm'
+                        ? 'bg-slate-900 text-white'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                     }`}
                   >

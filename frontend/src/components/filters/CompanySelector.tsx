@@ -12,7 +12,7 @@ export const CompanySelector: React.FC = () => {
 
   return (
     <div className="relative group">
-      <div className="flex items-center gap-2 px-3 py-2 bg-white  rounded-lg shadow-sm transition-colors cursor-pointer">
+      <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg transition-colors cursor-pointer">
         <Building2 size={18} className="text-neutral-500" />
         <select
           value={companyId || ''}

@@ -46,7 +46,7 @@ export const InsightsPage: React.FC = () => {
           <Skeleton className="h-[220px]" />
         </div>
       ) : insights.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-xl mx-auto">
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-200/80 max-w-xl mx-auto">
           <Lightbulb className="w-12 h-12 text-slate-300 mb-3" />
           <p className="text-slate-500 font-medium text-center">Aún no hay suficientes datos para generar insights inteligentes.</p>
           <p className="text-xs text-slate-400 mt-1 text-center">Continúa registrando transacciones para activar las sugerencias del sistema.</p>

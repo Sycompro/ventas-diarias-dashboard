@@ -65,7 +65,7 @@ export const GoalsPage: React.FC = () => {
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold rounded-lg shadow transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
           Nueva Meta
@@ -79,7 +79,7 @@ export const GoalsPage: React.FC = () => {
           <Skeleton className="h-[180px]" />
         </div>
       ) : goalsProgress.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-xl mx-auto">
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-200 max-w-xl mx-auto">
           <Target className="w-12 h-12 text-slate-300 mb-3" />
           <p className="text-slate-500 font-medium text-center">No hay metas configuradas para este período.</p>
           <p className="text-xs text-slate-400 mt-1 text-center">Haz clic en "Nueva Meta" para registrar un objetivo mensual de ventas.</p>
@@ -105,7 +105,7 @@ export const GoalsPage: React.FC = () => {
       {/* NEW GOAL MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/45 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
                 <Target className="w-4 h-4 text-blue-600" /> Registrar Nueva Meta

@@ -51,7 +51,7 @@ export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, detailedP
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-3 rounded-xl shadow-xl min-w-[140px]">
+        <div className="bg-white p-3 rounded-xl border border-slate-200 min-w-[140px]">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.color }}></span>
             <span className="text-sm font-semibold text-slate-900">{data.name}</span>
@@ -82,7 +82,7 @@ export const PaymentDonutChart: React.FC<PaymentDonutProps> = ({ data, detailedP
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-full animate-fade-in">
+    <div className="bg-white rounded-xl border border-slate-200/80 p-6 flex flex-col h-full animate-fade-in">
       <h3 className="text-base font-semibold text-slate-900 mb-1">Medios de Pago</h3>
       <p className="text-xs text-slate-500 mb-5">Distribución de ingresos por sucursal y vendedor</p>
       

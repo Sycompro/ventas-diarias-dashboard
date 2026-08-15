@@ -38,7 +38,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
       />
       
       {/* Modal Content */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col animate-in zoom-in-95 fade-in duration-300">
+      <div className="relative bg-white rounded-2xl border border-slate-200 w-full max-w-lg flex flex-col animate-in zoom-in-95 fade-in duration-300">
         <div className="flex items-center justify-between px-6 py-4">
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
           <button 

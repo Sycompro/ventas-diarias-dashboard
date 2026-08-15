@@ -72,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div 
-          className="fixed inset-0 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[4px_0_24px_rgba(0,0,0,0.1)]/50 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+          className="fixed inset-0 bg-gradient-to-b from-slate-900 to-slate-950 border-r border-white/10 backdrop-blur-sm z-40 lg:hidden transition-opacity"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
@@ -88,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="h-16 flex items-center justify-between px-4  -white/5 shrink-0">
           {!isCollapsed && (
             <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-glow-primary">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center border border-white/10">
                 <span className="text-white font-bold text-lg leading-none">S</span>
               </div>
               <span className="text-xl font-bold text-white tracking-tight">
@@ -98,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
           {isCollapsed && (
             <div className="w-full flex justify-center">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-glow-primary">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center border border-white/10">
                 <span className="text-white font-bold text-lg leading-none">S</span>
               </div>
             </div>
@@ -147,12 +147,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         )}
 
                         {item.badge && !isCollapsed && (
-                          <span className="flex w-5 h-5 items-center justify-center rounded-full bg-danger-500 text-white text-[10px] font-bold shadow-glow-danger shrink-0">
+                          <span className="flex w-5 h-5 items-center justify-center rounded-full bg-danger-500 text-white text-[10px] font-bold shrink-0">
                             3
                           </span>
                         )}
                         {item.badge && isCollapsed && (
-                          <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-danger-500 shadow-glow-danger" />
+                          <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-danger-500" />
                         )}
                       </NavLink>
                     </li>
@@ -167,7 +167,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-4  -white/5 shrink-0 overflow-hidden">
           <div className={`flex items-center gap-2 ${isCollapsed ? 'justify-center' : 'justify-between'} min-w-0`}>
             <div className={`flex items-center gap-2 min-w-0 ${isCollapsed ? 'hidden' : 'flex'}`}>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary-600 to-violet-500 flex items-center justify-center text-white font-semibold text-sm shadow-sm ring-2 ring-white/10 shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary-600 to-violet-500 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/10 shrink-0">
                 {user?.name?.charAt(0) || 'U'}
               </div>
               <div className="flex flex-col min-w-0">

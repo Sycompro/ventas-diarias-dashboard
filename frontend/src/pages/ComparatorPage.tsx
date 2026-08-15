@@ -137,7 +137,7 @@ export const ComparatorPage: React.FC = () => {
       </div>
 
       {/* Date Selectors for both periods */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-5 rounded-2xl border border-slate-200/80">
         <div className="space-y-2">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-blue-600" /> Período Actual (P1)

@@ -36,7 +36,7 @@ export const ComparisonChart: React.FC<ComparisonChartProps> = ({ data, isLoadin
       const isPositive = diff >= 0;
 
       return (
-        <div className="bg-white p-4 rounded-xl shadow-xl min-w-[200px]">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 min-w-[200px]">
           <p className="text-sm font-semibold text-slate-900 mb-3 pb-2">{label}</p>
           
           <div className="space-y-2.5">
@@ -68,7 +68,7 @@ export const ComparisonChart: React.FC<ComparisonChartProps> = ({ data, isLoadin
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-full">
+    <div className="bg-white rounded-xl border border-slate-200/80 p-6 flex flex-col h-full">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-slate-900 mb-1">Comparativa de Periodos</h3>
         <p className="text-sm text-slate-500">Actual vs Anterior</p>
@@ -108,7 +108,7 @@ export const ComparisonChart: React.FC<ComparisonChartProps> = ({ data, isLoadin
               strokeWidth={3}
               fillOpacity={1} 
               fill="url(#colorCurrent)" 
-              activeDot={{ r: 6, fill: '#2563eb', stroke: '#fff', strokeWidth: 2, className: 'drop-shadow-sm' }}
+              activeDot={{ r: 6, fill: '#2563eb', stroke: '#fff', strokeWidth: 2, className: '' }}
             />
             <Area 
               name="Periodo anterior"

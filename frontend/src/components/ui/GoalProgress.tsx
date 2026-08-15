@@ -26,7 +26,7 @@ export const GoalProgress: React.FC<GoalProgressProps> = ({ title, current, targ
   else if (percentage < 30) statusBadge = { text: 'En riesgo', colors: 'bg-red-50 text-red-700' };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-5">
+    <div className="bg-white rounded-xl border border-slate-200/80 p-5">
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-slate-800">{title}</h3>

@@ -12,17 +12,17 @@ interface ToastProps {
 }
 
 const icons = {
-  success: <CheckCircle className="w-5 h-5 text-emerald-500" />,
-  error: <AlertCircle className="w-5 h-5 text-red-500" />,
-  warning: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-  info: <Info className="w-5 h-5 text-blue-500" />
+  success: <CheckCircle className="w-5 h-5 text-emerald-600" />,
+  error: <AlertCircle className="w-5 h-5 text-red-600" />,
+  warning: <AlertTriangle className="w-5 h-5 text-amber-600" />,
+  info: <Info className="w-5 h-5 text-blue-600" />
 };
 
-const borders = {
-  success: '',
-  error: '',
-  warning: '',
-  info: ''
+const containerStyles = {
+  success: 'bg-emerald-50/90 border border-emerald-100/80',
+  error: 'bg-red-50/90 border border-red-100/80',
+  warning: 'bg-amber-50/90 border border-amber-100/80',
+  info: 'bg-blue-50/90 border border-blue-100/80'
 };
 
 const progressColors = {
@@ -52,7 +52,7 @@ export const Toast: React.FC<ToastProps> = ({ id, type, message, onClose, durati
   }, [duration, id, onClose]);
 
   return (
-    <div className="relative flex items-center gap-3 w-80 bg-white shadow-xl rounded-xl p-4 animate-in slide-in-from-right-8 fade-in duration-300">
+    <div className={`relative flex items-center gap-3 w-80 rounded-xl p-4 animate-in slide-in-from-right-8 fade-in duration-300 ${containerStyles[type]}`}>
       <div className="flex-shrink-0">
         {icons[type]}
       </div>
@@ -64,7 +64,7 @@ export const Toast: React.FC<ToastProps> = ({ id, type, message, onClose, durati
       >
         <X className="w-4 h-4" />
       </button>
-      <div className="absolute bottom-0 left-0 h-1 bg-slate-100 w-full rounded-b-xl overflow-hidden">
+      <div className="absolute bottom-0 left-0 h-1 bg-slate-100/40 w-full rounded-b-xl overflow-hidden">
         <div 
           className={`h-full ${progressColors[type]} transition-all ease-linear`}
           style={{ width: `${progress}%` }}

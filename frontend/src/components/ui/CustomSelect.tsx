@@ -45,7 +45,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white border border-slate-200/80 rounded-lg shadow-sm hover:bg-slate-50 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 cursor-pointer"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white border border-slate-200/80 rounded-lg hover:bg-slate-50 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 cursor-pointer"
       >
         <div className="flex items-center gap-2 min-w-0">
           {icon && <span className="text-slate-400 shrink-0">{icon}</span>}
@@ -58,7 +58,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
       {/* Floating Dropdown List */}
       {isOpen && (
-        <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto py-1 animate-in fade-in slide-in-from-top-1.5 duration-100">
+        <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-lg z-50 max-h-60 overflow-y-auto py-1 animate-in fade-in slide-in-from-top-1.5 duration-100">
           {/* Default Option (e.g. "Todos...") */}
           <button
             type="button"

@@ -163,7 +163,7 @@ export const CompaniesPage: React.FC = () => {
         {(!companies || companies.length === 0) && (
           <button 
             onClick={openAddModal}
-            className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all font-medium flex items-center gap-2 shadow-sm shadow-primary-600/10 hover:shadow-primary-600/20 active:scale-95 cursor-pointer text-sm"
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium flex items-center gap-2 active:scale-95 cursor-pointer text-sm"
           >
             <Plus size={16} /> Configurar Nueva Sede
           </button>
@@ -173,14 +173,14 @@ export const CompaniesPage: React.FC = () => {
       {/* Loader */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-48 bg-white rounded-xl shadow-sm animate-pulse"></div>
+          <div className="h-48 bg-white rounded-xl border border-slate-200/80 animate-pulse"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {companies?.map((company: any) => (
             <div 
               key={company.id}
-              className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-6 flex flex-col justify-between relative overflow-hidden"
+              className="bg-white rounded-xl border border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/20 transition-all duration-300 p-6 flex flex-col justify-between relative overflow-hidden"
             >
               {/* Card visual accent */}
               <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-primary-500 to-violet-500"></div>
@@ -277,7 +277,7 @@ export const CompaniesPage: React.FC = () => {
       {/* CRUD / Integration Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6 relative">
+          <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6 relative">
             {/* Close button */}
             <button 
               onClick={() => setIsModalOpen(false)}
@@ -345,7 +345,7 @@ export const CompaniesPage: React.FC = () => {
                 <button 
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer text-center shadow-sm"
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer text-center"
                 >
                   {saving ? 'Guardando...' : 'Guardar Conexión'}
                 </button>

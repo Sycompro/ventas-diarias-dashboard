@@ -108,12 +108,12 @@ export const SalesPage: React.FC = () => {
     <div className="space-y-6">
 
       {/* Filtros Globales */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm animate-in fade-in duration-500">
+      <div className="bg-white p-4 rounded-xl border border-slate-200/80 animate-in fade-in duration-500">
         <GlobalFilters />
       </div>
 
       {/* Cuadro Estadístico Pivot - Solicitud de Usuario */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden animate-in fade-in duration-700 delay-100">
+      <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-100">
         <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
           <div>
             <h3 className="font-bold text-slate-900 text-sm">Resumen de Ventas por Método de Pago</h3>
@@ -228,7 +228,7 @@ export const SalesPage: React.FC = () => {
       </div>
 
       {/* Registro Detallado de Documentos en Base de Datos Real */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden animate-in fade-in duration-700 delay-200">
+      <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-200">
         <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <h3 className="font-bold text-slate-900 text-sm">Listado Detallado de Comprobantes</h3>
           <div className="relative w-full sm:w-72">
@@ -237,7 +237,7 @@ export const SalesPage: React.FC = () => {
               placeholder="Buscar por doc, cliente o vendedor..." 
               value={docSearch}
               onChange={(e) => setDocSearch(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 placeholder:text-slate-400 transition-all shadow-sm"
+              className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 placeholder:text-slate-400 transition-all"
             />
           </div>
         </div>

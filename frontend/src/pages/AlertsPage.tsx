@@ -41,7 +41,7 @@ export const AlertsPage: React.FC = () => {
           <Skeleton className="h-20 w-full" />
         </div>
       ) : alerts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-sm border border-slate-100">
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-200/80">
           <ShieldCheck className="w-12 h-12 text-slate-300 mb-3" />
           <p className="text-slate-500 font-medium">No se detectaron anomalías ni alertas en el sistema.</p>
           <p className="text-xs text-slate-400 mt-1">Tu facturación se encuentra operando dentro de los rangos normales.</p>

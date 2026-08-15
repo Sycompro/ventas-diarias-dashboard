@@ -178,13 +178,13 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
     const baseClass = "h-8 w-8 flex items-center justify-center text-xs font-semibold rounded-lg transition-all duration-150 cursor-pointer";
 
     if (isStart && isEnd) {
-      return `${baseClass} bg-primary-600 text-white shadow-sm ring-2 ring-primary-500/20`;
+      return `${baseClass} bg-primary-600 text-white ring-2 ring-primary-500/20`;
     }
     if (isStart) {
-      return `${baseClass} bg-primary-600 text-white rounded-r-none rounded-l-lg shadow-sm`;
+      return `${baseClass} bg-primary-600 text-white rounded-r-none rounded-l-lg`;
     }
     if (isEnd) {
-      return `${baseClass} bg-primary-600 text-white rounded-l-none rounded-r-lg shadow-sm`;
+      return `${baseClass} bg-primary-600 text-white rounded-l-none rounded-r-lg`;
     }
     if (isInRange) {
       return `${baseClass} bg-primary-50 text-primary-700 rounded-none hover:bg-primary-100/80`;
@@ -235,7 +235,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3 py-2 bg-white border border-slate-200/80 rounded-lg shadow-sm hover:bg-slate-50 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 cursor-pointer duration-200 ${isOpen ? 'ring-2 ring-primary-100 border-primary-500' : ''}`}
+        className={`flex items-center gap-2 px-3 py-2 bg-white border border-slate-200/80 rounded-lg hover:bg-slate-50 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 cursor-pointer duration-200 ${isOpen ? 'ring-2 ring-primary-100 border-primary-500' : ''}`}
       >
         <CalendarIcon size={14} className="text-slate-400 shrink-0" />
         <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
@@ -248,7 +248,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
       {/* Popover Calendar Container */}
       {isOpen && (
-        <div className="absolute left-0 mt-1.5 p-4 bg-white border border-slate-200 rounded-xl shadow-xl z-50 min-w-[290px] animate-in fade-in slide-in-from-top-1.5 duration-150">
+        <div className="absolute left-0 mt-1.5 p-4 bg-white border border-slate-200 rounded-xl z-50 min-w-[290px] animate-in fade-in slide-in-from-top-1.5 duration-150">
           
           {/* Header Month Navigation */}
           <div className="flex items-center justify-between mb-4">

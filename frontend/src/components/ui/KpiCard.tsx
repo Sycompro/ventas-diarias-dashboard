@@ -53,7 +53,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   const isPositive = changePercent >= 0;
 
   return (
-    <div className="group relative bg-white rounded-xl shadow-sm p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+    <div className="group relative bg-white rounded-xl border border-slate-200/80 p-4 transition-all duration-300 hover:border-slate-300 hover:bg-slate-50/20">
       <div className="flex items-start justify-between">
          <div className="flex gap-3">
           <div className={`w-9.5 h-9.5 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>

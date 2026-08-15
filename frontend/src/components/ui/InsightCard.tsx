@@ -22,7 +22,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({ type, title, descripti
   const { icon: Icon, iconColor, iconBg, badge, badgeStyle } = config[type];
 
   return (
-    <div className="relative bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all p-5 pt-6 flex flex-col h-full group">
+    <div className="relative bg-white rounded-xl border border-slate-200/80 overflow-hidden hover:border-slate-300 hover:bg-slate-50/20 transition-all p-5 pt-6 flex flex-col h-full group">
       
       <div className="flex items-start justify-between mb-4">
         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBg}`}>
@@ -37,7 +37,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({ type, title, descripti
       <p className="text-sm text-slate-600 leading-relaxed mb-5 flex-1">{description}</p>
       
       {dataPoint && (
-        <div className="mt-auto bg-slate-50 rounded-lg p-3.5 flex items-center justify-between">
+        <div className="mt-auto bg-slate-50 border border-slate-100 rounded-lg p-3.5 flex items-center justify-between">
           <span className="text-xs font-medium text-slate-500">{dataLabel || 'Dato clave'}</span>
           <span className="text-sm font-bold text-slate-900">{dataPoint}</span>
         </div>

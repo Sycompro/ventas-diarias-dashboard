@@ -21,7 +21,7 @@ export function DataTable<T>({ title, columns, data, isLoading, emptyMessage = '
   const [searchTerm, setSearchTerm] = useState('');
   
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden flex flex-col">
       <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h3 className="text-base font-semibold text-slate-900">{title}</h3>
         <div className="relative">
@@ -80,10 +80,10 @@ export function DataTable<T>({ title, columns, data, isLoading, emptyMessage = '
       <div className="px-5 py-3.5 bg-slate-50/50 flex items-center justify-between">
         <span className="text-xs text-slate-500">Mostrando {data.length} registros</span>
         <div className="flex gap-1.5">
-          <button className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white rounded-md hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm">
+          <button className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50 transition-colors">
             Anterior
           </button>
-          <button className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white rounded-md hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm">
+          <button className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50 transition-colors">
             Siguiente
           </button>
         </div>

@@ -12,8 +12,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const displayLabel = label && label.includes('-') ? formatDate(label) : label;
     return (
-      <div className="bg-white p-4 rounded-xl shadow-xl">
-        <p className="text-xs font-medium text-slate-500 mb-1">{displayLabel}</p>
+      <div className="bg-white p-4 rounded-xl border border-slate-200">
+        <p className="text-xs font-semibold text-slate-500 mb-1">{displayLabel}</p>
         <p className="text-lg font-bold text-slate-900">
           {formatCurrency(payload[0].value)}
         </p>
@@ -41,7 +41,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({ data, isLoadin
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-full">
+    <div className="bg-white rounded-xl border border-slate-200/80 p-6 flex flex-col h-full">
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Evolución de Ventas</h3>
@@ -84,7 +84,7 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({ data, isLoadin
               strokeWidth={3}
               fillOpacity={1} 
               fill="url(#colorSales)" 
-              activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2, className: 'drop-shadow-md' }}
+              activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2, className: '' }}
             />
           </AreaChart>
         </ResponsiveContainer>

@@ -34,10 +34,10 @@ export const RankingBarChart: React.FC<RankingBarChartProps> = ({ title, subtitl
 
   const getRankStyle = (index: number) => {
     switch(index) {
-      case 0: return 'bg-amber-100 text-amber-700 shadow-sm'; // Oro
-      case 1: return 'bg-slate-100 text-slate-700 shadow-sm'; // Plata
-      case 2: return 'bg-orange-100 text-orange-800 shadow-sm'; // Bronce
-      default: return 'bg-slate-50 text-slate-500';
+      case 0: return 'bg-amber-100 text-amber-750 border border-amber-200'; // Oro
+      case 1: return 'bg-slate-100 text-slate-750 border border-slate-250'; // Plata
+      case 2: return 'bg-orange-100 text-orange-850 border border-orange-200'; // Bronce
+      default: return 'bg-slate-50 text-slate-500 border border-slate-100';
     }
   };
 
@@ -51,7 +51,7 @@ export const RankingBarChart: React.FC<RankingBarChartProps> = ({ title, subtitl
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-full">
+    <div className="bg-white rounded-xl border border-slate-200/80 p-6 flex flex-col h-full">
       <div className="flex items-start justify-between mb-8">
         <div>
           <h3 className="text-lg font-semibold text-slate-900 mb-1">{title}</h3>
