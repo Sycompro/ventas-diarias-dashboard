@@ -7,10 +7,25 @@ import { useAuthStore } from '../../hooks/useAuth';
 import { useFilters } from '../../hooks/useFilters';
 
 export const MainLayout: React.FC = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('sidebar-collapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
   const setCompany = useFilters((state) => state.setCompany);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
+    } catch (e) {
+      console.warn('Failed to save sidebar state to localStorage:', e);
+    }
+  }, [isCollapsed]);
 
   useEffect(() => {
     if (user?.companyId) {
