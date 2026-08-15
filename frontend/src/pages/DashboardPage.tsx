@@ -30,9 +30,11 @@ import { DocumentBarChart } from '../components/charts/DocumentBarChart';
 import { HourlyHeatmap } from '../components/charts/HourlyHeatmap';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { InsightCard } from '../components/ui/InsightCard';
+import { useFilters } from '../hooks/useFilters';
 import { formatCurrency } from '../utils/formatters';
 
 export const DashboardPage: React.FC = () => {
+  const { datePreset, dateStart, dateEnd } = useFilters();
   const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
   const { data: trendData, isLoading: loadingTrend } = useSalesTrend();
   const { data: paymentData, isLoading: loadingPayment } = useSalesByPayment();
@@ -124,9 +126,11 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Evolución de Ventas - Ancho Completo */}
-      <div className="mb-5 animate-in fade-in duration-700 delay-200 fill-mode-both">
-        <SalesTrendChart data={trendData || []} isLoading={loadingTrend} />
-      </div>
+      {datePreset !== 'today' && dateStart !== dateEnd && (
+        <div className="mb-5 animate-in fade-in duration-700 delay-200 fill-mode-both">
+          <SalesTrendChart data={trendData || []} isLoading={loadingTrend} />
+        </div>
+      )}
 
       {/* Distribución de Medios de Pago - Panel Amplio */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 animate-in fade-in duration-700 delay-250 fill-mode-both">
