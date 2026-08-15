@@ -138,9 +138,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         `}
                         title={isCollapsed ? item.name : undefined}
                       >
-                        {isActive && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary-400 rounded-r-full shadow-glow-primary" />
-                        )}
                         <item.icon size={20} className={`shrink-0 transition-opacity ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
                         
                         {!isCollapsed && (
