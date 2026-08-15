@@ -7,7 +7,9 @@ import { sales, companies } from '../db/schema.js';
 import { eq, and, sql, gte, lte, inArray } from 'drizzle-orm';
 import { redis } from '../config/redis.js';
 import { decrypt } from '../services/crypto.service.js';
-import { createBillingClient } from '../services/billing-api.service.js';
+import { createBillingClient, fetchDocuments } from '../services/billing-api.service.js';
+import axios from 'axios';
+import https from 'https';
 
 const router = Router();
 router.use(authenticate);
@@ -388,6 +390,48 @@ router.get('/debug-categories', async (req, res) => {
     res.json({ categories, sampleItems });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/debug-sync-one', async (req: any, res) => {
+  try {
+    const config = await getCompanyConfig(req.user.companyId);
+    const decryptedToken = decrypt(config.apiTokenEncrypted, config.apiTokenIv, config.apiTokenTag);
+    const client = createBillingClient(config.subdomain, decryptedToken);
+    
+    const docs = await fetchDocuments(client, '2026-08-01', '2026-08-15');
+    if (docs.length === 0) return res.json({ message: 'No documents found' });
+    
+    const doc = docs[0];
+    const xmlUrl = doc.download_xml;
+    
+    let xmlContent = '';
+    let errorMsg = '';
+    let success = false;
+    
+    if (xmlUrl) {
+      try {
+        const xmlRes = await axios.get(xmlUrl, {
+          responseType: 'text',
+          timeout: 5000,
+          httpsAgent: new https.Agent({ rejectUnauthorized: false })
+        });
+        xmlContent = xmlRes.data.substring(0, 200);
+        success = true;
+      } catch (err: any) {
+        errorMsg = err.message + ' ' + (err.response?.data || '');
+      }
+    }
+    
+    res.json({
+      number: doc.number,
+      xmlUrl,
+      success,
+      errorMsg,
+      xmlContent
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
