@@ -23,7 +23,6 @@ export const InsightCard: React.FC<InsightCardProps> = ({ type, title, descripti
 
   return (
     <div className="relative bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all p-5 pt-6 flex flex-col h-full group">
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-80 group-hover:opacity-100 transition-opacity"></div>
       
       <div className="flex items-start justify-between mb-4">
         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBg}`}>

@@ -9,9 +9,9 @@ export interface TrafficIndicatorProps {
 }
 
 const colorMap = {
-  healthy: { bg: 'bg-emerald-500', bar: 'border-emerald-500' },
-  attention: { bg: 'bg-amber-500', bar: 'border-amber-500' },
-  critical: { bg: 'bg-red-500', bar: 'border-red-500' },
+  healthy: { bg: 'bg-emerald-500' },
+  attention: { bg: 'bg-amber-500' },
+  critical: { bg: 'bg-red-500' },
 };
 
 export const TrafficLight: React.FC<{ indicators: TrafficIndicatorProps[] }> = ({ indicators }) => {
@@ -20,7 +20,7 @@ export const TrafficLight: React.FC<{ indicators: TrafficIndicatorProps[] }> = (
       {indicators.map((indicator, idx) => {
         const colors = colorMap[indicator.status];
         return (
-          <div key={idx} className={`relative bg-white rounded-xl shadow-sm border border-slate-200 p-4 border-t-2 ${colors.bar} hover:shadow-md transition-shadow`}>
+          <div key={idx} className="relative bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md transition-all">
             <div className="flex items-start gap-3">
               <div className="relative flex items-center justify-center w-4 h-4 mt-0.5">
                 {indicator.status === 'critical' && (

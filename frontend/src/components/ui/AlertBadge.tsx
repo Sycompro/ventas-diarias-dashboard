@@ -15,9 +15,9 @@ interface AlertBadgeProps {
 }
 
 const styles = {
-  critical: { bar: 'border-l-red-500', icon: <AlertCircle className="w-5 h-5 text-red-600" />, iconBg: 'bg-red-50' },
-  warning: { bar: 'border-l-amber-500', icon: <AlertTriangle className="w-5 h-5 text-amber-600" />, iconBg: 'bg-amber-50' },
-  info: { bar: 'border-l-blue-500', icon: <Info className="w-5 h-5 text-blue-600" />, iconBg: 'bg-blue-50' },
+  critical: { icon: <AlertCircle className="w-5 h-5 text-red-600" />, iconBg: 'bg-red-50' },
+  warning: { icon: <AlertTriangle className="w-5 h-5 text-amber-600" />, iconBg: 'bg-amber-50' },
+  info: { icon: <Info className="w-5 h-5 text-blue-600" />, iconBg: 'bg-blue-50' },
 };
 
 export const AlertBadge: React.FC<AlertBadgeProps> = ({ priority, title, description, recommendation, timestamp, onMarkRead }) => {
@@ -31,7 +31,7 @@ export const AlertBadge: React.FC<AlertBadgeProps> = ({ priority, title, descrip
   }
 
   return (
-    <div className={`relative bg-white rounded-xl shadow-sm border border-slate-200 border-l-4 ${config.bar} p-5 hover:shadow-md transition-all`}>
+    <div className="relative bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-all">
       <div className="flex items-start gap-4">
         <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${config.iconBg}`}>
           {config.icon}
