@@ -17,8 +17,9 @@ async function main() {
       }
     });
     
-    // We can also query all items in the database by making a temporary endpoint or writing a database query
-    console.log("Categories stats:", res.data);
+    console.log("Categories stats:", res.data?.categories);
+    console.log("Sample items (first 30):");
+    console.log(JSON.stringify(res.data?.sampleItems, null, 2));
     
   } catch (err: any) {
     console.error("Error:", err.message);

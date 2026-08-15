@@ -2,6 +2,7 @@ import { db } from '../config/database.js';
 import { companies, sales, saleItems, salePayments, syncLogs } from '../db/schema.js';
 import { eq, sql } from 'drizzle-orm';
 import axios from 'axios';
+import https from 'https';
 import { decrypt } from './crypto.service.js';
 import { createBillingClient, fetchDocuments, fetchReportDocuments, fetchSaleNotes, fetchSaleNoteDetail } from './billing-api.service.js';
 
@@ -141,18 +142,25 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
       
       if (insertedSale) {
         // Verificar si ya tiene items guardados
-        const [existingItemsCount] = await db
-          .select({ count: sql`COUNT(*)::int` })
+        const existingItems = await db
+          .select()
           .from(saleItems)
           .where(eq(saleItems.saleId, insertedSale.id));
 
-        if (!existingItemsCount || existingItemsCount.count === 0) {
+        const needsSync = existingItems.length === 0 ||
+          (existingItems.length === 1 && existingItems[0].description === 'Venta de Bienes o Servicios (Consolidado)');
+
+        if (needsSync) {
           let itemsToInsert: any[] = [];
 
           if (doc.download_xml) {
             try {
-              // Descargar XML directamente
-              const xmlRes = await axios.get(doc.download_xml, { responseType: 'text', timeout: 5000 });
+              // Descargar XML directamente con bypass de SSL
+              const xmlRes = await axios.get(doc.download_xml, { 
+                responseType: 'text', 
+                timeout: 5000,
+                httpsAgent: new https.Agent({ rejectUnauthorized: false })
+              });
               const xmlText = xmlRes.data;
               
               // Parsear items desde XML
