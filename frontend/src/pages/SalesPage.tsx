@@ -248,6 +248,7 @@ export const SalesPage: React.FC = () => {
               <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <th className="py-3 px-4">Fecha Emisión</th>
                 <th className="py-3 px-4">Comprobante</th>
+                <th className="py-3 px-4 text-center">Tipo</th>
                 <th className="py-3 px-4">Cliente</th>
                 <th className="py-3 px-4">Vendedor</th>
                 <th className="py-3 px-4 text-right">Monto Total</th>
@@ -257,13 +258,13 @@ export const SalesPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100 text-xs">
               {loadingDocs ? (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-slate-400 animate-pulse">
+                  <td colSpan={7} className="py-6 text-center text-slate-400 animate-pulse">
                     Cargando listado de comprobantes...
                   </td>
                 </tr>
               ) : filteredDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-slate-400">
+                  <td colSpan={7} className="py-6 text-center text-slate-400">
                     No se encontraron comprobantes registrados.
                   </td>
                 </tr>
@@ -274,6 +275,29 @@ export const SalesPage: React.FC = () => {
                     <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-2.5 px-4 text-slate-500 tabular-nums">{formatDateTime(doc.issuedAt)}</td>
                       <td className="py-2.5 px-4 font-semibold text-slate-800">{doc.series}-{doc.number}</td>
+                      <td className="py-2.5 px-4 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase inline-block border ${
+                          doc.documentTypeId === '01' 
+                            ? 'bg-blue-50 text-blue-700 border-blue-100' 
+                            : doc.documentTypeId === '03'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                            : doc.documentTypeId === '80'
+                            ? 'bg-amber-50 text-amber-700 border-amber-100'
+                            : doc.documentTypeId === '07'
+                            ? 'bg-red-50 text-red-700 border-red-100'
+                            : 'bg-slate-50 text-slate-700 border-slate-100'
+                        }`}>
+                          {doc.documentTypeId === '01' 
+                            ? 'Factura' 
+                            : doc.documentTypeId === '03'
+                            ? 'Boleta'
+                            : doc.documentTypeId === '80'
+                            ? 'Nota Venta'
+                            : doc.documentTypeId === '07'
+                            ? 'N. Crédito'
+                            : 'Otro'}
+                        </span>
+                      </td>
                       <td className="py-2.5 px-4 text-slate-700 truncate max-w-[200px]" title={doc.customerName}>
                         {doc.customerName || 'Cliente Varios'}
                       </td>
