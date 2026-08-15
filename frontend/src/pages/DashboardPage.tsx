@@ -35,7 +35,7 @@ import { useFilters } from '../hooks/useFilters';
 import { formatCurrency } from '../utils/formatters';
 
 export const DashboardPage: React.FC = () => {
-  const { datePreset, dateStart, dateEnd } = useFilters();
+  const { datePreset, dateStart, dateEnd, granularity } = useFilters();
   const { data: metrics, isLoading: loadingMetrics } = useDashboardMetrics();
   const { data: trendData, isLoading: loadingTrend } = useSalesTrend();
   const { data: paymentData, isLoading: loadingPayment } = useSalesByPayment();
@@ -128,7 +128,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Evolución de Ventas - Ancho Completo */}
-      {datePreset !== 'today' && dateStart !== dateEnd && (
+      {(dateStart !== dateEnd || granularity === 'hour') && (
         <div className="mb-5 animate-in fade-in duration-700 delay-200 fill-mode-both">
           <SalesTrendChart data={trendData || []} isLoading={loadingTrend} />
         </div>

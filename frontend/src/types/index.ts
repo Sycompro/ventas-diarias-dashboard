@@ -156,4 +156,7 @@ export interface FilterState {
   dateStart: string;
   dateEnd: string;
   datePreset: 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'this_year' | 'last_year' | 'custom';
+  branch: string | null;
+  seller: string | null;
+  granularity: 'day' | 'month' | 'year' | 'hour';
 }

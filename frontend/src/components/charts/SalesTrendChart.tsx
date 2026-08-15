@@ -10,9 +10,10 @@ interface SalesTrendChartProps {
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
+    const displayLabel = label && label.includes('-') ? formatDate(label) : label;
     return (
       <div className="bg-white p-4 rounded-xl shadow-xl">
-        <p className="text-xs font-medium text-slate-500 mb-1">{formatDate(label)}</p>
+        <p className="text-xs font-medium text-slate-500 mb-1">{displayLabel}</p>
         <p className="text-lg font-bold text-slate-900">
           {formatCurrency(payload[0].value)}
         </p>

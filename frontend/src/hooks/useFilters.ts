@@ -6,6 +6,9 @@ interface FiltersStore extends FilterState {
   setCompany: (companyId: string | null) => void;
   setDateRange: (start: string, end: string) => void;
   setDatePreset: (preset: FilterState['datePreset']) => void;
+  setBranch: (branch: string | null) => void;
+  setSeller: (seller: string | null) => void;
+  setGranularity: (granularity: FilterState['granularity']) => void;
 }
 
 const getDatesForPreset = (preset: FilterState['datePreset']) => {
@@ -43,6 +46,9 @@ export const useFilters = create<FiltersStore>((set) => ({
   dateStart: defaultDates.start,
   dateEnd: defaultDates.end,
   datePreset: 'today',
+  branch: null,
+  seller: null,
+  granularity: 'day',
   
   setCompany: (companyId) => set({ companyId }),
   setDateRange: (start, end) => set({ dateStart: start, dateEnd: end, datePreset: 'custom' }),
@@ -54,4 +60,7 @@ export const useFilters = create<FiltersStore>((set) => ({
       set({ datePreset: preset });
     }
   },
+  setBranch: (branch) => set({ branch }),
+  setSeller: (seller) => set({ seller }),
+  setGranularity: (granularity) => set({ granularity }),
 }));
