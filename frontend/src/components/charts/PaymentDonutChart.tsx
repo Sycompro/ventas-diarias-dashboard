@@ -16,6 +16,7 @@ const getPaymentMethodColor = (name: string): string => {
   if (nameLower.includes('plin')) return '#06b6d4'; // cyan/turquoise
   if (nameLower.includes('transferencia')) return '#3b82f6'; // blue
   if (nameLower.includes('tarjeta') || nameLower.includes('visa') || nameLower.includes('mastercard')) return '#6366f1'; // indigo
+  if (nameLower.includes('crédito') || nameLower.includes('credito')) return '#f59e0b'; // amber/orange
   
   return '#94a3b8'; // grey
 };

@@ -195,7 +195,9 @@ export const DashboardPage: React.FC = () => {
                     'transferencia': 'bg-blue-50 text-blue-700',
                     'yape': 'bg-purple-50 text-purple-700',
                     'plin': 'bg-teal-50 text-teal-700',
-                    'yape / plin': 'bg-violet-50 text-violet-700'
+                    'yape / plin': 'bg-violet-50 text-violet-700',
+                    'crédito': 'bg-amber-50 text-amber-700 border border-amber-100',
+                    'credito': 'bg-amber-50 text-amber-700 border border-amber-100'
                   };
                   const colorClass = colorClassMap[item.method.toLowerCase()] || 'bg-slate-50 text-slate-700';
                   return (

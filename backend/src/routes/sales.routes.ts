@@ -121,7 +121,8 @@ router.get('/by-payment-detailed', async (req, res) => {
         '03': 'Tarjeta de débito',
         '04': 'Transferencia',
         '06': 'Tarjeta crédito visa',
-        '10': 'Contado'
+        '10': 'Contado',
+        '99': 'Crédito'
       };
       const methodName = configMethod?.description || defaultDescriptions[r.paymentMethodId] || `Método ${r.paymentMethodId}`;
 
@@ -213,6 +214,11 @@ router.get('/pivot', async (req, res) => {
       id: m.id,
       description: m.description
     }));
+
+    activePaymentMethods.push({
+      id: '99',
+      description: 'Crédito'
+    });
 
     const pivotMap: Record<string, {
       sede: string;

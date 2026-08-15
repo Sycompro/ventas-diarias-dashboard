@@ -46,6 +46,7 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
       if (descUpper === 'YAPE') return '02';
       if (descUpper === 'TARJETA DE DÉBITO' || descUpper === 'TARJETA DE DEBITO') return '03';
       if (descUpper === 'TRANSFERENCIA') return '04';
+      if (descUpper === 'CRÉDITO' || descUpper === 'CREDITO') return '99';
       if (descUpper.includes('VISA') || descUpper.includes('TARJETA') || descUpper.includes('CREDITO') || descUpper.includes('CRÉDITO')) return '06';
       if (descUpper === 'CONTADO') return '10';
       
@@ -70,8 +71,18 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
     const paymentsLookup = new Map<string, any[]>();
     for (const rd of reportDocs) {
       const key = `${rd.document_type_id}_${rd.number}`;
-      if (rd.payments && Array.isArray(rd.payments.PAGOS)) {
-        paymentsLookup.set(key, rd.payments.PAGOS);
+      if (rd.payments) {
+        if (Array.isArray(rd.payments.PAGOS) && rd.payments.PAGOS.length > 0) {
+          paymentsLookup.set(key, rd.payments.PAGOS);
+        } else if (Array.isArray(rd.payments.CUOTA) && rd.payments.CUOTA.length > 0) {
+          // Map cuotas as payments with description "Crédito"
+          paymentsLookup.set(key, rd.payments.CUOTA.map((c: any) => ({
+            description: c.description || 'Crédito',
+            reference: c.reference || '',
+            amount: c.amount,
+            symbol: c.symbol || 'S/'
+          })));
+        }
       }
     }
     

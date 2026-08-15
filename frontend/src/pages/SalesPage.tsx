@@ -210,6 +210,8 @@ export const SalesPage: React.FC = () => {
                   let icon = <HelpCircle size={11} className="text-slate-500" />;
                   if (descUpper.includes('EFECTIVO') || descUpper.includes('CONTADO')) {
                     icon = <DollarSign size={11} className="text-emerald-500" />;
+                  } else if (descUpper === 'CRÉDITO' || descUpper === 'CREDITO') {
+                    icon = <ArrowLeftRight size={11} className="text-amber-500" />;
                   } else if (descUpper.includes('TARJETA') || descUpper.includes('VISA') || descUpper.includes('MASTERCARD') || descUpper.includes('CREDITO') || descUpper.includes('DEBITO')) {
                     icon = <CreditCard size={11} className="text-blue-500" />;
                   } else if (descUpper.includes('TRANSFERENCIA') || descUpper.includes('BANCO') || descUpper.includes('BCP') || descUpper.includes('BBVA')) {
