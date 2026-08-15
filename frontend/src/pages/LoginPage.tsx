@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Shield, BarChart3, Zap } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Shield, BarChart3, Zap, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../hooks/useAuth';
 
 export const LoginPage: React.FC = () => {
@@ -66,7 +66,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="relative z-10 space-y-6 mt-12">
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5  -white/10 backdrop-blur-sm max-w-sm hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 backdrop-blur-sm max-w-sm hover:bg-white/10 transition-colors">
             <div className="p-3 bg-primary-500/20 rounded-xl text-primary-300">
               <BarChart3 size={24} />
             </div>
@@ -75,7 +75,7 @@ export const LoginPage: React.FC = () => {
               <p className="text-sm text-slate-400">Datos comparativos y métricas en vivo</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5  -white/10 backdrop-blur-sm max-w-sm hover:bg-white/10 transition-colors ml-8">
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 backdrop-blur-sm max-w-sm hover:bg-white/10 transition-colors ml-8">
             <div className="p-3 bg-success-500/20 rounded-xl text-success-400">
               <Zap size={24} />
             </div>
@@ -84,7 +84,7 @@ export const LoginPage: React.FC = () => {
               <p className="text-sm text-slate-400">Toma de decisiones sin latencia</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5  -white/10 backdrop-blur-sm max-w-sm hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 backdrop-blur-sm max-w-sm hover:bg-white/10 transition-colors">
             <div className="p-3 bg-violet-500/20 rounded-xl text-violet-300">
               <Shield size={24} />
             </div>
@@ -115,7 +115,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-danger-50  -danger-200 text-danger-700 text-sm flex items-start gap-3 animate-slide-up">
+            <div className="mb-6 p-4 rounded-xl bg-danger-50 text-danger-700 text-sm flex items-start gap-3 animate-slide-up">
               <div className="p-1 bg-danger-100 rounded-full shrink-0">
                 <Shield size={14} className="text-danger-600" />
               </div>
@@ -174,7 +174,7 @@ export const LoginPage: React.FC = () => {
               <input
                 id="remember-me"
                 type="checkbox"
-                className="h-4 w-4 rounded -slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                className="h-4 w-4 rounded text-primary-600 focus:ring-primary-500 cursor-pointer"
               />
               <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600 cursor-pointer select-none">
                 Mantener sesión iniciada
@@ -188,7 +188,7 @@ export const LoginPage: React.FC = () => {
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 -2 -white/30 -white rounded-full animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin text-white" />
                   <span>Iniciando sesión...</span>
                 </div>
               ) : (

@@ -11,7 +11,7 @@ export const MobileNav: React.FC = () => {
   ];
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.05)]/90 backdrop-blur-lg  -slate-200 pb-safe z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.05)]/90 backdrop-blur-lg pb-safe z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
       <div className="flex justify-around items-center h-16 px-2">
         {navItems.map((item) => (
           <NavLink
@@ -30,7 +30,7 @@ export const MobileNav: React.FC = () => {
                 <div className="relative mt-1">
                   <item.icon size={22} className={isActive ? 'stroke-[2.5px]' : ''} />
                   {item.badge && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-danger-500 rounded-full -2 -white" />
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-danger-500 rounded-full" />
                   )}
                 </div>
                 <span className={`text-[10px] font-medium ${isActive ? 'font-semibold' : ''}`}>

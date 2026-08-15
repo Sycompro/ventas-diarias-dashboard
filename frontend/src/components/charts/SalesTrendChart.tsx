@@ -11,7 +11,7 @@ interface SalesTrendChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white p-4 rounded-xl shadow-xl  -slate-100">
+      <div className="bg-white p-4 rounded-xl shadow-xl">
         <p className="text-xs font-medium text-slate-500 mb-1">{formatDate(label)}</p>
         <p className="text-lg font-bold text-slate-900">
           {formatCurrency(payload[0].value)}
@@ -33,14 +33,14 @@ export const SalesTrendChart: React.FC<SalesTrendChartProps> = ({ data, isLoadin
 
   if (!data || data.length === 0) {
     return (
-      <div className="h-[360px] w-full flex items-center justify-center -2 -dashed -slate-200 rounded-xl bg-slate-50">
+      <div className="h-[360px] w-full flex items-center justify-center -2 -dashed rounded-xl bg-slate-50">
         <span className="text-slate-400 text-sm">No hay datos disponibles para la tendencia</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm  -slate-200 p-6 flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-full">
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">Evolución de Ventas</h3>

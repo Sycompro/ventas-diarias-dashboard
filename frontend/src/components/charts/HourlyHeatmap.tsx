@@ -37,7 +37,7 @@ export const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ data, isLoading })
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-4 rounded-xl shadow-xl  -slate-100 text-center min-w-[120px]">
+        <div className="bg-white p-4 rounded-xl shadow-xl text-center min-w-[120px]">
           <p className="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">{data.displayHour}</p>
           <p className="text-lg font-bold text-slate-900 mb-1">{formatCurrency(data.amount)}</p>
           <p className="text-xs text-slate-400">{data.count} operaciones</p>
@@ -48,7 +48,7 @@ export const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ data, isLoading })
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm  -slate-200 p-6 flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-full">
       <h3 className="text-lg font-semibold text-slate-900 mb-1">Ventas por Hora</h3>
       <p className="text-sm text-slate-500 mb-6">Mapa de calor de actividad diaria</p>
       

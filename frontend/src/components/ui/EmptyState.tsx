@@ -11,8 +11,8 @@ interface EmptyStateProps {
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ icon: Icon, title, description, actionLabel, onAction }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-10 text-center -2 -dashed -slate-200 rounded-2xl bg-slate-50/50 animate-in fade-in duration-500">
-      <div className="w-16 h-16 mb-5 flex items-center justify-center rounded-full bg-slate-100 shadow-sm  -slate-200/50">
+    <div className="flex flex-col items-center justify-center p-10 text-center -2 -dashed rounded-2xl bg-slate-50/50 animate-in fade-in duration-500">
+      <div className="w-16 h-16 mb-5 flex items-center justify-center rounded-full bg-slate-100 shadow-sm">
         <Icon className="w-8 h-8 text-slate-400" strokeWidth={1.5} />
       </div>
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>

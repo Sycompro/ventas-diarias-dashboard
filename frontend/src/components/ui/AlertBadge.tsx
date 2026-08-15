@@ -31,7 +31,7 @@ export const AlertBadge: React.FC<AlertBadgeProps> = ({ priority, title, descrip
   }
 
   return (
-    <div className="relative bg-white rounded-xl shadow-sm  -slate-200 p-5 hover:shadow-md transition-all">
+    <div className="relative bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all">
       <div className="flex items-start gap-4">
         <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${config.iconBg}`}>
           {config.icon}
@@ -44,7 +44,7 @@ export const AlertBadge: React.FC<AlertBadgeProps> = ({ priority, title, descrip
           <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
           
           {recommendation && (
-            <div className="mt-3 bg-slate-50  -slate-100 rounded-lg p-3">
+            <div className="mt-3 bg-slate-50 rounded-lg p-3">
               <p className="text-xs text-slate-700 font-medium">
                 <span className="text-slate-500 mr-1 font-normal">Sugerencia:</span>
                 {recommendation}

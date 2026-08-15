@@ -23,7 +23,7 @@ export const RankingBarChart: React.FC<RankingBarChartProps> = ({ title, subtitl
 
   if (!data || data.length === 0) {
     return (
-      <div className="h-[360px] w-full flex items-center justify-center -2 -dashed -slate-200 rounded-xl bg-slate-50">
+      <div className="h-[360px] w-full flex items-center justify-center -2 -dashed rounded-xl bg-slate-50">
         <span className="text-slate-400 text-sm">Sin datos para el ranking</span>
       </div>
     );
@@ -34,10 +34,10 @@ export const RankingBarChart: React.FC<RankingBarChartProps> = ({ title, subtitl
 
   const getRankStyle = (index: number) => {
     switch(index) {
-      case 0: return 'bg-amber-100 text-amber-700 -amber-200 shadow-sm'; // Oro
-      case 1: return 'bg-slate-100 text-slate-700 -slate-200 shadow-sm'; // Plata
-      case 2: return 'bg-orange-100 text-orange-800 -orange-200 shadow-sm'; // Bronce
-      default: return 'bg-slate-50 text-slate-500 -slate-100';
+      case 0: return 'bg-amber-100 text-amber-700 shadow-sm'; // Oro
+      case 1: return 'bg-slate-100 text-slate-700 shadow-sm'; // Plata
+      case 2: return 'bg-orange-100 text-orange-800 shadow-sm'; // Bronce
+      default: return 'bg-slate-50 text-slate-500';
     }
   };
 
@@ -51,13 +51,13 @@ export const RankingBarChart: React.FC<RankingBarChartProps> = ({ title, subtitl
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm  -slate-200 p-6 flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-full">
       <div className="flex items-start justify-between mb-8">
         <div>
           <h3 className="text-lg font-semibold text-slate-900 mb-1">{title}</h3>
           {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
         </div>
-        <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center  -amber-100">
+        <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
           <Trophy className="w-5 h-5 text-amber-500" />
         </div>
       </div>
