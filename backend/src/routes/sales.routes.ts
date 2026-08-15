@@ -249,4 +249,30 @@ router.get('/documents/:id', async (req, res) => {
   }
 });
 
+router.get('/debug-db', async (req, res) => {
+  try {
+    const paymentsCount = await sqlClient`SELECT COUNT(*)::int as count FROM sale_payments`;
+    const distinctPayments = await sqlClient`SELECT payment_method_id as "methodId", COUNT(*)::int as count FROM sale_payments GROUP BY payment_method_id`;
+    const salesCount = await sqlClient`SELECT COUNT(*)::int as count FROM sales`;
+    const samplePayments = await sqlClient`SELECT * FROM sale_payments LIMIT 5`;
+    
+    // We can also search if there are any payments inside raw_json fields
+    const rawPaymentsSearch = await sqlClient`
+      SELECT id, number, raw_json->'payments' as "paymentsJson", raw_json->'payment_method_type' as "methodType"
+      FROM sales 
+      LIMIT 10
+    `;
+
+    res.json({
+      paymentsCount: paymentsCount[0].count,
+      distinctPayments,
+      salesCount: salesCount[0].count,
+      samplePayments,
+      rawPaymentsSearch
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
