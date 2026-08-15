@@ -21,16 +21,16 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       login: async (credentials) => {
-        // En un caso real, llamaríamos a la API:
-        // const data = await authService.login(credentials);
-        // Simularemos un login exitoso
-        if (credentials.email && credentials.password) {
+        try {
+          const data = await authService.login(credentials);
           set({
-            user: { id: '1', email: credentials.email, name: 'Admin', role: 'admin' },
-            accessToken: 'dummy-token',
-            refreshToken: 'dummy-refresh',
+            user: data.user,
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
             isAuthenticated: true,
           });
+        } catch (err: any) {
+          throw new Error(err.response?.data?.message || 'Error de inicio de sesión. Revisa tus credenciales.');
         }
       },
       logout: () => {

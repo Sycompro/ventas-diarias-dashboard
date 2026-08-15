@@ -148,6 +148,8 @@ export interface User {
   email: string;
   name: string;
   role: 'admin' | 'manager' | 'viewer';
+  companyId?: string | null;
+  companySubdomain?: string | null;
 }
 
 // Filter state

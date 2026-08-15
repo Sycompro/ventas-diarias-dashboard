@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Shield, BarChart3, Zap, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Shield, BarChart3, Zap, Loader2, Building2 } from 'lucide-react';
 import { useAuthStore } from '../hooks/useAuth';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [subdomain, setSubdomain] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,17 +20,20 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Simulate network request
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      if (email && password) {
-        login({ id: '1', name: 'Administrador', email, role: 'admin' });
-        navigate('/');
-      } else {
+      if (!email || !password) {
         setError('Por favor, ingresa correo y contraseña.');
+        setIsLoading(false);
+        return;
       }
-    } catch (err) {
-      setError('Credenciales inválidas. Intenta nuevamente.');
+      
+      await login({ 
+        email, 
+        password, 
+        subdomain: subdomain.trim() || undefined 
+      });
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Credenciales inválidas. Intenta nuevamente.');
     } finally {
       setIsLoading(false);
     }
@@ -124,6 +128,22 @@ export const LoginPage: React.FC = () => {
           )}
 
           <form onSubmit={handleLogin} className={`space-y-5 ${error ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700 ml-1">Subdominio de la Sede (Opcional)</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Building2 size={18} />
+                </div>
+                <input
+                  type="text"
+                  value={subdomain}
+                  onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/\s+/g, ''))}
+                  className="input pl-10 py-2.5 bg-slate-50 focus:bg-white"
+                  placeholder="ej: central (dejar vacío si eres Admin)"
+                />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-slate-700 ml-1">Correo Electrónico</label>
               <div className="relative">

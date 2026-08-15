@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
+import { useAuthStore } from '../../hooks/useAuth';
+import { useFilters } from '../../hooks/useFilters';
 
 export const MainLayout: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  const setCompany = useFilters((state) => state.setCompany);
+
+  useEffect(() => {
+    if (user?.companyId) {
+      setCompany(user.companyId);
+    }
+  }, [user, setCompany]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-primary-200 selection:text-primary-900">

@@ -5,9 +5,10 @@ import { authenticate } from '../middleware/auth.middleware.js';
 const router = Router();
 router.use(authenticate);
 
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res) => {
   try {
-    const goals = await getGoals(req.query.companyId as string);
+    const companyId = req.user.companyId || (req.query.companyId as string);
+    const goals = await getGoals(companyId);
     res.json(goals);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching goals' });
@@ -41,10 +42,11 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-router.get('/progress', async (req, res) => {
+router.get('/progress', async (req: any, res) => {
   try {
     const date = new Date().toISOString().split('T')[0];
-    const progress = await getGoalProgress(req.query.companyId as string, date);
+    const companyId = req.user.companyId || (req.query.companyId as string);
+    const progress = await getGoalProgress(companyId, date);
     res.json(progress);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching goal progress' });
