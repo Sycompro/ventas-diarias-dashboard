@@ -143,6 +143,62 @@ router.post('/:id/test', async (req: any, res) => {
   }
 });
 
+router.get('/:id/debug-sync', async (req: any, res) => {
+  try {
+    if (req.params.id !== req.user.companyId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const company = await db.query.companies.findFirst({ where: eq(companies.id, req.params.id) });
+    if (!company) return res.status(404).json({ message: 'Company not found' });
+    
+    const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
+    const client = createBillingClient(company.subdomain, decryptedToken);
+    
+    const dateEnd = new Date();
+    const dateStart = new Date();
+    dateStart.setDate(dateStart.getDate() - 30); // 30 days
+    
+    const startDateStr = dateStart.toISOString().split('T')[0];
+    const endDateStr = dateEnd.toISOString().split('T')[0];
+    
+    const debugInfo: any = {
+      subdomain: company.subdomain,
+      dateStart: startDateStr,
+      dateEnd: endDateStr,
+      companyUrl: client.defaults.baseURL
+    };
+
+    try {
+      const response = await client.get('/documents/lists', {
+        params: { date_start: startDateStr, date_end: endDateStr }
+      });
+      debugInfo.listsResponse = response.data;
+    } catch (e: any) {
+      debugInfo.listsError = {
+        message: e.message,
+        status: e.response?.status,
+        data: e.response?.data
+      };
+    }
+
+    try {
+      const response = await client.get('/company');
+      debugInfo.companyResponse = response.data;
+    } catch (e: any) {
+      debugInfo.companyError = {
+        message: e.message,
+        status: e.response?.status,
+        data: e.response?.data
+      };
+    }
+
+    res.json(debugInfo);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error in debug-sync', error: error.message });
+  }
+});
+
 router.post('/:id/sync', async (req: any, res) => {
   try {
     if (req.params.id !== req.user.companyId) {
