@@ -35,9 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
 
   return (
     <header 
-      className={`h-16 bg-white/80 backdrop-blur-md shadow-sm/80 backdrop-blur-md  -slate-200 sticky top-0 z-30 transition-all duration-200 flex items-center justify-between px-4 sm:px-6 lg:px-8
-        ${scrolled ? 'shadow-sm' : ''}
-      `}
+      className="h-16 bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-30 transition-all duration-200 flex items-center justify-between px-4 sm:px-6 lg:px-8"
     >
       <div className="flex items-center gap-4">
         <button 
@@ -58,13 +56,13 @@ export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
           <input 
             type="text" 
             placeholder="Buscar..." 
-            className="pl-9 pr-4 py-1.5 bg-slate-100 rounded-full text-sm focus:bg-white focus:-primary-300 focus:ring-2 focus:ring-primary-100 w-48 lg:w-64 transition-all duration-300 outline-none placeholder:text-slate-500"
+            className="pl-9 pr-4 py-1.5 bg-slate-100 rounded-full text-sm focus:bg-white focus:ring-2 focus:ring-primary-100 w-48 lg:w-64 transition-all duration-300 outline-none placeholder:text-slate-500"
           />
         </div>
 
         <button className="relative p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
           <Bell size={20} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger-500 rounded-full  -white pulse-dot"></span>
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger-500 rounded-full pulse-dot"></span>
         </button>
 
         <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block"></div>
