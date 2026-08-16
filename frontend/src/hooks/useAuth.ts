@@ -38,10 +38,21 @@ export const useAuthStore = create<AuthState>()(
       },
       doRefreshToken: async () => {
         const { refreshToken } = get();
-        if (refreshToken) {
-          // Simular refresh
-          // const data = await authService.refresh(refreshToken);
-          set({ accessToken: 'new-dummy-token' });
+        if (!refreshToken) {
+          get().logout();
+          throw new Error('No refresh token available');
+        }
+        try {
+          const data = await authService.refresh(refreshToken);
+          if (data && data.accessToken) {
+            set({ accessToken: data.accessToken, isAuthenticated: true });
+          } else {
+            get().logout();
+            throw new Error('Could not refresh access token');
+          }
+        } catch (err) {
+          get().logout();
+          throw err;
         }
       },
     }),

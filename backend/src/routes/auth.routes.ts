@@ -98,8 +98,8 @@ router.post('/login', async (req, res) => {
       role: 'manager' // Todos los clientes entran como manager de su propia sede
     };
 
-    const accessToken = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '8h' });
-    const refreshToken = jwt.sign(tokenPayload, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    const accessToken = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign(tokenPayload, env.JWT_REFRESH_SECRET, { expiresIn: '30d' });
 
     return res.json({ 
       accessToken, 
@@ -122,13 +122,13 @@ router.post('/login', async (req, res) => {
 
 router.post('/refresh', async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    const rawToken = req.body.refreshToken || req.body.token;
     
-    if (!refreshToken) {
+    if (!rawToken) {
       return res.status(400).json({ message: 'Refresh token is required' });
     }
     
-    const decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as any;
+    const decoded = jwt.verify(rawToken, env.JWT_REFRESH_SECRET) as any;
     
     const tokenPayload = {
       id: decoded.id,
@@ -138,11 +138,11 @@ router.post('/refresh', async (req, res) => {
       role: decoded.role
     };
     
-    const newAccessToken = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '8h' });
+    const newAccessToken = jwt.sign(tokenPayload, env.JWT_SECRET, { expiresIn: '7d' });
     
     res.json({ accessToken: newAccessToken });
   } catch (error) {
-    res.status(401).json({ message: 'Invalid refresh token' });
+    res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
 });
 

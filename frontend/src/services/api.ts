@@ -28,19 +28,23 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthEndpoint = originalRequest?.url?.includes('/auth/');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       try {
         const { doRefreshToken } = useAuthStore.getState();
         await doRefreshToken();
         const newToken = useAuthStore.getState().accessToken;
-        if (originalRequest.headers) {
+        if (newToken && originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
         }
-        return api(originalRequest);
       } catch (refreshError) {
         useAuthStore.getState().logout();
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }
@@ -51,11 +55,16 @@ api.interceptors.response.use(
 // Endpoints
 export const authService = {
   login: async (credentials: any) => {
-    const { data } = await api.post('/auth/login', credentials);
+    const baseURL = getBaseURL();
+    const { data } = await axios.post(`${baseURL}/auth/login`, credentials);
     return data;
   },
   refresh: async (token: string) => {
-    const { data } = await api.post('/auth/refresh', { token });
+    const baseURL = getBaseURL();
+    const { data } = await axios.post(`${baseURL}/auth/refresh`, { 
+      refreshToken: token, 
+      token 
+    });
     return data;
   }
 };
