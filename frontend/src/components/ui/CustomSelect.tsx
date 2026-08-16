@@ -28,7 +28,6 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -40,98 +39,81 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   }, []);
 
   const selectedOption = options.find((opt) => opt.value === value);
+  const isActive = !!value;
 
-  let variantClasses = '';
-  let iconClasses = '';
-  
-  if (variant === 'blue') {
-    variantClasses = value 
-      ? 'bg-blue-50/90 border-blue-200 hover:bg-blue-100/80 text-blue-900 focus:ring-blue-100 focus:border-blue-400' 
-      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
-    iconClasses = value ? 'text-blue-500' : 'text-slate-400';
-  } else if (variant === 'emerald') {
-    variantClasses = value 
-      ? 'bg-emerald-50/90 border-emerald-200 hover:bg-emerald-100/80 text-emerald-900 focus:ring-emerald-100 focus:border-emerald-400' 
-      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
-    iconClasses = value ? 'text-emerald-500' : 'text-slate-400';
-  } else if (variant === 'violet') {
-    variantClasses = value 
-      ? 'bg-violet-50/90 border-violet-200 hover:bg-violet-100/80 text-violet-900 focus:ring-violet-100 focus:border-violet-400' 
-      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
-    iconClasses = value ? 'text-violet-500' : 'text-slate-400';
-  } else if (variant === 'amber') {
-    variantClasses = value 
-      ? 'bg-amber-50/90 border-amber-200 hover:bg-amber-100/80 text-amber-900 focus:ring-amber-100 focus:border-amber-400' 
-      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
-    iconClasses = value ? 'text-amber-500' : 'text-slate-400';
-  } else if (variant === 'primary') {
-    variantClasses = value 
-      ? 'bg-primary-50/90 border-primary-200 hover:bg-primary-100/80 text-primary-900 focus:ring-primary-100 focus:border-primary-400' 
-      : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/50 text-slate-700 focus:ring-slate-100 focus:border-slate-300';
-    iconClasses = value ? 'text-primary-500' : 'text-slate-400';
-  } else {
-    variantClasses = 'bg-white border-slate-200/80 hover:bg-slate-50 text-slate-700 focus:ring-primary-100 focus:border-primary-500';
-    iconClasses = 'text-slate-400';
-  }
+  const variantMap: Record<string, { active: string; idle: string; iconActive: string; iconIdle: string }> = {
+    blue:    { active: 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20',      idle: 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50/60',    iconActive: 'text-white', iconIdle: 'text-blue-400' },
+    emerald: { active: 'bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-500/20', idle: 'bg-white border-slate-200 text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/60', iconActive: 'text-white', iconIdle: 'text-emerald-400' },
+    violet:  { active: 'bg-violet-600 border-violet-500 text-white shadow-md shadow-violet-500/20',   idle: 'bg-white border-slate-200 text-slate-700 hover:border-violet-300 hover:bg-violet-50/60',  iconActive: 'text-white', iconIdle: 'text-violet-400' },
+    amber:   { active: 'bg-amber-500 border-amber-400 text-white shadow-md shadow-amber-400/20',    idle: 'bg-white border-slate-200 text-slate-700 hover:border-amber-300 hover:bg-amber-50/60',   iconActive: 'text-white', iconIdle: 'text-amber-500' },
+    primary: { active: 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-500/20',  idle: 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/60', iconActive: 'text-white', iconIdle: 'text-indigo-400' },
+  };
+
+  const scheme = variant ? variantMap[variant] : null;
+
+  const triggerClass = scheme
+    ? `${isActive ? scheme.active : scheme.idle} border rounded-xl transition-all duration-200 focus:outline-none`
+    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 border rounded-xl transition-all duration-200 focus:outline-none';
+
+  const iconClass = scheme
+    ? (isActive ? scheme.iconActive : scheme.iconIdle)
+    : 'text-slate-400';
 
   return (
-    <div ref={containerRef} className={`relative min-w-[160px] ${className}`}>
-      {/* Clickable button/trigger */}
+    <div ref={containerRef} className={`relative min-w-[150px] ${className}`}>
+      {/* Trigger button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg transition-all text-left focus:outline-none focus:ring-2 cursor-pointer duration-200 ${variantClasses}`}
+        className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 text-left cursor-pointer ${triggerClass}`}
       >
         <div className="flex items-center gap-2 min-w-0">
-          {icon && <span className={`shrink-0 transition-colors ${iconClasses}`}>{icon}</span>}
+          {icon && (
+            <span className={`shrink-0 transition-colors ${iconClass}`}>{icon}</span>
+          )}
           <span className="text-xs font-bold truncate">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         </div>
-        <ChevronDown size={14} className={`transition-transform duration-200 shrink-0 ${iconClasses} ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={13}
+          className={`shrink-0 transition-transform duration-200 ${iconClass} ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
-      {/* Floating Dropdown List */}
+      {/* Floating Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-lg z-50 max-h-60 overflow-y-auto py-1 animate-in fade-in slide-in-from-top-1.5 duration-100">
-          {/* Default Option (e.g. "Todos...") */}
+        <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-64 overflow-y-auto py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+          {/* Reset to default option */}
           <button
             type="button"
-            onClick={() => {
-              onChange(null);
-              setIsOpen(false);
-            }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left cursor-pointer transition-colors
-              ${!value 
-                ? 'bg-primary-50/80 text-primary-700 font-bold' 
-                : 'text-slate-600 hover:bg-slate-50'
-              }
-            `}
+            onClick={() => { onChange(null); setIsOpen(false); }}
+            className={`w-full flex items-center justify-between px-3.5 py-2 text-xs text-left cursor-pointer rounded-lg transition-colors ${
+              !value
+                ? 'bg-slate-100 text-slate-900 font-bold'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+            }`}
           >
             <span>{placeholder}</span>
-            {!value && <Check size={12} className="text-primary-600" />}
+            {!value && <Check size={12} className="text-slate-700" />}
           </button>
 
-          {/* Map options */}
+          {/* Options */}
           {options.map((option) => {
             const isSelected = value === option.value;
             return (
               <button
                 key={option.value}
                 type="button"
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left cursor-pointer transition-colors
-                  ${isSelected 
-                    ? 'bg-primary-50/80 text-primary-700 font-bold' 
-                    : 'text-slate-600 hover:bg-slate-50'
-                  }
-                `}
+                onClick={() => { onChange(option.value); setIsOpen(false); }}
+                className={`w-full flex items-center justify-between px-3.5 py-2 text-xs text-left cursor-pointer rounded-lg transition-colors ${
+                  isSelected
+                    ? 'bg-slate-100 text-slate-900 font-bold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                }`}
               >
                 <span className="truncate">{option.label}</span>
-                {isSelected && <Check size={12} className="text-primary-600" />}
+                {isSelected && <Check size={12} className="text-slate-700" />}
               </button>
             );
           })}
