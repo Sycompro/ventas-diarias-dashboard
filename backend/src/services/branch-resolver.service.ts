@@ -14,32 +14,59 @@ export interface BranchInfo {
 }
 
 /**
- * Obtiene la configuración completa de la empresa desde el Facturador Pro y la caché
+ * Obtiene la configuración completa y los nombres reales de almacenes/sucursales desde Facturador Pro
  */
 export async function getCompanyBillingConfig(companyId: string) {
-  const cacheKey = `company_billing_config_v3:${companyId}`;
+  const cacheKey = `company_billing_config_v5:${companyId}`;
   try {
     const cached = await redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
-  } catch (e) {
-    // Redis optional fallback
-  }
+  } catch (e) {}
 
   try {
     const company = await db.query.companies.findFirst({
       where: eq(companies.id, companyId)
     });
     
-    if (!company) return { establishments: [], series: [], paymentMethods: [] };
+    if (!company) return { establishments: [], series: [], paymentMethods: [], warehouses: {} };
     
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
-    const res = await client.get('/company');
+    // 1. Consultar /company
+    const compRes = await client.get('/company');
+    const establishments = compRes.data?.establishments || [];
+    const series = compRes.data?.series || [];
+    const paymentMethods = compRes.data?.payment_method_types || [];
+
+    // 2. Consultar /items/records para extraer todos los nombres reales de los almacenes/sucursales
+    const warehouseNames: Record<number, string> = {};
+    try {
+      const itemsRes = await client.get('/items/records', { params: { limit: 50 } });
+      const items = itemsRes.data?.data || [];
+      items.forEach((it: any) => {
+        if (Array.isArray(it.warehouses)) {
+          it.warehouses.forEach((w: any) => {
+            const id = w.warehouse_id || w.id;
+            const name = (w.warehouse_description || w.description || w.name || '')
+              .replace(/^Almacén\s*-\s*/i, '')
+              .replace(/^Almacen\s*-\s*/i, '')
+              .trim();
+            if (id && name) {
+              warehouseNames[id] = name;
+            }
+          });
+        }
+      });
+    } catch (itemErr: any) {
+      console.warn(`[Branch Resolver] Could not fetch warehouses from items:`, itemErr.message);
+    }
+
     const data = {
-      establishments: res.data?.establishments || [],
-      series: res.data?.series || [],
-      paymentMethods: res.data?.payment_method_types || []
+      establishments,
+      series,
+      paymentMethods,
+      warehouses: warehouseNames
     };
     
     try {
@@ -49,20 +76,34 @@ export async function getCompanyBillingConfig(companyId: string) {
     return data;
   } catch (error: any) {
     console.warn(`[Branch Resolver] Warning loading billing config:`, error.message);
-    return { establishments: [], series: [], paymentMethods: [] };
+    return { establishments: [], series: [], paymentMethods: [], warehouses: {} };
   }
 }
 
 /**
- * Obtiene la lista completa y unificada de TODAS las Sucursales reales de una empresa.
- * Combina:
- * 1. Los establecimientos oficiales registrados en el Facturador Pro.
- * 2. Las series con ventas reales registradas en la base de datos.
+ * Obtiene la lista completa con los NOMBRES REALES de todas las Sucursales de una empresa
  */
 export async function getCompanyBranches(companyId: string): Promise<BranchInfo[]> {
   const config = await getCompanyBillingConfig(companyId);
   const officialEstablishments = config.establishments || [];
   const officialSeries = config.series || [];
+  const warehouses = config.warehouses || {};
+
+  // Diccionario consolidado de nombres de sucursal por ID
+  const branchNameById: Record<number, string> = {};
+  
+  // Agregar desde warehouses (que contiene todas las sucursales reales de Facturador Pro)
+  for (const [idStr, name] of Object.entries(warehouses)) {
+    const id = parseInt(idStr, 10);
+    if (!isNaN(id)) branchNameById[id] = name as string;
+  }
+
+  // Agregar o sobrescribir con descripciones oficiales de establishments
+  for (const est of officialEstablishments) {
+    if (est.id && est.description) {
+      branchNameById[est.id] = est.description;
+    }
+  }
 
   // Consultar todas las series distintas y sus vendedores con ventas en la BD
   let dbSeriesRows: Array<{ series: string; seller_name: string }> = [];
@@ -84,84 +125,96 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     if (r.seller_name) sellersBySeries[r.series].add(r.seller_name);
   });
 
-  const branches: BranchInfo[] = [];
-  const coveredSeries = new Set<string>();
+  const branchesMap: Record<string, BranchInfo> = {};
 
-  // 1. Procesar establecimientos oficiales de Facturador Pro
-  for (const est of officialEstablishments) {
-    const estId = est.id;
-    const estName = est.description || `Sucursal ${estId}`;
-    
-    // Series asignadas formalmente a este establecimiento
-    const estSeries = officialSeries
-      .filter((s: any) => s.establishment_id === estId)
-      .map((s: any) => s.number);
+  // Mapeo conocido o inferido de series a sucursal por ID correlativo
+  // En Facturador Pro:
+  // Serie terminada en 06 (B006, F006, NV06) -> Sucursal 2 ("LAS BRISAS")
+  // Serie terminada en 09 (B009, F009, NV09) -> Sucursal 5 ("JOSE LEONARDO ORTIZ")
+  // Serie terminada en 08 (B008, F008, NV08) -> Sucursal 4 ("PIMENTEL")
+  // Serie terminada en 05 (B005, F005, NV05) -> Sucursal 1 ("LA PRADERA")
+  // Serie terminada en 03 (B003, F003, NV03) -> Sucursal 3 ("LA VICTORIA")
+  const resolveEstIdForSeries = (s: string): number => {
+    // 1. Buscar si está en officialSeries
+    const off = officialSeries.find((os: any) => os.number === s);
+    if (off && off.establishment_id) return off.establishment_id;
 
-    // Vendedores asociados a esas series
-    const estSellers = new Set<string>();
-    estSeries.forEach((s: string) => {
-      coveredSeries.add(s);
-      const sellers = sellersBySeries[s];
-      if (sellers) sellers.forEach(sel => estSellers.add(sel));
-    });
-
-    branches.push({
-      id: String(estId),
-      name: estName,
-      series: estSeries,
-      establishmentId: estId,
-      sellers: [...estSellers]
-    });
-  }
-
-  // 2. Procesar series en ventas que NO están en ningún establecimiento oficial
-  // Agrupar por prefijo o identificador de sucursal/caja
-  const unmappedSeries = allDbSeries.filter(s => !coveredSeries.has(s));
-  
-  // Agrupar series huérfanas por su correlativo o serie
-  // Ej: B005, B008, B009, NV08
-  const groupedUnmapped: Record<string, string[]> = {};
-  for (const s of unmappedSeries) {
+    // 2. Extraer correlativo numérico de la serie
     const match = s.match(/([A-Za-z]+)(\d+)/);
-    const suffix = match ? match[2] : s;
-    const groupKey = suffix;
-    if (!groupedUnmapped[groupKey]) groupedUnmapped[groupKey] = [];
-    groupedUnmapped[groupKey].push(s);
+    if (match) {
+      const num = parseInt(match[2], 10);
+      if (num === 6) return 2; // LAS BRISAS
+      if (num === 9) return 5; // JOSE LEONARDO ORTIZ
+      if (num === 8) return 4; // PIMENTEL
+      if (num === 5) return 1; // LA PRADERA
+      if (num === 3) return 3; // LA VICTORIA
+      if (branchNameById[num]) return num;
+    }
+    return 1;
+  };
+
+  // Inicializar sucursales encontradas en Facturador Pro (IDs 1, 2, 3, 4, 5, etc.)
+  for (const [idStr, name] of Object.entries(branchNameById)) {
+    const estId = parseInt(idStr, 10);
+    branchesMap[String(estId)] = {
+      id: String(estId),
+      name: name,
+      series: [],
+      establishmentId: estId,
+      sellers: []
+    };
   }
 
-  for (const [groupKey, seriesList] of Object.entries(groupedUnmapped)) {
-    const sellers = new Set<string>();
-    seriesList.forEach(s => {
-      const sels = sellersBySeries[s];
-      if (sels) sels.forEach(sel => sellers.add(sel));
-    });
-
-    // Nombre legible para la sucursal/caja
-    const sampleSeries = seriesList[0];
-    const sellerSample = [...sellers][0];
-    let branchName = `Sucursal / Caja ${seriesList.join(', ')}`;
-    if (sellerSample) {
-      branchName = `Sucursal ${seriesList.join('/')} (${sellerSample.split(' ')[0]})`;
+  // Asignar cada serie de ventas a su sucursal correspondiente
+  for (const s of allDbSeries) {
+    const estId = resolveEstIdForSeries(s);
+    const key = String(estId);
+    
+    if (!branchesMap[key]) {
+      const name = branchNameById[estId] || `Sucursal ${estId}`;
+      branchesMap[key] = {
+        id: key,
+        name,
+        series: [],
+        establishmentId: estId,
+        sellers: []
+      };
     }
 
-    branches.push({
-      id: `series:${seriesList.join(',')}`,
-      name: branchName,
-      series: seriesList,
-      sellers: [...sellers]
-    });
+    if (!branchesMap[key].series.includes(s)) {
+      branchesMap[key].series.push(s);
+    }
+
+    // Agregar vendedores
+    const sellers = sellersBySeries[s];
+    if (sellers) {
+      if (!branchesMap[key].sellers) branchesMap[key].sellers = [];
+      sellers.forEach(sel => {
+        if (!branchesMap[key].sellers!.includes(sel)) {
+          branchesMap[key].sellers!.push(sel);
+        }
+      });
+    }
   }
 
-  // Si no se encontró ningún establecimiento ni serie, retornar Sucursal Principal por defecto
-  if (branches.length === 0) {
-    branches.push({
+  // Filtrar solo aquellas sucursales que tengan series o ventas, o mantener las oficiales
+  const result = Object.values(branchesMap).filter(b => b.series.length > 0 || (b.establishmentId && officialEstablishments.some((e: any) => e.id === b.establishmentId)));
+
+  // Si queda vacía, fallback
+  if (result.length === 0) {
+    result.push({
       id: '1',
-      name: 'Sucursal Principal',
+      name: branchNameById[1] || 'LA PRADERA',
       series: []
     });
   }
 
-  return branches;
+  return result.sort((a, b) => {
+    // Ordenar por ID numérico si es posible
+    const numA = parseInt(a.id, 10) || 99;
+    const numB = parseInt(b.id, 10) || 99;
+    return numA - numB;
+  });
 }
 
 /**
@@ -174,8 +227,8 @@ export async function resolveBranchSeries(companyId: string, branchParam?: strin
 
   const branches = await getCompanyBranches(companyId);
   
-  // 1. Buscar por ID exacto (ej: "2" o "series:B005" o "series:B008,NV08")
-  const foundById = branches.find(b => b.id === branchParam);
+  // 1. Buscar por ID exacto (ej: "1", "2", "4", "5")
+  const foundById = branches.find(b => b.id === String(branchParam));
   if (foundById && foundById.series.length > 0) {
     return foundById.series;
   }
@@ -189,13 +242,13 @@ export async function resolveBranchSeries(companyId: string, branchParam?: strin
     }
   }
 
-  // 3. Si el parámetro es directamente una serie o contiene series separadas por coma
-  if (branchParam.includes('series:')) {
-    const raw = branchParam.replace('series:', '');
-    return raw.split(',').map(s => s.trim()).filter(Boolean);
+  // 3. Buscar por nombre exacto de la sucursal (ej: "LAS BRISAS", "PIMENTEL", "LA PRADERA")
+  const foundByName = branches.find(b => b.name.toLowerCase() === branchParam.toLowerCase());
+  if (foundByName && foundByName.series.length > 0) {
+    return foundByName.series;
   }
 
-  // 4. Si el parámetro coincide con el nombre de una serie directa
+  // 4. Si el parámetro coincide directamente con una serie
   return [branchParam];
 }
 
