@@ -267,6 +267,7 @@ router.get('/:id/branches', async (req: any, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
     
+    let establishments: any[] = [];
     try {
       const company = targetCompanyId ? await db.query.companies.findFirst({
         where: eq(companies.id, targetCompanyId)
@@ -274,28 +275,18 @@ router.get('/:id/branches', async (req: any, res) => {
         where: eq(companies.id, req.user.companyId)
       });
       
-      if (!company) {
-        return res.status(404).json({ message: 'Company not found' });
-      }
-      
-      const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
-      const client = createBillingClient(company.subdomain, decryptedToken);
-      
-      const response = await client.get('/company');
-      const establishments = response.data?.establishments || [];
-      
-      if (establishments.length > 0) {
-        return res.json(establishments.map((e: any) => ({
-          id: String(e.id),
-          name: e.description || `Sede ${e.id}`
-        })));
+      if (company) {
+        const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
+        const client = createBillingClient(company.subdomain, decryptedToken);
+        const response = await client.get('/company');
+        establishments = response.data?.establishments || [];
       }
     } catch (e: any) {
       console.warn(`[Branches Route] Warning: Could not fetch real establishments from facturador API:`, e.message);
     }
     
-    // Fallback: If billing API fails or returns no establishments, query distinct series from DB
-    const result = targetCompanyId ? await sqlClient`
+    // Obtener series distintas de la base de datos
+    const dbSeriesResult = targetCompanyId ? await sqlClient`
       SELECT DISTINCT series as "name"
       FROM sales
       WHERE company_id = ${targetCompanyId} AND series IS NOT NULL AND series != ''
@@ -306,11 +297,34 @@ router.get('/:id/branches', async (req: any, res) => {
       WHERE series IS NOT NULL AND series != ''
       ORDER BY series ASC
     `;
-    
-    res.json(result.map(r => ({
-      id: r.name,
-      name: `Sede ${r.name}`
-    })));
+
+    const branchesList: any[] = [];
+    const seenNames = new Set<string>();
+
+    // 1. Agregar establecimientos oficiales
+    establishments.forEach((e: any) => {
+      const name = e.description || `Sede ${e.id}`;
+      seenNames.add(name.toLowerCase());
+      branchesList.push({
+        id: String(e.id),
+        name
+      });
+    });
+
+    // 2. Agregar series como sedes / puntos de venta si no están repetidas
+    dbSeriesResult.forEach((r: any) => {
+      const seriesName = r.name;
+      const formattedName = `Sede ${seriesName}`;
+      if (!seenNames.has(seriesName.toLowerCase()) && !seenNames.has(formattedName.toLowerCase())) {
+        seenNames.add(formattedName.toLowerCase());
+        branchesList.push({
+          id: seriesName,
+          name: formattedName
+        });
+      }
+    });
+
+    res.json(branchesList);
   } catch (error: any) {
     res.status(500).json({ message: 'Error listing company branches', error: error.message });
   }

@@ -176,20 +176,16 @@ router.get('/pivot', async (req, res) => {
     );
     
     if (branch) {
-      // Find all series numbers belonging to this establishment
       const branchId = parseInt(branch, 10);
-      const matchedSeries = config.series
-        .filter((s: any) => s.establishment_id === branchId)
-        .map((s: any) => s.number);
+      const matchedSeries = !isNaN(branchId)
+        ? config.series.filter((s: any) => s.establishment_id === branchId).map((s: any) => s.number)
+        : [];
       
       if (matchedSeries.length > 0) {
         conditions = and(conditions, inArray(sales.series, matchedSeries));
       } else {
-        // If no series match, return empty to avoid leaking other branches
-        return res.json({
-          paymentMethods: config.paymentMethods.map((m: any) => ({ id: m.id, description: m.description })),
-          pivotData: []
-        });
+        // Direct series match (e.g. branch is 'B005', 'B008', 'NV08')
+        conditions = and(conditions, eq(sales.series, branch));
       }
     }
     
