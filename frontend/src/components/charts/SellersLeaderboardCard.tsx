@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown, Trophy, Medal, Sparkles, TrendingUp, Users, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { Crown, Trophy, Sparkles, Users, TrendingUp, Receipt, Award } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
 interface SellerItem {
@@ -23,8 +23,8 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
     return (
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm animate-pulse space-y-3">
         <div className="h-5 bg-slate-100 rounded-lg w-1/3"></div>
-        <div className="h-24 bg-slate-100 rounded-2xl"></div>
-        <div className="h-14 bg-slate-100 rounded-xl"></div>
+        <div className="h-28 bg-slate-100 rounded-2xl"></div>
+        <div className="h-10 bg-slate-100 rounded-xl"></div>
       </div>
     );
   }
@@ -42,7 +42,7 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-gradient-to-tr from-amber-500 to-amber-600 text-white rounded-xl shadow-xs">
+          <div className="p-2 bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-600 text-white rounded-xl shadow-xs">
             <Trophy size={15} />
           </div>
           <div>
@@ -50,12 +50,12 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
               Ranking de Vendedores
               <Sparkles size={11} className="text-amber-500" />
             </h4>
-            <span className="text-[10px] text-slate-400 font-medium">Rendimiento y volumen de facturación</span>
+            <span className="text-[10px] text-slate-400 font-medium">Top rendimiento por facturación</span>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
-          <Users size={11} className="text-slate-500" />
-          {sortedSellers.length} {sortedSellers.length === 1 ? 'vendedor' : 'vendedores'}
+        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200/80 flex items-center gap-1">
+          <Users size={11} className="text-amber-600" />
+          {sortedSellers.length} {sortedSellers.length === 1 ? 'vendedor activo' : 'vendedores'}
         </span>
       </div>
 
@@ -72,7 +72,7 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
             const progressWidth = maxTotal > 0 ? (seller.total / maxTotal) * 100 : 0;
             const initials = name.slice(0, 2).toUpperCase();
 
-            // Estilos diferenciados para el Líder (#1)
+            // Estilos diferenciados
             const isLeader = idx === 0;
             const isSilver = idx === 1;
             const isBronze = idx === 2;
@@ -81,21 +81,21 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
               return (
                 <div 
                   key={name + idx}
-                  className="p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-50/50 to-white border border-amber-300/80 relative overflow-hidden shadow-xs hover:border-amber-400 transition-all duration-200"
+                  className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-50/40 to-white border border-amber-300/90 relative overflow-hidden shadow-xs hover:border-amber-400 transition-all duration-200"
                 >
                   {/* Subtle watermark crown */}
-                  <Crown size={64} className="absolute -bottom-4 -right-3 text-amber-500/10 pointer-events-none" />
+                  <Crown size={72} className="absolute -bottom-5 -right-3 text-amber-500/10 pointer-events-none select-none" />
 
-                  {/* Top row: Avatar + Name + Tag + Total */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
+                  {/* Top row: Avatar + Name + Leader Badge + Total */}
+                  <div className="flex items-start justify-between gap-2 relative z-10">
+                    <div className="flex items-center gap-3 min-w-0">
                       {/* Avatar con corona */}
                       <div className="relative shrink-0">
-                        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white text-[11px] font-black flex items-center justify-center shadow-xs">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-600 text-white text-xs font-black flex items-center justify-center shadow-md ring-2 ring-amber-200">
                           {initials}
                         </div>
-                        <div className="absolute -top-1.5 -right-1.5 p-0.5 bg-amber-400 text-white rounded-full shadow-xs">
-                          <Crown size={9} />
+                        <div className="absolute -top-1.5 -right-1.5 p-0.5 bg-amber-400 text-slate-900 rounded-full shadow-xs ring-1 ring-white">
+                          <Crown size={10} className="fill-current text-white" />
                         </div>
                       </div>
 
@@ -104,14 +104,14 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
                           <span className="text-xs font-black text-slate-900 truncate">
                             {name}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300/80 shrink-0">
-                            #1 Líder
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0 flex items-center gap-0.5">
+                            🥇 #1 Líder
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 font-medium">
-                          <span>{seller.count} {seller.count === 1 ? 'doc' : 'docs'} emitidos</span>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-1 font-medium">
+                          <span className="font-semibold text-slate-700">{seller.count} {seller.count === 1 ? 'operación' : 'operaciones'}</span>
                           <span>•</span>
-                          <span className="font-bold text-amber-700">{percentage.toFixed(0)}% del total</span>
+                          <span className="font-bold text-amber-800">{percentage.toFixed(0)}% del total</span>
                         </div>
                       </div>
                     </div>
@@ -121,7 +121,7 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
                         {formatCurrency(seller.total)}
                       </span>
                       {seller.avgTicket ? (
-                        <span className="text-[10px] font-semibold text-slate-500 block tabular-nums">
+                        <span className="text-[10px] font-semibold text-indigo-700 block tabular-nums mt-0.5">
                           Prom: {formatCurrency(seller.avgTicket)}
                         </span>
                       ) : null}
@@ -129,10 +129,10 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
                   </div>
 
                   {/* Progress Bar Estilizada con Gradiente */}
-                  <div className="mt-2.5">
-                    <div className="w-full h-1.5 rounded-full bg-amber-200/50 overflow-hidden">
+                  <div className="mt-3 relative z-10">
+                    <div className="w-full h-2 rounded-full bg-amber-200/60 p-0.5 overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-700 shadow-xs"
+                        className="h-full rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-400 transition-all duration-700 shadow-xs"
                         style={{ width: `${progressWidth}%` }}
                       />
                     </div>
@@ -154,15 +154,15 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className={`w-6 h-6 rounded-lg text-[10px] font-black flex items-center justify-center shrink-0 ${
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-7 h-7 rounded-xl text-[10px] font-black flex items-center justify-center shrink-0 shadow-2xs ${
                       isSilver 
-                        ? 'bg-slate-200 text-slate-700' 
+                        ? 'bg-slate-200 text-slate-700 border border-slate-300' 
                         : isBronze 
-                        ? 'bg-amber-200 text-amber-900' 
+                        ? 'bg-amber-200 text-amber-900 border border-amber-300' 
                         : 'bg-slate-100 text-slate-600'
                     }`}>
-                      {idx + 1}
+                      {idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
                     </div>
                     <div className="min-w-0">
                       <span className="text-xs font-bold text-slate-800 block truncate">
@@ -187,7 +187,7 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
                 </div>
 
                 {/* Progress bar */}
-                <div className="w-full h-1 rounded-full bg-slate-100 mt-2 overflow-hidden">
+                <div className="w-full h-1.5 rounded-full bg-slate-100 mt-2 overflow-hidden">
                   <div 
                     className={`h-full rounded-full transition-all duration-500 ${
                       isSilver ? 'bg-slate-400' : isBronze ? 'bg-amber-600' : 'bg-indigo-400'
@@ -201,15 +201,15 @@ export const SellersLeaderboardCard: React.FC<SellersLeaderboardCardProps> = ({
         )}
       </div>
 
-      {/* Footer Resumen */}
-      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-        <div>
+      {/* Footer Resumen 3 KPIs */}
+      <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+        <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
           <span className="text-slate-400 text-[10px] block font-medium">Ticket Promedio Equipo</span>
-          <span className="font-bold text-slate-700 text-[11px] tabular-nums">
+          <span className="font-extrabold text-slate-800 text-xs tabular-nums">
             {formatCurrency(teamAvgTicket)}
           </span>
         </div>
-        <div className="text-right">
+        <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-right">
           <span className="text-slate-400 text-[10px] block font-medium">Total Facturado</span>
           <span className="font-black text-slate-900 text-xs tabular-nums">
             {formatCurrency(overallTotal)}
