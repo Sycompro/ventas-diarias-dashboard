@@ -226,23 +226,7 @@ export const SalesPage: React.FC = () => {
         )}
       </div>
 
-      {/* Sección Analítica: Horas (Reducido) + Desglose IGV y Ranking de Vendedores al Costado */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* Columna Izquierda: Análisis Estadístico de Ventas por Hora (Ancho: 7/12 o 8/12) */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-start">
-          <HourlySalesAnalysis data={hourlySales || []} isLoading={loadingHourly} />
-        </div>
-
-        {/* Columna Derecha: IGV & Ranking de Vendedores (Ancho: 5/12 o 4/12) */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-5 justify-between">
-          <TaxIgvCard taxes={metrics?.taxes} isLoading={loadingDocTypes} />
-          <SellersLeaderboardCard sellers={metrics?.bySeller || []} isLoading={loadingDocTypes} />
-        </div>
-
-      </div>
-
-      {/* Cuadro Estadístico Pivot */}
+      {/* Cuadro Estadístico Pivot (Directamente debajo de las tarjetas) */}
       <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm animate-in fade-in duration-700 delay-200">
 
         {/* Header */}
@@ -382,6 +366,22 @@ export const SalesPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Sección Analítica: Horas (Reducido) + Desglose IGV y Ranking de Vendedores al Costado */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        {/* Columna Izquierda: Análisis Estadístico de Ventas por Hora (Ancho: 7/12 o 8/12) */}
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-start">
+          <HourlySalesAnalysis data={hourlySales || []} isLoading={loadingHourly} />
+        </div>
+
+        {/* Columna Derecha: IGV & Ranking de Vendedores (Ancho: 5/12 o 4/12) */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-5 justify-between">
+          <TaxIgvCard taxes={metrics?.taxes} isLoading={loadingDocTypes} />
+          <SellersLeaderboardCard sellers={metrics?.bySeller || []} isLoading={loadingDocTypes} />
+        </div>
+
       </div>
 
     </div>
