@@ -195,7 +195,7 @@ export const SalesPage: React.FC = () => {
         <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
           <div>
             <h3 className="font-bold text-slate-900 text-sm">Resumen de Ventas por Método de Pago</h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">Despliega cada sede para ver el desglose detallado de sus vendedores.</p>
+
           </div>
           <span className="px-2.5 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-semibold">
             Consolidado
