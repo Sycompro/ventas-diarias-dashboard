@@ -7,6 +7,7 @@ import { testConnection, createBillingClient } from '../services/billing-api.ser
 import { syncCompany } from '../services/sync.service.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { getSalesTrend } from '../services/analytics.service.js';
+import { getCompanyBranches, resolveBranchSeries } from '../services/branch-resolver.service.js';
 
 const router = Router();
 router.use(authenticate);
@@ -243,44 +244,23 @@ router.get('/:id/sellers', async (req: any, res) => {
     }
     
     const branch = req.query.branch as string;
-    let seriesFilter: string[] = [];
+    let seriesFilter: string[] | null = null;
 
     if (branch && targetCompanyId) {
-      try {
-        const company = await db.query.companies.findFirst({ where: eq(companies.id, targetCompanyId) });
-        if (company) {
-          const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
-          const client = createBillingClient(company.subdomain, decryptedToken);
-          const response = await client.get('/company');
-          const series = response.data?.series || [];
-          const branchId = parseInt(branch, 10);
-          if (!isNaN(branchId)) {
-            seriesFilter = series.filter((s: any) => s.establishment_id === branchId).map((s: any) => s.number);
-          }
-        }
-      } catch (e: any) {
-        console.warn(`[Sellers Route] Warning: Could not filter sellers by establishment series:`, e.message);
-      }
+      seriesFilter = await resolveBranchSeries(targetCompanyId, branch);
     }
 
-    const result = targetCompanyId ? (
-      seriesFilter.length > 0 ? await sqlClient`
-        SELECT DISTINCT seller_name as "name"
-        FROM sales
-        WHERE company_id = ${targetCompanyId} 
-          AND series = ANY(${seriesFilter})
-          AND seller_name IS NOT NULL AND seller_name != ''
-        ORDER BY seller_name ASC
-      ` : await sqlClient`
-        SELECT DISTINCT seller_name as "name"
-        FROM sales
-        WHERE company_id = ${targetCompanyId} AND seller_name IS NOT NULL AND seller_name != ''
-        ORDER BY seller_name ASC
-      `
-    ) : await sqlClient`
+    const hasSeriesFilter = seriesFilter !== null && seriesFilter.length > 0;
+    const seriesArray = seriesFilter || [];
+    const hasCompanyFilter = Boolean(targetCompanyId);
+    const cId = targetCompanyId || '';
+
+    const result = await sqlClient`
       SELECT DISTINCT seller_name as "name"
       FROM sales
       WHERE seller_name IS NOT NULL AND seller_name != ''
+        AND (${!hasCompanyFilter} OR company_id = ${cId})
+        AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
       ORDER BY seller_name ASC
     `;
     
@@ -297,38 +277,15 @@ router.get('/:id/branches', async (req: any, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
     
-    let establishments: any[] = [];
-    try {
-      const company = targetCompanyId ? await db.query.companies.findFirst({
-        where: eq(companies.id, targetCompanyId)
-      }) : await db.query.companies.findFirst({
-        where: eq(companies.id, req.user.companyId)
-      });
-      
-      if (company) {
-        const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
-        const client = createBillingClient(company.subdomain, decryptedToken);
-        const response = await client.get('/company');
-        establishments = response.data?.establishments || [];
-      }
-    } catch (e: any) {
-      console.warn(`[Branches Route] Warning: Could not fetch real establishments from facturador API:`, e.message);
+    if (!targetCompanyId) {
+      return res.json([{ id: 'all', name: 'Todas las Sedes' }]);
     }
-    
-    const branchesList: any[] = [];
-    if (establishments.length > 0) {
-      establishments.forEach((e: any) => {
-        branchesList.push({
-          id: String(e.id),
-          name: e.description || `Sede ${e.id}`
-        });
-      });
-    } else {
-      branchesList.push({
-        id: '1',
-        name: 'Sede Principal'
-      });
-    }
+
+    const branches = await getCompanyBranches(targetCompanyId);
+    const branchesList = branches.map(b => ({
+      id: b.id,
+      name: b.name
+    }));
 
     res.json(branchesList);
   } catch (error: any) {

@@ -1,4 +1,5 @@
 import { sqlClient } from '../config/database.js';
+import { resolveBranchSeries } from './branch-resolver.service.js';
 
 export interface TrendPoint {
   date: string;
@@ -7,53 +8,43 @@ export interface TrendPoint {
   avgTicket: number;
 }
 
-export async function getSalesTrend(companyId: string, dateStart: string, dateEnd: string, granularity: 'hour'|'day'|'week'|'month'): Promise<TrendPoint[]> {
-  let res;
-  if (granularity === 'hour') {
-    res = await sqlClient`
-      SELECT 
-        date_trunc('hour', issued_at) as period,
-        COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
-        COUNT(*) as count
-      FROM sales
-      WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
-      GROUP BY period
-      ORDER BY period ASC
-    `;
-  } else if (granularity === 'week') {
-    res = await sqlClient`
-      SELECT 
-        date_trunc('week', issued_at) as period,
-        COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
-        COUNT(*) as count
-      FROM sales
-      WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
-      GROUP BY period
-      ORDER BY period ASC
-    `;
-  } else if (granularity === 'month') {
-    res = await sqlClient`
-      SELECT 
-        date_trunc('month', issued_at) as period,
-        COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
-        COUNT(*) as count
-      FROM sales
-      WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
-      GROUP BY period
-      ORDER BY period ASC
-    `;
-  } else {
-    res = await sqlClient`
-      SELECT 
-        date_trunc('day', issued_at) as period,
-        COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
-        COUNT(*) as count
-      FROM sales
-      WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
-      GROUP BY period
-      ORDER BY period ASC
-    `;
-  }
+export async function getSalesTrend(
+  companyId: string, 
+  dateStart: string, 
+  dateEnd: string, 
+  granularity: 'hour'|'day'|'week'|'month',
+  branch?: string | null,
+  seller?: string | null
+): Promise<TrendPoint[]> {
+  const seriesFilter = companyId ? await resolveBranchSeries(companyId, branch) : null;
+  const hasSeriesFilter = seriesFilter !== null && seriesFilter.length > 0;
+  const hasSellerFilter = Boolean(seller && seller.trim() !== '');
+  const hasCompanyFilter = Boolean(companyId);
+
+  const seriesArray = seriesFilter || [];
+  const sellerName = seller || '';
+  const cId = companyId || '';
+
+  const truncUnit = granularity === 'hour' ? 'hour' 
+    : granularity === 'week' ? 'week' 
+    : granularity === 'month' ? 'month' 
+    : 'day';
+
+  const res = await sqlClient`
+    SELECT 
+      date_trunc(${truncUnit}, issued_at AT TIME ZONE 'America/Lima') as period,
+      COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+      COUNT(*) as count
+    FROM sales
+    WHERE status = 'active'
+      AND (${!hasCompanyFilter} OR company_id = ${cId})
+      AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
+      AND (${!hasSellerFilter} OR seller_name = ${sellerName})
+      AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+      AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
+    GROUP BY period
+    ORDER BY period ASC
+  `;
 
   return res.map(r => {
     const total = parseFloat(r.total_sales as string || '0');
@@ -79,32 +70,37 @@ export async function getSalesTrend(companyId: string, dateStart: string, dateEn
   });
 }
 
-export async function getSalesByHour(companyId: string | null | undefined, dateStart: string, dateEnd: string): Promise<Array<{ hour: number; total: number; count: number }>> {
-  const res = companyId
-    ? await sqlClient`
-        SELECT 
-          EXTRACT(HOUR FROM (issued_at AT TIME ZONE 'America/Lima'))::int as hour,
-          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
-          COUNT(*) as count
-        FROM sales
-        WHERE status = 'active' AND company_id = ${companyId} 
-          AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
-          AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
-        GROUP BY hour
-        ORDER BY hour ASC
-      `
-    : await sqlClient`
-        SELECT 
-          EXTRACT(HOUR FROM (issued_at AT TIME ZONE 'America/Lima'))::int as hour,
-          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
-          COUNT(*) as count
-        FROM sales
-        WHERE status = 'active' 
-          AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
-          AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
-        GROUP BY hour
-        ORDER BY hour ASC
-      `;
+export async function getSalesByHour(
+  companyId: string | null | undefined, 
+  dateStart: string, 
+  dateEnd: string,
+  branch?: string | null,
+  seller?: string | null
+): Promise<Array<{ hour: number; total: number; count: number }>> {
+  const seriesFilter = companyId ? await resolveBranchSeries(companyId, branch) : null;
+  const hasSeriesFilter = seriesFilter !== null && seriesFilter.length > 0;
+  const hasSellerFilter = Boolean(seller && seller.trim() !== '');
+  const hasCompanyFilter = Boolean(companyId);
+
+  const seriesArray = seriesFilter || [];
+  const sellerName = seller || '';
+  const cId = companyId || '';
+
+  const res = await sqlClient`
+    SELECT 
+      EXTRACT(HOUR FROM (issued_at AT TIME ZONE 'America/Lima'))::int as hour,
+      COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+      COUNT(*) as count
+    FROM sales
+    WHERE status = 'active'
+      AND (${!hasCompanyFilter} OR company_id = ${cId})
+      AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
+      AND (${!hasSellerFilter} OR seller_name = ${sellerName})
+      AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+      AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
+    GROUP BY hour
+    ORDER BY hour ASC
+  `;
   
   return res.map(r => ({
     hour: parseInt(r.hour as string, 10),
@@ -120,7 +116,9 @@ export async function comparePeriods(companyId: string, period1Start: string, pe
         COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
         COUNT(*) as count
       FROM sales
-      WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${start}::date AND issued_at::date <= ${end}::date
+      WHERE status = 'active' AND company_id = ${companyId} 
+        AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${start}::date 
+        AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${end}::date
     `;
     return {
       total: parseFloat(res[0]?.total_sales as string || '0'),
@@ -141,13 +139,29 @@ export async function comparePeriods(companyId: string, period1Start: string, pe
   };
 }
 
-export async function getRankingBySeller(companyId: string, dateStart: string, dateEnd: string) {
+export async function getRankingBySeller(
+  companyId: string, 
+  dateStart: string, 
+  dateEnd: string,
+  branch?: string | null
+) {
+  const seriesFilter = companyId ? await resolveBranchSeries(companyId, branch) : null;
+  const hasSeriesFilter = seriesFilter !== null && seriesFilter.length > 0;
+  const hasCompanyFilter = Boolean(companyId);
+  const seriesArray = seriesFilter || [];
+  const cId = companyId || '';
+
   const res = await sqlClient`
-    SELECT seller_name, 
+    SELECT 
+      COALESCE(seller_name, 'Sin Vendedor') as seller_name, 
       COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total,
       COUNT(*) as count
     FROM sales
-    WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+    WHERE status = 'active' 
+      AND (${!hasCompanyFilter} OR company_id = ${cId})
+      AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
+      AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+      AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
     GROUP BY seller_name
     ORDER BY total DESC
   `;
@@ -167,7 +181,10 @@ export async function getRankingByCompany(dateStart: string, dateEnd: string, co
       COUNT(*) as count
     FROM sales s
     JOIN companies c ON s.company_id = c.id
-    WHERE s.status = 'active' AND s.company_id = ANY(${companyIds}) AND s.issued_at::date >= ${dateStart}::date AND s.issued_at::date <= ${dateEnd}::date
+    WHERE s.status = 'active' 
+      AND s.company_id = ANY(${companyIds}) 
+      AND (s.issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+      AND (s.issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
     GROUP BY c.id, c.name
     ORDER BY total DESC
   `;
