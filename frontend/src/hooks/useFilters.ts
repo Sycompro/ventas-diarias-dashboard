@@ -50,7 +50,7 @@ export const useFilters = create<FiltersStore>((set) => ({
   seller: null,
   granularity: 'day',
   
-  setCompany: (companyId) => set({ companyId }),
+  setCompany: (companyId) => set({ companyId, branch: null, seller: null }),
   setDateRange: (start, end) => set({ dateStart: start, dateEnd: end, datePreset: 'custom' }),
   setDatePreset: (preset) => {
     if (preset !== 'custom') {
@@ -60,7 +60,7 @@ export const useFilters = create<FiltersStore>((set) => ({
       set({ datePreset: preset });
     }
   },
-  setBranch: (branch) => set({ branch }),
+  setBranch: (branch) => set({ branch, seller: null }),
   setSeller: (seller) => set({ seller }),
   setGranularity: (granularity) => set({ granularity }),
 }));

@@ -85,8 +85,8 @@ export const companyService = {
     const { data } = await api.post(`/companies/${id}/sync`, options || {});
     return data;
   },
-  getSellers: async (id: string) => {
-    const { data } = await api.get(`/companies/${id}/sellers`);
+  getSellers: async (id: string, branch?: string | null) => {
+    const { data } = await api.get(`/companies/${id}/sellers`, { params: { branch: branch || undefined } });
     return data;
   },
   getBranches: async (id: string) => {
