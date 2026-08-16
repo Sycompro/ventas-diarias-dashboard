@@ -39,13 +39,13 @@ const getDatesForPreset = (preset: FilterState['datePreset']) => {
   }
 };
 
-const defaultDates = getDatesForPreset('this_month');
+const defaultDates = getDatesForPreset('today');
 
 export const useFilters = create<FiltersStore>((set) => ({
   companyId: null,
   dateStart: defaultDates.start,
   dateEnd: defaultDates.end,
-  datePreset: 'this_month',
+  datePreset: 'today',
   branch: null,
   seller: null,
   granularity: 'day',
