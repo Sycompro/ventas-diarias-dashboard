@@ -66,8 +66,27 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ message: 'Ocurrió un error inesperado en el servidor.' });
 });
 
+async function initDatabaseIndexes() {
+  try {
+    const { sqlClient } = await import('./config/database.js');
+    await sqlClient.unsafe(`
+      CREATE INDEX IF NOT EXISTS idx_sales_company_issued ON sales(company_id, issued_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_sales_company_series_issued ON sales(company_id, series, issued_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_sales_company_seller_issued ON sales(company_id, seller_name, issued_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_sales_company_status ON sales(company_id, status);
+      CREATE INDEX IF NOT EXISTS idx_sale_payments_sale_id ON sale_payments(sale_id);
+      CREATE INDEX IF NOT EXISTS idx_sale_payments_method ON sale_payments(payment_method_id);
+      CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
+    `);
+    console.log('⚡ Índices de alto rendimiento verificados en PostgreSQL.');
+  } catch (e: any) {
+    console.warn('Warning al verificar índices:', e.message);
+  }
+}
+
 // Iniciar servidor
 const port = env.PORT;
 app.listen(port, () => {
   console.log(`🚀 Servidor corriendo en modo ${env.NODE_ENV} en el puerto ${port}`);
+  initDatabaseIndexes();
 });
