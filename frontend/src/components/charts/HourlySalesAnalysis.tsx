@@ -41,7 +41,7 @@ export const HourlySalesAnalysis: React.FC<HourlySalesAnalysisProps> = ({
 }) => {
   const [activeView, setActiveView] = useState<'chart' | 'table'>('chart');
 
-  // Procesamiento y cálculo de métricas horarias
+  // Procesamiento y cálculo de métricas horarias en formato 12 Horas (AM / PM)
   const {
     hourlyData,
     peakHour,
@@ -53,6 +53,17 @@ export const HourlySalesAnalysis: React.FC<HourlySalesAnalysisProps> = ({
     dominantSlot,
     activeHoursCount
   } = useMemo(() => {
+    // Helper para formato de 12 Horas
+    const format12Hour = (h: number) => {
+      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      return {
+        short: `${h12} ${ampm}`,
+        display: `${h12}:00 ${ampm}`,
+        range: `${h12}:00 ${ampm} - ${h12}:59 ${ampm}`,
+      };
+    };
+
     // Mapa rápido de datos por hora
     const hourMap = new Map<number, { total: number; count: number }>();
     let sumAmount = 0;
@@ -84,14 +95,15 @@ export const HourlySalesAnalysis: React.FC<HourlySalesAnalysisProps> = ({
       const count = match ? match.count : 0;
       const hourAvgTicket = count > 0 ? total / count : 0;
       const percentage = sumAmount > 0 ? (total / sumAmount) * 100 : 0;
+      const hFmt = format12Hour(h);
 
       if (total > 0 || count > 0) activeHCount++;
 
       const item = {
         hour: h,
-        label: `${String(h).padStart(2, '0')}:00`,
-        displayHour: `${h > 12 ? h - 12 : (h === 0 ? 12 : h)} ${h >= 12 ? 'PM' : 'AM'}`,
-        range: `${String(h).padStart(2, '0')}:00 - ${String(h).padStart(2, '0')}:59`,
+        label: hFmt.short,
+        displayHour: hFmt.short,
+        range: hFmt.range,
         total,
         count,
         avgTicket: hourAvgTicket,
@@ -124,7 +136,7 @@ export const HourlySalesAnalysis: React.FC<HourlySalesAnalysisProps> = ({
       {
         id: 'morning',
         name: 'Mañana',
-        range: '06:00 - 11:59',
+        range: '06:00 AM - 11:59 AM',
         icon: <Sunrise size={14} className="text-amber-500" />,
         amount: morningAmount,
         count: morningCount,
@@ -134,7 +146,7 @@ export const HourlySalesAnalysis: React.FC<HourlySalesAnalysisProps> = ({
       {
         id: 'afternoon',
         name: 'Tarde',
-        range: '12:00 - 17:59',
+        range: '12:00 PM - 05:59 PM',
         icon: <Sun size={14} className="text-orange-500" />,
         amount: afternoonAmount,
         count: afternoonCount,
@@ -144,7 +156,7 @@ export const HourlySalesAnalysis: React.FC<HourlySalesAnalysisProps> = ({
       {
         id: 'evening',
         name: 'Noche',
-        range: '18:00 - 22:59',
+        range: '06:00 PM - 10:59 PM',
         icon: <Moon size={14} className="text-indigo-500" />,
         amount: eveningAmount,
         count: eveningCount,
