@@ -164,8 +164,8 @@ router.get('/pivot', async (req, res) => {
     let conditions = and(
       eq(sales.companyId, companyId),
       eq(sales.status, 'active'),
-      gte(sales.issuedAt, new Date(dateStart)),
-      lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999Z'))
+      gte(sales.issuedAt, new Date(dateStart + 'T00:00:00-05:00')),
+      lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999-05:00'))
     );
     
     if (branch) {
@@ -331,8 +331,8 @@ router.get('/documents', async (req, res) => {
     
     let conditions = and(
       eq(sales.companyId, companyId),
-      gte(sales.issuedAt, new Date(dateStart)),
-      lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999Z'))
+      gte(sales.issuedAt, new Date(dateStart + 'T00:00:00-05:00')),
+      lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999-05:00'))
     );
     
     if (branch) {

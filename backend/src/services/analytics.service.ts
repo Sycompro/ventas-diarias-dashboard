@@ -83,21 +83,25 @@ export async function getSalesByHour(companyId: string | null | undefined, dateS
   const res = companyId
     ? await sqlClient`
         SELECT 
-          EXTRACT(HOUR FROM issued_at)::int as hour,
+          EXTRACT(HOUR FROM (issued_at AT TIME ZONE 'America/Lima'))::int as hour,
           COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
           COUNT(*) as count
         FROM sales
-        WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+        WHERE status = 'active' AND company_id = ${companyId} 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
         GROUP BY hour
         ORDER BY hour ASC
       `
     : await sqlClient`
         SELECT 
-          EXTRACT(HOUR FROM issued_at)::int as hour,
+          EXTRACT(HOUR FROM (issued_at AT TIME ZONE 'America/Lima'))::int as hour,
           COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
           COUNT(*) as count
         FROM sales
-        WHERE status = 'active' AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+        WHERE status = 'active' 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
         GROUP BY hour
         ORDER BY hour ASC
       `;

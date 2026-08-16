@@ -13,7 +13,8 @@ import {
   HelpCircle,
   Package,
   Briefcase,
-  XCircle
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 import { useFilters } from '../hooks/useFilters';
 import { GlobalFilters } from '../components/filters/GlobalFilters';
@@ -23,10 +24,14 @@ import { formatCurrency } from '../utils/formatters';
 import { useAuthStore } from '../hooks/useAuth';
 import axios from 'axios';
 import { useHeaderStore } from '../hooks/useHeader';
+import { useQueryClient } from '@tanstack/react-query';
+import { companyService } from '../services/api';
 
 export const SalesPage: React.FC = () => {
   const { companyId, dateStart, dateEnd } = useFilters();
   const token = useAuthStore((state) => state.accessToken);
+  const queryClient = useQueryClient();
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const { data: pivotResponse, isLoading: loadingPivot } = useSalesPivot();
   const { data: docTypeMetrics, isLoading: loadingDocTypes } = useSalesByDocumentType();
@@ -43,6 +48,19 @@ export const SalesPage: React.FC = () => {
 
   const toggleSede = (sede: string) => {
     setExpandedSedes(prev => ({ ...prev, [sede]: !prev[sede] }));
+  };
+
+  const handleSync = async () => {
+    if (!companyId) return;
+    setIsSyncing(true);
+    try {
+      await companyService.sync(companyId);
+      queryClient.invalidateQueries();
+    } catch (err) {
+      console.error("Error triggering sync:", err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleExport = () => {
@@ -129,17 +147,28 @@ export const SalesPage: React.FC = () => {
   return (
     <div className="space-y-6">
 
-      {/* Filtros Globales + Exportar */}
+      {/* Filtros Globales + Exportar + Sincronizar */}
       <div className="animate-in fade-in duration-500">
         <GlobalFilters
           actions={
-            <button
-              onClick={handleExport}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md shrink-0"
-            >
-              <Download size={13} />
-              Exportar Excel
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSync}
+                disabled={isSyncing}
+                title="Sincronizar datos con Facturador Pro"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold rounded-xl transition-all duration-200 border border-indigo-200/80 shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+              </button>
+              <button
+                onClick={handleExport}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md shrink-0 cursor-pointer"
+              >
+                <Download size={13} />
+                Exportar Excel
+              </button>
+            </div>
           }
         />
       </div>

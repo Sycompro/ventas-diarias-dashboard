@@ -1,4 +1,5 @@
 import { db } from '../config/database.js';
+import { redis } from '../config/redis.js';
 import { companies, sales, saleItems, salePayments, syncLogs } from '../db/schema.js';
 import { eq, sql } from 'drizzle-orm';
 import axios from 'axios';
@@ -8,6 +9,42 @@ import { createBillingClient, fetchDocuments, fetchReportDocuments, fetchSaleNot
 
 export interface SyncResult {
   syncedCount: number;
+}
+
+function parseDocumentIssuedAt(item: any): Date {
+  try {
+    let timePart = '00:00:00';
+    if (item.time_of_issue) {
+      timePart = item.time_of_issue;
+    } else if (item.time) {
+      timePart = item.time;
+    } else if (item.created_at) {
+      const match = item.created_at.match(/(\d{2}:\d{2}:\d{2})/);
+      if (match) timePart = match[1];
+    }
+
+    let datePart = '';
+    if (item.date_of_issue && item.date_of_issue.includes('-')) {
+      const parts = item.date_of_issue.split('-');
+      if (parts[0].length === 4) {
+        datePart = item.date_of_issue;
+      } else {
+        const [day, month, year] = parts;
+        datePart = `${year}-${month}-${day}`;
+      }
+    } else if (item.created_at) {
+      datePart = item.created_at.split(' ')[0];
+    }
+
+    if (datePart) {
+      const isoString = `${datePart}T${timePart}-05:00`;
+      const d = new Date(isoString);
+      if (!isNaN(d.getTime())) return d;
+    }
+  } catch (e) {
+    // fallback
+  }
+  return new Date();
 }
 
 export async function syncCompany(companyId: string): Promise<SyncResult> {
@@ -91,29 +128,7 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
       // Procesar documentos con estado válido o anulados/rechazados (01=registrado, 03=enviado, 05=aceptado, 11=anulado, 09=anulado, 13=anulado)
       if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
       
-      let issuedAt: Date;
-      try {
-        if (doc.date_of_issue && doc.date_of_issue.includes('-')) {
-          const parts = doc.date_of_issue.split('-');
-          if (parts[0].length === 4) {
-            // YYYY-MM-DD
-            issuedAt = new Date(`${doc.date_of_issue}T${doc.time_of_issue || '00:00:00'}`);
-          } else {
-            // DD-MM-YYYY
-            const [day, month, year] = parts;
-            issuedAt = new Date(`${year}-${month}-${day}T${doc.time_of_issue || '00:00:00'}`);
-          }
-        } else {
-          issuedAt = new Date(`${doc.date_of_issue}T${doc.time_of_issue || '00:00:00'}`);
-        }
-        
-        if (isNaN(issuedAt.getTime())) {
-          issuedAt = new Date();
-        }
-      } catch (e) {
-        issuedAt = new Date();
-      }
-
+      const issuedAt = parseDocumentIssuedAt(doc);
       const isVoided = ['09', '11', '13'].includes(stateId);
       
       let parsedSeries = '';
@@ -147,6 +162,7 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
           number: parsedNumber,
           total: doc.total.toString(),
           status: isVoided ? 'voided' : 'active',
+          issuedAt,
           syncedAt: new Date(),
         },
       }).returning({ id: sales.id });
@@ -295,26 +311,7 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
       // Procesar notas de venta con estado válido o anuladas/rechazadas (01=registrado, 03=enviado, 05=aceptado, 11=anulado, 09=anulado, 13=anulado)
       if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
 
-      let issuedAt: Date;
-      try {
-        if (note.date_of_issue && note.date_of_issue.includes('-')) {
-          const parts = note.date_of_issue.split('-');
-          if (parts[0].length === 4) {
-            issuedAt = new Date(`${note.date_of_issue}T${note.time_of_issue || '00:00:00'}`);
-          } else {
-            const [day, month, year] = parts;
-            issuedAt = new Date(`${year}-${month}-${day}T${note.time_of_issue || '00:00:00'}`);
-          }
-        } else {
-          issuedAt = new Date(`${note.date_of_issue}T${note.time_of_issue || '00:00:00'}`);
-        }
-        if (isNaN(issuedAt.getTime())) {
-          issuedAt = new Date();
-        }
-      } catch (e) {
-        issuedAt = new Date();
-      }
-
+      const issuedAt = parseDocumentIssuedAt(note);
       const isVoided = ['09', '11', '13'].includes(stateId);
       
       let parsedSeries = note.series || '';
@@ -345,6 +342,7 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
           number: parsedNumber,
           total: note.total.toString(),
           status: isVoided ? 'voided' : 'active',
+          issuedAt,
           syncedAt: new Date(),
         },
       }).returning({ id: sales.id });
@@ -430,6 +428,15 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
       startedAt,
       finishedAt: new Date(),
     });
+
+    try {
+      const keys = await redis.keys(`*${companyId}*`);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } catch (redisErr) {
+      // ignore
+    }
   }
   
   return { syncedCount: documentsSynced };

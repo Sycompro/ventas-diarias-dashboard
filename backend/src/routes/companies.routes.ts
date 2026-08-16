@@ -219,14 +219,15 @@ router.get('/:id/debug-trend', async (req: any, res) => {
 
 router.post('/:id/sync', async (req: any, res) => {
   try {
-    if (req.params.id !== req.user.companyId) {
+    if (req.user.companyId && req.params.id !== req.user.companyId && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({ message: 'Forbidden' });
     }
     
     const result = await syncCompany(req.params.id);
     res.json(result);
-  } catch (error) {
-    res.status(500).json({ message: 'Error syncing company data' });
+  } catch (error: any) {
+    console.error(`[Companies Route] Error syncing:`, error.message);
+    res.status(500).json({ message: 'Error syncing company data', error: error.message });
   }
 });
 
