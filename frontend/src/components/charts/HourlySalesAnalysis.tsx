@@ -508,74 +508,153 @@ export const HourlySalesAnalysis: React.FC<HourlySalesAnalysisProps> = ({
           </div>
         )}
 
-        {/* Vista Tabla Detallada */}
+        {/* Vista Tabla Detallada y Elegante */}
         {activeView === 'table' && (
-          <div className="overflow-x-auto border border-slate-200/80 rounded-2xl">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200/80 text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Franja Horaria</th>
-                  <th className="py-3 px-3 text-center">Nivel</th>
-                  <th className="py-3 px-3 text-right">Comprobantes</th>
-                  <th className="py-3 px-3 text-right">Ticket Promedio</th>
-                  <th className="py-3 px-4 text-right">% Día</th>
-                  <th className="py-3 px-4 text-right">Total Facturado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs">
-                {hourlyData.filter(d => d.total > 0 || d.count > 0).length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400 text-xs font-medium">
-                      No se registraron ventas en las horas de este periodo.
+          <div className="space-y-3">
+            <div className="overflow-x-auto border border-slate-200/80 rounded-2xl shadow-2xs">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200/80 text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">Franja Horaria</th>
+                    <th className="py-3 px-3 text-center">Nivel</th>
+                    <th className="py-3 px-3 text-right">Comprobantes</th>
+                    <th className="py-3 px-3 text-right">Ticket Promedio</th>
+                    <th className="py-3 px-4 text-right min-w-[130px]">% del Día</th>
+                    <th className="py-3 px-4 text-right">Total Facturado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {hourlyData.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-10 text-center text-slate-400 text-xs font-medium">
+                        No se registraron ventas en este periodo.
+                      </td>
+                    </tr>
+                  ) : (
+                    hourlyData.map((d) => {
+                      const isPeak = peakHour && d.hour === peakHour.hour;
+                      const hasSales = d.total > 0 || d.count > 0;
+
+                      let intensityBadge = (
+                        <span className="text-[10px] text-slate-400 font-medium">—</span>
+                      );
+
+                      if (isPeak) {
+                        intensityBadge = (
+                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xs inline-flex items-center gap-1">
+                            <Flame size={10} /> Pico
+                          </span>
+                        );
+                      } else if (d.percentage >= 10) {
+                        intensityBadge = (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                            Alto
+                          </span>
+                        );
+                      } else if (d.percentage >= 3) {
+                        intensityBadge = (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-blue-50 text-blue-800 border border-blue-200/80">
+                            Medio
+                          </span>
+                        );
+                      } else if (hasSales) {
+                        intensityBadge = (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] text-slate-600 bg-slate-100 border border-slate-200/60 font-medium">
+                            Bajo
+                          </span>
+                        );
+                      }
+
+                      return (
+                        <tr 
+                          key={d.hour} 
+                          className={`transition-colors ${
+                            isPeak 
+                              ? 'bg-amber-50/60 font-semibold text-slate-900 border-l-4 border-l-amber-500' 
+                              : hasSales 
+                              ? 'hover:bg-indigo-50/30 text-slate-700 bg-white' 
+                              : 'text-slate-400 opacity-50 hover:opacity-100 hover:bg-slate-50/50'
+                          }`}
+                        >
+                          {/* Franja Horaria */}
+                          <td className="py-2.5 px-4 font-bold text-slate-800 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-1.5 h-1.5 rounded-full ${isPeak ? 'bg-amber-500' : hasSales ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                              <span>{d.range}</span>
+                            </div>
+                          </td>
+
+                          {/* Nivel / Badge */}
+                          <td className="py-2.5 px-3 text-center">
+                            {intensityBadge}
+                          </td>
+
+                          {/* Comprobantes */}
+                          <td className="py-2.5 px-3 text-right tabular-nums font-semibold text-slate-700">
+                            {hasSales ? (
+                              <span>{d.count} {d.count === 1 ? 'doc' : 'docs'}</span>
+                            ) : (
+                              <span className="text-slate-300">0 docs</span>
+                            )}
+                          </td>
+
+                          {/* Ticket Promedio */}
+                          <td className="py-2.5 px-3 text-right tabular-nums font-medium text-slate-600">
+                            {hasSales ? formatCurrency(d.avgTicket) : <span className="text-slate-300">S/. 0.00</span>}
+                          </td>
+
+                          {/* % Día con Barra */}
+                          <td className="py-2.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <span className={`tabular-nums text-[11px] font-extrabold ${isPeak ? 'text-amber-800' : hasSales ? 'text-indigo-700' : 'text-slate-300'}`}>
+                                {d.percentage.toFixed(1)}%
+                              </span>
+                              {hasSales && (
+                                <div className="w-12 h-1.5 rounded-full bg-slate-100 overflow-hidden shrink-0">
+                                  <div 
+                                    className={`h-full rounded-full ${isPeak ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                                    style={{ width: `${Math.min(100, d.percentage)}%` }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Total Facturado */}
+                          <td className={`py-2.5 px-4 text-right tabular-nums ${isPeak ? 'font-black text-slate-900 text-sm' : hasSales ? 'font-extrabold text-slate-800 text-xs' : 'font-medium text-slate-300'}`}>
+                            {formatCurrency(d.total)}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+
+                {/* Footer Total */}
+                <tfoot>
+                  <tr className="bg-slate-800 text-white">
+                    <td className="py-3 px-4 text-xs font-black uppercase tracking-widest text-slate-200">
+                      Total Consolidado
+                    </td>
+                    <td className="py-3 px-3 text-center text-[10px] font-bold text-slate-300">
+                      {activeHoursCount} {activeHoursCount === 1 ? 'hora activa' : 'horas activas'}
+                    </td>
+                    <td className="py-3 px-3 text-right text-xs font-bold tabular-nums text-slate-100">
+                      {totalCount} {totalCount === 1 ? 'doc' : 'docs'}
+                    </td>
+                    <td className="py-3 px-3 text-right text-xs font-bold tabular-nums text-slate-200">
+                      {formatCurrency(avgTicket)}
+                    </td>
+                    <td className="py-3 px-4 text-right text-xs font-black text-indigo-300">
+                      100.0%
+                    </td>
+                    <td className="py-3 px-4 text-right text-sm font-black tabular-nums text-white">
+                      {formatCurrency(totalAmount)}
                     </td>
                   </tr>
-                ) : (
-                  hourlyData.map((d) => {
-                    const isPeak = peakHour && d.hour === peakHour.hour;
-                    let intensityBadge = <span className="text-[10px] text-slate-400">Inactivo</span>;
-                    if (isPeak) {
-                      intensityBadge = <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-2xs">🔥 Pico</span>;
-                    } else if (d.percentage >= 15) {
-                      intensityBadge = <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Alto</span>;
-                    } else if (d.percentage >= 5) {
-                      intensityBadge = <span className="px-2 py-0.5 rounded-full text-[9px] font-medium bg-blue-50 text-blue-700 border border-blue-100">Medio</span>;
-                    } else if (d.total > 0) {
-                      intensityBadge = <span className="px-2 py-0.5 rounded-full text-[9px] text-slate-600 bg-slate-100">Bajo</span>;
-                    }
-
-                    return (
-                      <tr 
-                        key={d.hour} 
-                        className={`transition-colors ${
-                          isPeak 
-                            ? 'bg-amber-50/40 font-semibold text-slate-900' 
-                            : 'hover:bg-slate-50/70 text-slate-700'
-                        }`}
-                      >
-                        <td className="py-2.5 px-4 font-bold text-slate-800">
-                          {d.range}
-                        </td>
-                        <td className="py-2.5 px-3 text-center">
-                          {intensityBadge}
-                        </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-600">
-                          {d.count} {d.count === 1 ? 'doc' : 'docs'}
-                        </td>
-                        <td className="py-2.5 px-3 text-right tabular-nums text-slate-600">
-                          {formatCurrency(d.avgTicket)}
-                        </td>
-                        <td className="py-2.5 px-4 text-right tabular-nums font-semibold text-indigo-600">
-                          {d.percentage.toFixed(1)}%
-                        </td>
-                        <td className="py-2.5 px-4 text-right font-extrabold text-slate-900 tabular-nums">
-                          {formatCurrency(d.total)}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                </tfoot>
+              </table>
+            </div>
           </div>
         )}
 
