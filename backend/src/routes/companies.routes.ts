@@ -285,44 +285,20 @@ router.get('/:id/branches', async (req: any, res) => {
       console.warn(`[Branches Route] Warning: Could not fetch real establishments from facturador API:`, e.message);
     }
     
-    // Obtener series distintas de la base de datos
-    const dbSeriesResult = targetCompanyId ? await sqlClient`
-      SELECT DISTINCT series as "name"
-      FROM sales
-      WHERE company_id = ${targetCompanyId} AND series IS NOT NULL AND series != ''
-      ORDER BY series ASC
-    ` : await sqlClient`
-      SELECT DISTINCT series as "name"
-      FROM sales
-      WHERE series IS NOT NULL AND series != ''
-      ORDER BY series ASC
-    `;
-
     const branchesList: any[] = [];
-    const seenNames = new Set<string>();
-
-    // 1. Agregar establecimientos oficiales
-    establishments.forEach((e: any) => {
-      const name = e.description || `Sede ${e.id}`;
-      seenNames.add(name.toLowerCase());
-      branchesList.push({
-        id: String(e.id),
-        name
-      });
-    });
-
-    // 2. Agregar series como sedes / puntos de venta si no están repetidas
-    dbSeriesResult.forEach((r: any) => {
-      const seriesName = r.name;
-      const formattedName = `Sede ${seriesName}`;
-      if (!seenNames.has(seriesName.toLowerCase()) && !seenNames.has(formattedName.toLowerCase())) {
-        seenNames.add(formattedName.toLowerCase());
+    if (establishments.length > 0) {
+      establishments.forEach((e: any) => {
         branchesList.push({
-          id: seriesName,
-          name: formattedName
+          id: String(e.id),
+          name: e.description || `Sede ${e.id}`
         });
-      }
-    });
+      });
+    } else {
+      branchesList.push({
+        id: '1',
+        name: 'Sede Principal'
+      });
+    }
 
     res.json(branchesList);
   } catch (error: any) {
