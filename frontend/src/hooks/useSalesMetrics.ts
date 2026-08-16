@@ -122,10 +122,25 @@ const mapBackendMetricsToFrontend = (data: any, filters: any): DashboardMetrics 
     avgTicket: parseFloat(s.avgTicket || 0)
   }));
 
+  const taxes = data.taxes ? {
+    taxed: parseFloat(data.taxes.taxed || 0),
+    igv: parseFloat(data.taxes.igv || 0),
+    exonerated: parseFloat(data.taxes.exonerated || 0),
+    unaffected: parseFloat(data.taxes.unaffected || 0),
+    total: parseFloat(data.taxes.total || totalSales),
+  } : {
+    taxed: parseFloat((totalSales / 1.18).toFixed(2)),
+    igv: parseFloat((totalSales - (totalSales / 1.18)).toFixed(2)),
+    exonerated: 0,
+    unaffected: 0,
+    total: totalSales
+  };
+
   return {
     totalSales,
     totalDocuments,
     avgTicket,
+    taxes,
     byDocumentType,
     byPaymentMethod,
     byItemType: {

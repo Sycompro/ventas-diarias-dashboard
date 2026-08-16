@@ -15,6 +15,13 @@ export interface DashboardMetrics {
   totalSales: number;
   totalDocuments: number;
   avgTicket: number;
+  taxes?: {
+    taxed: number;
+    igv: number;
+    exonerated: number;
+    unaffected: number;
+    total: number;
+  };
   byDocumentType: {
     facturas: { count: number; amount: number };
     boletas: { count: number; amount: number };

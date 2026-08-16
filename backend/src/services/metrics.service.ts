@@ -9,6 +9,13 @@ export interface DashboardMetrics {
   totalSales: number;
   documentsCount: number;
   averageTicket: number;
+  taxes: {
+    taxed: number;
+    igv: number;
+    exonerated: number;
+    unaffected: number;
+    total: number;
+  };
   byDocumentType: { 
     facturas: { amount: number; count: number }; 
     boletas: { amount: number; count: number }; 
@@ -32,7 +39,7 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
     return JSON.parse(cached);
   }
 
-  // Query principal de ventas
+  // Query principal de ventas con desglose tributario IGV
   const salesRes = companyId
     ? await sqlClient`
         SELECT 
@@ -45,9 +52,15 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
           COALESCE(SUM(CASE WHEN document_type_id = '07' THEN total::numeric ELSE 0 END), 0) as notas_credito_amount,
           COUNT(CASE WHEN document_type_id = '07' THEN 1 END) as notas_credito_count,
           COALESCE(SUM(CASE WHEN document_type_id = '80' THEN total::numeric ELSE 0 END), 0) as notas_venta_amount,
-          COUNT(CASE WHEN document_type_id = '80' THEN 1 END) as notas_venta_count
+          COUNT(CASE WHEN document_type_id = '80' THEN 1 END) as notas_venta_count,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_taxed')::numeric, 0) ELSE -COALESCE((raw_json->>'total_taxed')::numeric, 0) END), 0) as taxed_total,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_igv')::numeric, 0) ELSE -COALESCE((raw_json->>'total_igv')::numeric, 0) END), 0) as igv_total,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_exonerated')::numeric, 0) ELSE -COALESCE((raw_json->>'total_exonerated')::numeric, 0) END), 0) as exonerated_total,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_unaffected')::numeric, 0) ELSE -COALESCE((raw_json->>'total_unaffected')::numeric, 0) END), 0) as unaffected_total
         FROM sales 
-        WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+        WHERE status = 'active' AND company_id = ${companyId} 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
       `
     : await sqlClient`
         SELECT 
@@ -60,9 +73,15 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
           COALESCE(SUM(CASE WHEN document_type_id = '07' THEN total::numeric ELSE 0 END), 0) as notas_credito_amount,
           COUNT(CASE WHEN document_type_id = '07' THEN 1 END) as notas_credito_count,
           COALESCE(SUM(CASE WHEN document_type_id = '80' THEN total::numeric ELSE 0 END), 0) as notas_venta_amount,
-          COUNT(CASE WHEN document_type_id = '80' THEN 1 END) as notas_venta_count
+          COUNT(CASE WHEN document_type_id = '80' THEN 1 END) as notas_venta_count,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_taxed')::numeric, 0) ELSE -COALESCE((raw_json->>'total_taxed')::numeric, 0) END), 0) as taxed_total,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_igv')::numeric, 0) ELSE -COALESCE((raw_json->>'total_igv')::numeric, 0) END), 0) as igv_total,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_exonerated')::numeric, 0) ELSE -COALESCE((raw_json->>'total_exonerated')::numeric, 0) END), 0) as exonerated_total,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_unaffected')::numeric, 0) ELSE -COALESCE((raw_json->>'total_unaffected')::numeric, 0) END), 0) as unaffected_total
         FROM sales 
-        WHERE status = 'active' AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+        WHERE status = 'active' 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
       `;
 
   const row = salesRes[0];
@@ -173,20 +192,26 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
   // Ventas por vendedor
   const sellersRes = companyId
     ? await sqlClient`
-        SELECT seller_name, 
+        SELECT 
+          COALESCE(seller_name, 'Sin Vendedor') as seller_name, 
           COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total,
           COUNT(*) as count
         FROM sales
-        WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+        WHERE status = 'active' AND company_id = ${companyId} 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
         GROUP BY seller_name
         ORDER BY total DESC
       `
     : await sqlClient`
-        SELECT seller_name, 
+        SELECT 
+          COALESCE(seller_name, 'Sin Vendedor') as seller_name, 
           COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total,
           COUNT(*) as count
         FROM sales
-        WHERE status = 'active' AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+        WHERE status = 'active' 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
         GROUP BY seller_name
         ORDER BY total DESC
       `;
@@ -199,7 +224,9 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
           COALESCE(SUM(CASE WHEN i.category != '02' THEN i.total::numeric ELSE 0 END), 0) as products_total
         FROM sale_items i
         JOIN sales s ON i.sale_id = s.id
-        WHERE s.status = 'active' AND s.company_id = ${companyId} AND s.issued_at::date >= ${dateStart}::date AND s.issued_at::date <= ${dateEnd}::date
+        WHERE s.status = 'active' AND s.company_id = ${companyId} 
+          AND (s.issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+          AND (s.issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
       `
     : await sqlClient`
         SELECT 
@@ -207,17 +234,37 @@ export async function getDashboardMetrics(companyId: string | null, dateStart: s
           COALESCE(SUM(CASE WHEN i.category != '02' THEN i.total::numeric ELSE 0 END), 0) as products_total
         FROM sale_items i
         JOIN sales s ON i.sale_id = s.id
-        WHERE s.status = 'active' AND s.issued_at::date >= ${dateStart}::date AND s.issued_at::date <= ${dateEnd}::date
+        WHERE s.status = 'active' 
+          AND (s.issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+          AND (s.issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
       `;
 
   const itemTypeRow = itemTypeRes[0];
   const productsTotal = parseFloat(itemTypeRow.products_total as string || '0');
   const servicesTotal = parseFloat(itemTypeRow.services_total as string || '0');
 
+  let taxedAmount = parseFloat(row.taxed_total as string || '0');
+  let igvAmount = parseFloat(row.igv_total as string || '0');
+  const exoneratedAmount = parseFloat(row.exonerated_total as string || '0');
+  const unaffectedAmount = parseFloat(row.unaffected_total as string || '0');
+
+  // Fallback si no vinieron en raw_json
+  if (taxedAmount === 0 && igvAmount === 0 && totalSales > 0) {
+    taxedAmount = parseFloat((totalSales / 1.18).toFixed(2));
+    igvAmount = parseFloat((totalSales - taxedAmount).toFixed(2));
+  }
+
   const result: DashboardMetrics = {
     totalSales,
     documentsCount,
     averageTicket: documentsCount > 0 ? totalSales / documentsCount : 0,
+    taxes: {
+      taxed: taxedAmount,
+      igv: igvAmount,
+      exonerated: exoneratedAmount,
+      unaffected: unaffectedAmount,
+      total: totalSales,
+    },
     byDocumentType: {
       facturas: {
         amount: parseFloat(row.facturas_amount as string || '0'),
