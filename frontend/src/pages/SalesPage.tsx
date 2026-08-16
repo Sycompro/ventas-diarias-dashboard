@@ -190,56 +190,67 @@ export const SalesPage: React.FC = () => {
         )}
       </div>
 
-      {/* Cuadro Estadístico Pivot - Solicitud de Usuario */}
-      <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-200">
-        <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm">Resumen de Ventas por Método de Pago</h3>
+      {/* Cuadro Estadístico Pivot */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm animate-in fade-in duration-700 delay-200">
 
+        {/* Header */}
+        <div className="px-5 py-3.5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-indigo-100 rounded-lg">
+              <CreditCard size={13} className="text-indigo-600" />
+            </div>
+            <span className="font-bold text-slate-800 text-sm tracking-tight">Ventas por Método de Pago</span>
           </div>
-          <span className="px-2.5 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-semibold">
+          <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-[10px] font-bold uppercase tracking-wider">
             Consolidado
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
+            {/* Table head */}
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                <th className="py-3.5 px-4 font-semibold text-slate-700 min-w-[220px]">Sede / Vendedor</th>
+              <tr className="border-b border-slate-200/80 bg-slate-50/60">
+                <th className="py-2.5 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest min-w-[200px]">
+                  Sede / Vendedor
+                </th>
                 {paymentMethods.map((m: any) => {
                   const descUpper = m.description.toUpperCase();
-                  let icon = <HelpCircle size={11} className="text-slate-500" />;
-                  if (descUpper.includes('EFECTIVO') || descUpper.includes('CONTADO')) {
-                    icon = <DollarSign size={11} className="text-emerald-500" />;
-                  } else if (descUpper === 'CRÉDITO' || descUpper === 'CREDITO') {
-                    icon = <ArrowLeftRight size={11} className="text-amber-500" />;
-                  } else if (descUpper.includes('TARJETA') || descUpper.includes('VISA') || descUpper.includes('MASTERCARD') || descUpper.includes('CREDITO') || descUpper.includes('DEBITO')) {
-                    icon = <CreditCard size={11} className="text-blue-500" />;
-                  } else if (descUpper.includes('TRANSFERENCIA') || descUpper.includes('BANCO') || descUpper.includes('BCP') || descUpper.includes('BBVA')) {
-                    icon = <ArrowLeftRight size={11} className="text-indigo-500" />;
-                  } else if (descUpper.includes('YAPE') || descUpper.includes('PLIN')) {
-                    icon = <Smartphone size={11} className="text-violet-500" />;
-                  }
+                  let icon = <HelpCircle size={10} className="text-slate-400" />;
+                  let pillClass = 'bg-slate-100 text-slate-600';
+                  if (descUpper.includes('EFECTIVO')) { icon = <DollarSign size={10} className="text-emerald-600" />; pillClass = 'bg-emerald-50 text-emerald-700 border border-emerald-100'; }
+                  else if (descUpper === 'CRÉDITO' || descUpper === 'CREDITO') { icon = <ArrowLeftRight size={10} className="text-amber-600" />; pillClass = 'bg-amber-50 text-amber-700 border border-amber-100'; }
+                  else if (descUpper.includes('CONTADO')) { icon = <DollarSign size={10} className="text-emerald-600" />; pillClass = 'bg-emerald-50 text-emerald-700 border border-emerald-100'; }
+                  else if (descUpper.includes('TARJETA') || descUpper.includes('VISA') || descUpper.includes('DEBITO')) { icon = <CreditCard size={10} className="text-blue-600" />; pillClass = 'bg-blue-50 text-blue-700 border border-blue-100'; }
+                  else if (descUpper.includes('TRANSFERENCIA')) { icon = <ArrowLeftRight size={10} className="text-indigo-600" />; pillClass = 'bg-indigo-50 text-indigo-700 border border-indigo-100'; }
+                  else if (descUpper.includes('YAPE') || descUpper.includes('PLIN')) { icon = <Smartphone size={10} className="text-violet-600" />; pillClass = 'bg-violet-50 text-violet-700 border border-violet-100'; }
                   return (
-                    <th key={m.id} className="py-3.5 px-3 text-right font-semibold text-slate-700">
-                      <span className="inline-flex items-center gap-1">{icon} {m.description}</span>
+                    <th key={m.id} className="py-2.5 px-3 text-right">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold ${pillClass}`}>
+                        {icon} {m.description}
+                      </span>
                     </th>
                   );
                 })}
-                <th className="py-3.5 px-4 text-right font-semibold text-slate-900 bg-slate-50/80">Total General</th>
+                <th className="py-2.5 px-4 text-right">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-white">
+                    Total General
+                  </span>
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
+
+            {/* Table body */}
+            <tbody className="divide-y divide-slate-100">
               {loadingPivot ? (
                 <tr>
-                  <td colSpan={(paymentMethods.length || 5) + 2} className="py-8 text-center text-slate-400">
+                  <td colSpan={(paymentMethods.length || 5) + 2} className="py-10 text-center text-slate-400 text-xs">
                     <span className="inline-block animate-pulse">Cargando estadísticas...</span>
                   </td>
                 </tr>
               ) : !pivotData || pivotData.length === 0 ? (
                 <tr>
-                  <td colSpan={(paymentMethods.length || 5) + 2} className="py-8 text-center text-slate-400">
+                  <td colSpan={(paymentMethods.length || 5) + 2} className="py-10 text-center text-slate-400 text-xs">
                     No se encontraron transacciones en el rango de fechas seleccionado.
                   </td>
                 </tr>
@@ -249,56 +260,70 @@ export const SalesPage: React.FC = () => {
                     const isExpanded = !!expandedSedes[sede.sede];
                     return (
                       <React.Fragment key={sede.sede}>
-                        {/* Fila Padre: Sede */}
-                        <tr className="bg-slate-50/40 hover:bg-slate-50 transition-colors font-semibold text-slate-800">
-                          <td className="py-3 px-4 flex items-center gap-2">
-                            <button
-                              onClick={() => toggleSede(sede.sede)}
-                              className="p-1 rounded hover:bg-slate-200/80 transition-colors text-slate-500"
-                            >
-                              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            </button>
-                            <span className="inline-flex items-center gap-1.5">
-                              <Building2 size={14} className="text-slate-400 shrink-0" />
-                              {sede.sede}
-                            </span>
+                        {/* Sede row */}
+                        <tr className="bg-slate-50/70 hover:bg-slate-100/50 transition-colors">
+                          <td className="py-2.5 px-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => toggleSede(sede.sede)}
+                                className="p-0.5 rounded-md hover:bg-slate-200 transition-colors text-slate-500 shrink-0"
+                              >
+                                {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <div className="p-1 bg-indigo-100 rounded-md shrink-0">
+                                  <Building2 size={11} className="text-indigo-600" />
+                                </div>
+                                <span className="text-xs font-bold text-slate-800">{sede.sede}</span>
+                              </div>
+                            </div>
                           </td>
                           {paymentMethods.map((m: any) => (
-                            <td key={m.id} className="py-3 px-3 text-right tabular-nums">
+                            <td key={m.id} className="py-2.5 px-3 text-right text-xs font-semibold text-slate-700 tabular-nums">
                               {formatCurrency(sede.payments?.[m.id] || 0)}
                             </td>
                           ))}
-                          <td className="py-3 px-4 text-right font-bold text-slate-900 bg-slate-50/55 tabular-nums">{formatCurrency(sede.total)}</td>
+                          <td className="py-2.5 px-4 text-right text-xs font-extrabold text-indigo-700 tabular-nums">
+                            {formatCurrency(sede.total)}
+                          </td>
                         </tr>
 
-                        {/* Filas Hijos: Vendedores (solo si está expandido) */}
+                        {/* Vendor rows (expanded) */}
                         {isExpanded && sede.vendedores.map((vendedor: any) => (
-                          <tr key={vendedor.vendedor} className="hover:bg-slate-50/60 transition-colors text-slate-600">
-                            <td className="py-2.5 pl-11 pr-4 flex items-center gap-2">
-                              <User size={13} className="text-slate-400 shrink-0" />
-                              <span>{vendedor.vendedor}</span>
+                          <tr key={vendedor.vendedor} className="hover:bg-slate-50/50 transition-colors border-l-2 border-indigo-100">
+                            <td className="py-2 pl-12 pr-4">
+                              <div className="flex items-center gap-1.5">
+                                <User size={11} className="text-slate-400 shrink-0" />
+                                <span className="text-[11px] text-slate-600 font-medium">{vendedor.vendedor}</span>
+                              </div>
                             </td>
                             {paymentMethods.map((m: any) => (
-                              <td key={m.id} className="py-2.5 px-3 text-right text-xs tabular-nums text-slate-500">
+                              <td key={m.id} className="py-2 px-3 text-right text-[11px] text-slate-500 tabular-nums">
                                 {formatCurrency(vendedor.payments?.[m.id] || 0)}
                               </td>
                             ))}
-                            <td className="py-2.5 px-4 text-right font-medium text-slate-800 bg-slate-50/10 tabular-nums">{formatCurrency(vendedor.total)}</td>
+                            <td className="py-2 px-4 text-right text-[11px] font-semibold text-slate-700 tabular-nums">
+                              {formatCurrency(vendedor.total)}
+                            </td>
                           </tr>
                         ))}
                       </React.Fragment>
                     );
                   })}
 
-                  {/* Fila de Totales Generales */}
-                  <tr className="bg-slate-100/90 font-bold border-t-2 border-slate-300 text-slate-900">
-                    <td className="py-3.5 px-4">TOTAL GENERAL</td>
+                  {/* Grand total footer row */}
+                  <tr className="bg-slate-800 text-white">
+                    <td className="py-3 px-4 text-xs font-extrabold uppercase tracking-widest text-slate-200">
+                      Total General
+                    </td>
                     {paymentMethods.map((m: any) => (
-                      <td key={m.id} className="py-3.5 px-3 text-right tabular-nums">
+                      <td key={m.id} className="py-3 px-3 text-right text-xs font-bold tabular-nums text-slate-100">
                         {formatCurrency(grandTotals[m.id] || 0)}
                       </td>
                     ))}
-                    <td className="py-3.5 px-4 text-right font-extrabold text-primary-900 bg-slate-100 tabular-nums">{formatCurrency(grandTotals.total)}</td>
+                    <td className="py-3 px-4 text-right text-sm font-extrabold tabular-nums text-white">
+                      {formatCurrency(grandTotals.total)}
+                    </td>
                   </tr>
                 </>
               )}
