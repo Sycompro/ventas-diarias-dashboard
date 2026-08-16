@@ -97,11 +97,11 @@ export const SalesPage: React.FC = () => {
   const docSummaryData = useMemo(() => {
     if (!docTypeMetrics) return [];
     const base = [
-      { name: 'Facturas', amount: docTypeMetrics.facturas.amount, count: docTypeMetrics.facturas.count, colorBg: 'bg-white/20 text-white border-white/20', colorCard: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-600/40 shadow-sm hover:from-blue-600 hover:to-blue-700', type: 'doc', icon: <DollarSign size={13} className="text-white shrink-0" /> },
-      { name: 'Boletas', amount: docTypeMetrics.boletas.amount, count: docTypeMetrics.boletas.count, colorBg: 'bg-white/20 text-white border-white/20', colorCard: 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-emerald-600/40 shadow-sm hover:from-emerald-600 hover:to-emerald-700', type: 'doc', icon: <CreditCard size={13} className="text-white shrink-0" /> },
-      { name: 'Notas de Venta', amount: docTypeMetrics.notasVenta.amount, count: docTypeMetrics.notasVenta.count, colorBg: 'bg-white/20 text-white border-white/20', colorCard: 'bg-gradient-to-br from-amber-500 to-amber-600 text-white border-amber-600/40 shadow-sm hover:from-amber-600 hover:to-amber-700', type: 'doc', icon: <ArrowLeftRight size={13} className="text-white shrink-0" /> },
-      { name: 'Notas de Crédito', amount: docTypeMetrics.notasCredito.amount, count: docTypeMetrics.notasCredito.count, colorBg: 'bg-white/20 text-white border-white/20', colorCard: 'bg-gradient-to-br from-rose-500 to-rose-600 text-white border-rose-600/40 shadow-sm hover:from-rose-600 hover:to-rose-700', type: 'doc', icon: <Smartphone size={13} className="text-white shrink-0" /> },
-      { name: 'Anulados', amount: docTypeMetrics.anulados?.amount || 0, count: docTypeMetrics.anulados?.count || 0, colorBg: 'bg-white/20 text-white border-white/20', colorCard: 'bg-gradient-to-br from-slate-600 to-slate-700 text-white border-slate-700/40 shadow-sm hover:from-slate-700 hover:to-slate-800', type: 'doc', icon: <XCircle size={13} className="text-white shrink-0" /> },
+      { name: 'Facturas', amount: docTypeMetrics.facturas.amount, count: docTypeMetrics.facturas.count, colorCard: 'bg-gradient-to-br from-blue-500 to-blue-700 border-blue-700/30 shadow-blue-500/30', pillColor: 'bg-white/25 text-white', type: 'doc', icon: <DollarSign size={16} className="text-white shrink-0" />, watermark: <DollarSign size={64} className="text-white/10" /> },
+      { name: 'Boletas', amount: docTypeMetrics.boletas.amount, count: docTypeMetrics.boletas.count, colorCard: 'bg-gradient-to-br from-emerald-500 to-emerald-700 border-emerald-700/30 shadow-emerald-500/30', pillColor: 'bg-white/25 text-white', type: 'doc', icon: <CreditCard size={16} className="text-white shrink-0" />, watermark: <CreditCard size={64} className="text-white/10" /> },
+      { name: 'Notas de Venta', amount: docTypeMetrics.notasVenta.amount, count: docTypeMetrics.notasVenta.count, colorCard: 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-600/30 shadow-amber-500/30', pillColor: 'bg-white/25 text-white', type: 'doc', icon: <ArrowLeftRight size={16} className="text-white shrink-0" />, watermark: <ArrowLeftRight size={64} className="text-white/10" /> },
+      { name: 'Notas de Crédito', amount: docTypeMetrics.notasCredito.amount, count: docTypeMetrics.notasCredito.count, colorCard: 'bg-gradient-to-br from-rose-500 to-rose-700 border-rose-700/30 shadow-rose-500/30', pillColor: 'bg-white/25 text-white', type: 'doc', icon: <Smartphone size={16} className="text-white shrink-0" />, watermark: <Smartphone size={64} className="text-white/10" /> },
+      { name: 'Anulados', amount: docTypeMetrics.anulados?.amount || 0, count: docTypeMetrics.anulados?.count || 0, colorCard: 'bg-gradient-to-br from-slate-600 to-slate-800 border-slate-800/30 shadow-slate-600/30', pillColor: 'bg-white/25 text-white', type: 'doc', icon: <XCircle size={16} className="text-white shrink-0" />, watermark: <XCircle size={64} className="text-white/10" /> },
     ];
     if (metrics?.byItemType) {
       const totalItem = (metrics.byItemType.products || 0) + (metrics.byItemType.services || 0) || 1;
@@ -110,19 +110,21 @@ export const SalesPage: React.FC = () => {
           name: 'Productos', 
           amount: metrics.byItemType.products, 
           count: Math.round((metrics.byItemType.products / totalItem) * 100), 
-          colorBg: 'bg-white/20 text-white border-white/20', 
-          colorCard: 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-indigo-600/40 shadow-sm hover:from-indigo-600 hover:to-indigo-700',
+          colorCard: 'bg-gradient-to-br from-indigo-500 to-indigo-700 border-indigo-700/30 shadow-indigo-500/30',
+          pillColor: 'bg-white/25 text-white',
           type: 'category', 
-          icon: <Package size={13} className="text-white shrink-0" /> 
+          icon: <Package size={16} className="text-white shrink-0" />,
+          watermark: <Package size={64} className="text-white/10" />
         },
         { 
           name: 'Servicios', 
           amount: metrics.byItemType.services, 
           count: Math.round((metrics.byItemType.services / totalItem) * 100), 
-          colorBg: 'bg-white/20 text-white border-white/20', 
-          colorCard: 'bg-gradient-to-br from-teal-500 to-teal-600 text-white border-teal-600/40 shadow-sm hover:from-teal-600 hover:to-teal-700',
+          colorCard: 'bg-gradient-to-br from-teal-500 to-teal-700 border-teal-700/30 shadow-teal-500/30',
+          pillColor: 'bg-white/25 text-white',
           type: 'category', 
-          icon: <Briefcase size={13} className="text-white shrink-0" /> 
+          icon: <Briefcase size={16} className="text-white shrink-0" />,
+          watermark: <Briefcase size={64} className="text-white/10" />
         }
       );
     }
@@ -161,22 +163,36 @@ export const SalesPage: React.FC = () => {
               No se encontraron datos registrados en el rango seleccionado.
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
               {docSummaryData.map((doc) => {
-                const isNegative = doc.amount < 0;
                 return (
-                  <div key={doc.name} className={`p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between h-[100px] ${doc.colorCard || 'border-slate-200/60 bg-slate-50/40 hover:bg-slate-50'}`}>
-                    <div className="flex justify-between items-start gap-1 min-w-0">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {doc.icon}
-                        <span className="text-[10px] font-extrabold text-white/85 truncate uppercase tracking-wider">{doc.name}</span>
+                  <div
+                    key={doc.name}
+                    className={`relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between ${doc.colorCard}`}
+                  >
+                    {/* Watermark icon bottom-right */}
+                    <div className="absolute -bottom-3 -right-3 pointer-events-none select-none">
+                      {doc.watermark}
+                    </div>
+
+                    {/* Top row: icon pill + badge */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm">
+                          {doc.icon}
+                        </div>
+                        <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-tight">
+                          {doc.name}
+                        </span>
                       </div>
-                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase border shrink-0 ${doc.colorBg}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 ${doc.pillColor || 'bg-white/25 text-white'}`}>
                         {doc.count}{doc.type === 'category' ? '%' : ' emit.'}
                       </span>
                     </div>
-                    <div className="mt-4">
-                      <span className="text-base font-black tabular-nums text-white">
+
+                    {/* Bottom: amount */}
+                    <div>
+                      <span className="text-lg font-black tabular-nums text-white drop-shadow-sm">
                         {formatCurrency(doc.amount)}
                       </span>
                     </div>
