@@ -5,8 +5,7 @@ import { companyService } from '../services/api';
 
 // Mock data for development
 const mockCompanies: Company[] = [
-  { id: '1', name: 'Sede Principal - Lima', ruc: '20123456789', subdomain: 'central', timezone: 'America/Lima', currencySymbol: 'S/.', isActive: true, createdAt: '2020-01-01' },
-  { id: '2', name: 'Sede Sur - Arequipa', ruc: '20987654321', subdomain: 'sur', timezone: 'America/Lima', currencySymbol: 'S/.', isActive: true, createdAt: '2021-05-15' },
+  { id: '1', name: 'Empresa Principal', ruc: '20123456789', subdomain: 'central', timezone: 'America/Lima', currencySymbol: 'S/.', isActive: true, createdAt: '2020-01-01' },
 ];
 
 export const useCompanies = () => {

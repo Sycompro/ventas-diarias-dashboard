@@ -278,7 +278,7 @@ router.get('/:id/branches', async (req: any, res) => {
     }
     
     if (!targetCompanyId) {
-      return res.json([{ id: 'all', name: 'Todas las Sedes' }]);
+      return res.json([{ id: 'all', name: 'Todas las Sucursales' }]);
     }
 
     const branches = await getCompanyBranches(targetCompanyId);

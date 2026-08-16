@@ -195,6 +195,7 @@ router.get('/pivot', async (req, res) => {
 
     const pivotMap: Record<string, {
       sede: string;
+      sucursal?: string;
       payments: Record<string, number>;
       vendedores: Record<string, {
         vendedor: string;
@@ -210,29 +211,30 @@ router.get('/pivot', async (req, res) => {
         seriesName = sale.number.split('-')[0];
       }
       
-      const sedeName = getBranchNameForSeries(seriesName, branches);
+      const branchName = getBranchNameForSeries(seriesName, branches);
       const sellerName = sale.sellerName || 'Sin Vendedor';
 
-      if (!pivotMap[sedeName]) {
-        pivotMap[sedeName] = {
-          sede: sedeName,
+      if (!pivotMap[branchName]) {
+        pivotMap[branchName] = {
+          sede: branchName,
+          sucursal: branchName,
           payments: {},
           vendedores: {},
           total: 0
         };
         activePaymentMethods.forEach((m: any) => {
-          pivotMap[sedeName].payments[m.id] = 0;
+          pivotMap[branchName].payments[m.id] = 0;
         });
       }
 
-      if (!pivotMap[sedeName].vendedores[sellerName]) {
-        pivotMap[sedeName].vendedores[sellerName] = {
+      if (!pivotMap[branchName].vendedores[sellerName]) {
+        pivotMap[branchName].vendedores[sellerName] = {
           vendedor: sellerName,
           payments: {},
           total: 0
         };
         activePaymentMethods.forEach((m: any) => {
-          pivotMap[sedeName].vendedores[sellerName].payments[m.id] = 0;
+          pivotMap[branchName].vendedores[sellerName].payments[m.id] = 0;
         });
       }
 
@@ -243,33 +245,33 @@ router.get('/pivot', async (req, res) => {
           const amount = parseFloat(payment.amount);
           const method = payment.paymentMethodId;
 
-          if (pivotMap[sedeName].payments[method] === undefined) {
-            pivotMap[sedeName].payments[method] = 0;
+          if (pivotMap[branchName].payments[method] === undefined) {
+            pivotMap[branchName].payments[method] = 0;
           }
-          if (pivotMap[sedeName].vendedores[sellerName].payments[method] === undefined) {
-            pivotMap[sedeName].vendedores[sellerName].payments[method] = 0;
+          if (pivotMap[branchName].vendedores[sellerName].payments[method] === undefined) {
+            pivotMap[branchName].vendedores[sellerName].payments[method] = 0;
           }
 
-          pivotMap[sedeName].payments[method] += amount;
-          pivotMap[sedeName].total += amount;
+          pivotMap[branchName].payments[method] += amount;
+          pivotMap[branchName].total += amount;
 
-          pivotMap[sedeName].vendedores[sellerName].payments[method] += amount;
-          pivotMap[sedeName].vendedores[sellerName].total += amount;
+          pivotMap[branchName].vendedores[sellerName].payments[method] += amount;
+          pivotMap[branchName].vendedores[sellerName].total += amount;
         }
       } else {
         const defaultMethod = '01';
-        if (pivotMap[sedeName].payments[defaultMethod] === undefined) {
-          pivotMap[sedeName].payments[defaultMethod] = 0;
+        if (pivotMap[branchName].payments[defaultMethod] === undefined) {
+          pivotMap[branchName].payments[defaultMethod] = 0;
         }
-        if (pivotMap[sedeName].vendedores[sellerName].payments[defaultMethod] === undefined) {
-          pivotMap[sedeName].vendedores[sellerName].payments[defaultMethod] = 0;
+        if (pivotMap[branchName].vendedores[sellerName].payments[defaultMethod] === undefined) {
+          pivotMap[branchName].vendedores[sellerName].payments[defaultMethod] = 0;
         }
 
-        pivotMap[sedeName].payments[defaultMethod] += saleTotal;
-        pivotMap[sedeName].total += saleTotal;
+        pivotMap[branchName].payments[defaultMethod] += saleTotal;
+        pivotMap[branchName].total += saleTotal;
 
-        pivotMap[sedeName].vendedores[sellerName].payments[defaultMethod] += saleTotal;
-        pivotMap[sedeName].vendedores[sellerName].total += saleTotal;
+        pivotMap[branchName].vendedores[sellerName].payments[defaultMethod] += saleTotal;
+        pivotMap[branchName].vendedores[sellerName].total += saleTotal;
       }
     }
 

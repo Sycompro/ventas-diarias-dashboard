@@ -273,7 +273,7 @@ export const useDetailedPaymentMetrics = () => {
         return (data || []).map((item: any, idx: number) => ({
           id: String(idx + 1),
           method: item.paymentMethodName || 'Otros',
-          company: item.branch || 'Sede Principal',
+          company: item.branch || 'Sucursal Principal',
           seller: item.seller,
           count: item.count,
           amount: parseFloat(item.amount || 0)

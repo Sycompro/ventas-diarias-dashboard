@@ -54,7 +54,7 @@ export async function getCompanyBillingConfig(companyId: string) {
 }
 
 /**
- * Obtiene la lista completa y unificada de TODAS las Sedes reales de una empresa.
+ * Obtiene la lista completa y unificada de TODAS las Sucursales reales de una empresa.
  * Combina:
  * 1. Los establecimientos oficiales registrados en el Facturador Pro.
  * 2. Las series con ventas reales registradas en la base de datos.
@@ -90,7 +90,7 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
   // 1. Procesar establecimientos oficiales de Facturador Pro
   for (const est of officialEstablishments) {
     const estId = est.id;
-    const estName = est.description || `Sede ${estId}`;
+    const estName = est.description || `Sucursal ${estId}`;
     
     // Series asignadas formalmente a este establecimiento
     const estSeries = officialSeries
@@ -115,14 +115,13 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
   }
 
   // 2. Procesar series en ventas que NO están en ningún establecimiento oficial
-  // Agrupar por prefijo o identificador de sede/caja
+  // Agrupar por prefijo o identificador de sucursal/caja
   const unmappedSeries = allDbSeries.filter(s => !coveredSeries.has(s));
   
   // Agrupar series huérfanas por su correlativo o serie
   // Ej: B005, B008, B009, NV08
   const groupedUnmapped: Record<string, string[]> = {};
   for (const s of unmappedSeries) {
-    // Si es una serie como B008 o NV08, agrupar por correlativo '08' o usar la serie directa
     const match = s.match(/([A-Za-z]+)(\d+)/);
     const suffix = match ? match[2] : s;
     const groupKey = suffix;
@@ -137,12 +136,12 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
       if (sels) sels.forEach(sel => sellers.add(sel));
     });
 
-    // Nombre legible para la sede/caja
+    // Nombre legible para la sucursal/caja
     const sampleSeries = seriesList[0];
     const sellerSample = [...sellers][0];
-    let branchName = `Sede / Caja ${seriesList.join(', ')}`;
+    let branchName = `Sucursal / Caja ${seriesList.join(', ')}`;
     if (sellerSample) {
-      branchName = `Sede ${seriesList.join('/')} (${sellerSample.split(' ')[0]})`;
+      branchName = `Sucursal ${seriesList.join('/')} (${sellerSample.split(' ')[0]})`;
     }
 
     branches.push({
@@ -153,11 +152,11 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     });
   }
 
-  // Si no se encontró ningún establecimiento ni serie, retornar Sede Principal por defecto
+  // Si no se encontró ningún establecimiento ni serie, retornar Sucursal Principal por defecto
   if (branches.length === 0) {
     branches.push({
       id: '1',
-      name: 'Sede Principal',
+      name: 'Sucursal Principal',
       series: []
     });
   }
@@ -170,7 +169,7 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
  */
 export async function resolveBranchSeries(companyId: string, branchParam?: string | null): Promise<string[] | null> {
   if (!branchParam || branchParam === 'all' || branchParam === '') {
-    return null; // Todas las sedes
+    return null; // Todas las sucursales
   }
 
   const branches = await getCompanyBranches(companyId);
@@ -201,7 +200,7 @@ export async function resolveBranchSeries(companyId: string, branchParam?: strin
 }
 
 /**
- * Obtiene el nombre amigable de la sede para una serie específica
+ * Obtiene el nombre amigable de la sucursal para una serie específica
  */
 export function getBranchNameForSeries(seriesName: string, branches: BranchInfo[]): string {
   for (const b of branches) {
@@ -209,5 +208,5 @@ export function getBranchNameForSeries(seriesName: string, branches: BranchInfo[
       return b.name;
     }
   }
-  return `Sede ${seriesName}`;
+  return `Sucursal ${seriesName}`;
 }

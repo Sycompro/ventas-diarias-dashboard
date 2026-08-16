@@ -68,7 +68,7 @@ export const SalesByPaymentPage: React.FC = () => {
         );
       }
     },
-    { header: 'Sede / Sucursal', key: 'company' },
+    { header: 'Sucursal', key: 'company' },
     { header: 'Vendedor', key: 'seller' },
     { 
       header: 'Operaciones', 
@@ -101,7 +101,7 @@ export const SalesByPaymentPage: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <CreditCard className="text-primary" /> Medios de Pago por Sede y Vendedor
+          <CreditCard className="text-primary" /> Medios de Pago por Sucursal y Vendedor
         </h2>
         <p className="text-xs text-slate-500 mt-1">
           Análisis multidimensional de cobros y distribución de fondos.

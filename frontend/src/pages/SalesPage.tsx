@@ -43,13 +43,13 @@ export const SalesPage: React.FC = () => {
   const pivotData = pivotResponse?.pivotData || [];
   const paymentMethods = pivotResponse?.paymentMethods || [];
 
-  const [expandedSedes, setExpandedSedes] = useState<Record<string, boolean>>({});
+  const [expandedSucursales, setExpandedSucursales] = useState<Record<string, boolean>>({});
 
   const setHeader = useHeaderStore((state: any) => state.setHeader);
   const clearHeader = useHeaderStore((state: any) => state.clearHeader);
 
-  const toggleSede = (sede: string) => {
-    setExpandedSedes(prev => ({ ...prev, [sede]: !prev[sede] }));
+  const toggleSucursal = (sucursalName: string) => {
+    setExpandedSucursales(prev => ({ ...prev, [sucursalName]: !prev[sucursalName] }));
   };
 
   const handleSync = async () => {
@@ -88,7 +88,7 @@ export const SalesPage: React.FC = () => {
   useEffect(() => {
     setHeader(
       'Detalle de Ventas',
-      'Cuadro estadístico de ingresos consolidado por sedes, vendedores y métodos de pago.'
+      'Cuadro estadístico de ingresos consolidado por sucursales, vendedores y métodos de pago.'
     );
     return () => clearHeader();
   }, [companyId, dateStart, dateEnd, token]);
@@ -248,7 +248,7 @@ export const SalesPage: React.FC = () => {
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/60">
                 <th className="py-2.5 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest min-w-[200px]">
-                  Sede / Vendedor
+                  Sucursal / Vendedor
                 </th>
                 {paymentMethods.map((m: any) => {
                   const descUpper = m.description.toUpperCase();
@@ -292,16 +292,17 @@ export const SalesPage: React.FC = () => {
                 </tr>
               ) : (
                 <>
-                  {pivotData.map((sede: any) => {
-                    const isExpanded = !!expandedSedes[sede.sede];
+                  {pivotData.map((branchItem: any) => {
+                    const branchName = branchItem.sucursal || branchItem.sede;
+                    const isExpanded = !!expandedSucursales[branchName];
                     return (
-                      <React.Fragment key={sede.sede}>
-                        {/* Sede row */}
+                      <React.Fragment key={branchName}>
+                        {/* Sucursal row */}
                         <tr className="bg-slate-50/70 hover:bg-slate-100/50 transition-colors">
                           <td className="py-2.5 px-4">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => toggleSede(sede.sede)}
+                                onClick={() => toggleSucursal(branchName)}
                                 className="p-0.5 rounded-md hover:bg-slate-200 transition-colors text-slate-500 shrink-0"
                               >
                                 {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
@@ -310,22 +311,22 @@ export const SalesPage: React.FC = () => {
                                 <div className="p-1 bg-indigo-100 rounded-md shrink-0">
                                   <Building2 size={11} className="text-indigo-600" />
                                 </div>
-                                <span className="text-xs font-bold text-slate-800">{sede.sede}</span>
+                                <span className="text-xs font-bold text-slate-800">{branchName}</span>
                               </div>
                             </div>
                           </td>
                           {paymentMethods.map((m: any) => (
                             <td key={m.id} className="py-2.5 px-3 text-right text-xs font-semibold text-slate-700 tabular-nums">
-                              {formatCurrency(sede.payments?.[m.id] || 0)}
+                              {formatCurrency(branchItem.payments?.[m.id] || 0)}
                             </td>
                           ))}
                           <td className="py-2.5 px-4 text-right text-xs font-extrabold text-indigo-700 tabular-nums">
-                            {formatCurrency(sede.total)}
+                            {formatCurrency(branchItem.total)}
                           </td>
                         </tr>
 
                         {/* Vendor rows (expanded) */}
-                        {isExpanded && sede.vendedores.map((vendedor: any) => (
+                        {isExpanded && branchItem.vendedores.map((vendedor: any) => (
                           <tr key={vendedor.vendedor} className="hover:bg-slate-50/50 transition-colors border-l-2 border-indigo-100">
                             <td className="py-2 pl-12 pr-4">
                               <div className="flex items-center gap-1.5">

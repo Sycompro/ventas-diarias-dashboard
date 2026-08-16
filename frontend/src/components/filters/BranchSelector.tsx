@@ -18,7 +18,7 @@ export const BranchSelector: React.FC = () => {
       value={branch}
       onChange={setBranch}
       options={options}
-      placeholder="Todas las sedes"
+      placeholder="Todas las sucursales"
       icon={<MapPin size={15} />}
       variant="blue"
     />

@@ -165,7 +165,7 @@ export const CompaniesPage: React.FC = () => {
             onClick={openAddModal}
             className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium flex items-center gap-2 active:scale-95 cursor-pointer text-sm"
           >
-            <Plus size={16} /> Configurar Nueva Sede
+            <Plus size={16} /> Conectar Nueva Empresa
           </button>
         )}
       </div>
@@ -259,7 +259,7 @@ export const CompaniesPage: React.FC = () => {
           {(!companies || companies.length === 0) && (
             <div className="col-span-2 bg-slate-50 rounded-xl p-8 text-center border border-dashed border-slate-200">
               <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h4 className="text-lg font-semibold text-slate-700">Ninguna sede configurada</h4>
+              <h4 className="text-lg font-semibold text-slate-700">Ninguna empresa configurada</h4>
               <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
                 Registra las credenciales y subdominios de tus facturadores para comenzar a compilar ventas en tu dashboard unificado.
               </p>
@@ -267,7 +267,7 @@ export const CompaniesPage: React.FC = () => {
                 onClick={openAddModal}
                 className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
               >
-                Configurar Primera Sede
+                Conectar Primera Empresa
               </button>
             </div>
           )}
