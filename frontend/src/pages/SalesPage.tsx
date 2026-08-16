@@ -66,14 +66,7 @@ export const SalesPage: React.FC = () => {
   useEffect(() => {
     setHeader(
       'Detalle de Ventas',
-      'Cuadro estadístico de ingresos consolidado por sedes, vendedores y métodos de pago.',
-      <button 
-         onClick={handleExport}
-         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-[11px] font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-      >
-        <Download size={12} />
-        Exportar Excel
-      </button>
+      'Cuadro estadístico de ingresos consolidado por sedes, vendedores y métodos de pago.'
     );
     return () => clearHeader();
   }, [companyId, dateStart, dateEnd, token]);
@@ -134,9 +127,19 @@ export const SalesPage: React.FC = () => {
   return (
     <div className="space-y-6">
 
-      {/* Filtros Globales */}
+      {/* Filtros Globales + Exportar */}
       <div className="animate-in fade-in duration-500">
-        <GlobalFilters />
+        <GlobalFilters
+          actions={
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md shrink-0"
+            >
+              <Download size={13} />
+              Exportar Excel
+            </button>
+          }
+        />
       </div>
 
       {/* Resumen General Unificado */}
