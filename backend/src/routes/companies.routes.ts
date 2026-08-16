@@ -233,14 +233,20 @@ router.post('/:id/sync', async (req: any, res) => {
 
 router.get('/:id/sellers', async (req: any, res) => {
   try {
-    if (req.params.id !== req.user.companyId) {
+    const targetCompanyId = req.params.id === 'all' || !req.params.id ? req.user.companyId : req.params.id;
+    if (req.user.companyId && targetCompanyId !== req.user.companyId && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({ message: 'Forbidden' });
     }
     
-    const result = await sqlClient`
+    const result = targetCompanyId ? await sqlClient`
       SELECT DISTINCT seller_name as "name"
       FROM sales
-      WHERE company_id = ${req.params.id} AND seller_name IS NOT NULL AND seller_name != ''
+      WHERE company_id = ${targetCompanyId} AND seller_name IS NOT NULL AND seller_name != ''
+      ORDER BY seller_name ASC
+    ` : await sqlClient`
+      SELECT DISTINCT seller_name as "name"
+      FROM sales
+      WHERE seller_name IS NOT NULL AND seller_name != ''
       ORDER BY seller_name ASC
     `;
     
@@ -252,13 +258,16 @@ router.get('/:id/sellers', async (req: any, res) => {
 
 router.get('/:id/branches', async (req: any, res) => {
   try {
-    if (req.params.id !== req.user.companyId) {
+    const targetCompanyId = req.params.id === 'all' || !req.params.id ? req.user.companyId : req.params.id;
+    if (req.user.companyId && targetCompanyId !== req.user.companyId && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({ message: 'Forbidden' });
     }
     
     try {
-      const company = await db.query.companies.findFirst({
-        where: eq(companies.id, req.params.id)
+      const company = targetCompanyId ? await db.query.companies.findFirst({
+        where: eq(companies.id, targetCompanyId)
+      }) : await db.query.companies.findFirst({
+        where: eq(companies.id, req.user.companyId)
       });
       
       if (!company) {
@@ -282,10 +291,15 @@ router.get('/:id/branches', async (req: any, res) => {
     }
     
     // Fallback: If billing API fails or returns no establishments, query distinct series from DB
-    const result = await sqlClient`
+    const result = targetCompanyId ? await sqlClient`
       SELECT DISTINCT series as "name"
       FROM sales
-      WHERE company_id = ${req.params.id} AND series IS NOT NULL AND series != ''
+      WHERE company_id = ${targetCompanyId} AND series IS NOT NULL AND series != ''
+      ORDER BY series ASC
+    ` : await sqlClient`
+      SELECT DISTINCT series as "name"
+      FROM sales
+      WHERE series IS NOT NULL AND series != ''
       ORDER BY series ASC
     `;
     
