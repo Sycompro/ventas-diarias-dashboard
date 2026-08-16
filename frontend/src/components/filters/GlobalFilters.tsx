@@ -2,7 +2,6 @@ import React from 'react';
 import { CompanySelector } from './CompanySelector';
 import { BranchSelector } from './BranchSelector';
 import { SellerSelector } from './SellerSelector';
-import { GranularitySelector } from './GranularitySelector';
 import { DateRangePicker } from './DateRangePicker';
 import { useAuthStore } from '../../hooks/useAuth';
 import { Search } from 'lucide-react';
@@ -22,7 +21,6 @@ export const GlobalFilters: React.FC<GlobalFiltersProps> = ({ actions }) => {
         {!isCompanyUser && <CompanySelector />}
         <BranchSelector />
         <SellerSelector />
-        <GranularitySelector />
         <DateRangePicker />
       </div>
 

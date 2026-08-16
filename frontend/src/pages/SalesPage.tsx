@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import { useFilters } from '../hooks/useFilters';
 import { GlobalFilters } from '../components/filters/GlobalFilters';
-import { useSalesPivot, useSalesByDocumentType, useDashboardMetrics } from '../hooks/useSalesMetrics';
+import { useSalesPivot, useSalesByDocumentType, useDashboardMetrics, useSalesByHour } from '../hooks/useSalesMetrics';
+import { HourlySalesAnalysis } from '../components/charts/HourlySalesAnalysis';
 import { formatCurrency } from '../utils/formatters';
 import { useAuthStore } from '../hooks/useAuth';
 import axios from 'axios';
@@ -30,6 +31,7 @@ export const SalesPage: React.FC = () => {
   const { data: pivotResponse, isLoading: loadingPivot } = useSalesPivot();
   const { data: docTypeMetrics, isLoading: loadingDocTypes } = useSalesByDocumentType();
   const { data: metrics } = useDashboardMetrics();
+  const { data: hourlySales, isLoading: loadingHourly } = useSalesByHour();
   
   const pivotData = pivotResponse?.pivotData || [];
   const paymentMethods = pivotResponse?.paymentMethods || [];
@@ -192,6 +194,9 @@ export const SalesPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Análisis Estadístico de Ventas por Hora */}
+      <HourlySalesAnalysis data={hourlySales || []} isLoading={loadingHourly} />
 
       {/* Cuadro Estadístico Pivot */}
       <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm animate-in fade-in duration-700 delay-200">

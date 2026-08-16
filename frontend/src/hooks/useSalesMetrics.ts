@@ -319,3 +319,26 @@ export const useSalesDocuments = (limit = 50, offset = 0) => {
     ...queryOptions,
   });
 };
+
+export const useSalesByHour = () => {
+  const filters = useFilters();
+  return useQuery({
+    queryKey: ['sales-by-hour', filters],
+    queryFn: async () => {
+      try {
+        const data = await salesService.getByHour({
+          companyId: filters.companyId,
+          dateStart: filters.dateStart,
+          dateEnd: filters.dateEnd,
+          branch: filters.branch,
+          seller: filters.seller
+        });
+        return (data || []) as Array<{ hour: number; total: number; count: number }>;
+      } catch (err) {
+        console.error("Sales by hour API offline/empty:", err);
+        return [];
+      }
+    },
+    ...queryOptions,
+  });
+};

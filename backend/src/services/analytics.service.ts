@@ -79,17 +79,28 @@ export async function getSalesTrend(companyId: string, dateStart: string, dateEn
   });
 }
 
-export async function getSalesByHour(companyId: string, dateStart: string, dateEnd: string): Promise<Array<{ hour: number; total: number; count: number }>> {
-  const res = await sqlClient`
-    SELECT 
-      EXTRACT(HOUR FROM issued_at)::int as hour,
-      COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
-      COUNT(*) as count
-    FROM sales
-    WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
-    GROUP BY hour
-    ORDER BY hour ASC
-  `;
+export async function getSalesByHour(companyId: string | null | undefined, dateStart: string, dateEnd: string): Promise<Array<{ hour: number; total: number; count: number }>> {
+  const res = companyId
+    ? await sqlClient`
+        SELECT 
+          EXTRACT(HOUR FROM issued_at)::int as hour,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+          COUNT(*) as count
+        FROM sales
+        WHERE status = 'active' AND company_id = ${companyId} AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+        GROUP BY hour
+        ORDER BY hour ASC
+      `
+    : await sqlClient`
+        SELECT 
+          EXTRACT(HOUR FROM issued_at)::int as hour,
+          COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
+          COUNT(*) as count
+        FROM sales
+        WHERE status = 'active' AND issued_at::date >= ${dateStart}::date AND issued_at::date <= ${dateEnd}::date
+        GROUP BY hour
+        ORDER BY hour ASC
+      `;
   
   return res.map(r => ({
     hour: parseInt(r.hour as string, 10),
