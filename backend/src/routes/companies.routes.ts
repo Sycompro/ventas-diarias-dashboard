@@ -245,9 +245,23 @@ router.get('/:id/sellers', async (req: any, res) => {
     
     const branch = req.query.branch as string;
     let seriesFilter: string[] | null = null;
+    let branchSellers: string[] = [];
 
-    if (branch && targetCompanyId) {
-      seriesFilter = await resolveBranchSeries(targetCompanyId, branch);
+    if (targetCompanyId) {
+      const branches = await getCompanyBranches(targetCompanyId);
+      if (branch && branch !== 'all') {
+        const foundBranch = branches.find(b => b.id === branch || b.name.toLowerCase() === branch.toLowerCase() || String(b.establishmentId) === branch);
+        if (foundBranch) {
+          seriesFilter = foundBranch.series;
+          branchSellers = foundBranch.sellers || [];
+        } else {
+          seriesFilter = await resolveBranchSeries(targetCompanyId, branch);
+        }
+      } else {
+        branches.forEach(b => {
+          if (b.sellers) branchSellers.push(...b.sellers);
+        });
+      }
     }
 
     const hasSeriesFilter = seriesFilter !== null && seriesFilter.length > 0;
@@ -255,7 +269,7 @@ router.get('/:id/sellers', async (req: any, res) => {
     const hasCompanyFilter = Boolean(targetCompanyId);
     const cId = targetCompanyId || '';
 
-    const result = await sqlClient`
+    const dbResult = await sqlClient`
       SELECT DISTINCT seller_name as "name"
       FROM sales
       WHERE seller_name IS NOT NULL AND seller_name != ''
@@ -264,7 +278,10 @@ router.get('/:id/sellers', async (req: any, res) => {
       ORDER BY seller_name ASC
     `;
     
-    res.json(result.map(r => r.name));
+    const dbSellers = dbResult.map(r => r.name);
+    const unifiedSellers = [...new Set([...branchSellers, ...dbSellers])].filter(Boolean).sort();
+    
+    res.json(unifiedSellers);
   } catch (error: any) {
     res.status(500).json({ message: 'Error listing company sellers', error: error.message });
   }

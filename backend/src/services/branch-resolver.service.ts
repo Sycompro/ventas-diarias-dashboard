@@ -132,8 +132,8 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
   // Serie terminada en 06 (B006, F006, NV06) -> Sucursal 2 ("LAS BRISAS")
   // Serie terminada en 09 (B009, F009, NV09) -> Sucursal 5 ("JOSE LEONARDO ORTIZ")
   // Serie terminada en 08 (B008, F008, NV08) -> Sucursal 4 ("PIMENTEL")
-  // Serie terminada en 05 (B005, F005, NV05) -> Sucursal 1 ("LA PRADERA")
-  // Serie terminada en 03 (B003, F003, NV03) -> Sucursal 3 ("LA VICTORIA")
+  // Serie terminada en 07 o 03 (B007, F007, NV07, B003, F003, NV03) -> Sucursal 3 ("LA VICTORIA")
+  // Serie terminada en 05 o 01 (B005, F005, NV05, B001, F001, NV01) -> Sucursal 1 ("LA PRADERA")
   const resolveEstIdForSeries = (s: string): number => {
     // 1. Buscar si está en officialSeries
     const off = officialSeries.find((os: any) => os.number === s);
@@ -146,20 +146,30 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
       if (num === 6) return 2; // LAS BRISAS
       if (num === 9) return 5; // JOSE LEONARDO ORTIZ
       if (num === 8) return 4; // PIMENTEL
-      if (num === 5) return 1; // LA PRADERA
-      if (num === 3) return 3; // LA VICTORIA
+      if (num === 7 || num === 3) return 3; // LA VICTORIA
+      if (num === 5 || num === 1) return 1; // LA PRADERA
       if (branchNameById[num]) return num;
     }
     return 1;
   };
 
+  // Pre-mapeo de series estándar para cada ID de sucursal
+  const defaultSeriesByEst: Record<number, string[]> = {
+    1: ['B005', 'F005', 'NV05', 'B001', 'F001', 'NV01'],
+    2: ['B006', 'F006', 'NV06', 'BC06', 'FC06'],
+    3: ['B007', 'F007', 'NV07', 'B003', 'F003', 'NV03'],
+    4: ['B008', 'F008', 'NV08'],
+    5: ['B009', 'F009', 'NV09']
+  };
+
   // Inicializar sucursales encontradas en Facturador Pro (IDs 1, 2, 3, 4, 5, etc.)
   for (const [idStr, name] of Object.entries(branchNameById)) {
     const estId = parseInt(idStr, 10);
+    const defaults = defaultSeriesByEst[estId] || [];
     branchesMap[String(estId)] = {
       id: String(estId),
       name: name,
-      series: [],
+      series: [...defaults],
       establishmentId: estId,
       sellers: []
     };

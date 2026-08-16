@@ -95,13 +95,44 @@ export async function testConnection(subdomain: string, token: string): Promise<
 
 export async function fetchReportDocuments(client: AxiosInstance, dateStart: string, dateEnd: string): Promise<any[]> {
   try {
-    const response = await client.get('/reports/documents', {
-      params: {
-        date_start: dateStart,
-        date_end: dateEnd
+    const start = new Date(dateStart);
+    const end = new Date(dateEnd);
+    const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 31) {
+      const response = await client.get('/reports/documents', {
+        params: { date_start: dateStart, date_end: dateEnd }
+      });
+      return Array.isArray(response.data) ? response.data : [];
+    }
+
+    // Dividir en bloques de 30 días para evitar timeouts en facturador
+    const allReportDocs: any[] = [];
+    let curStart = new Date(start);
+
+    while (curStart <= end) {
+      let curEnd = new Date(curStart);
+      curEnd.setDate(curEnd.getDate() + 29);
+      if (curEnd > end) curEnd = new Date(end);
+
+      const sStr = curStart.toISOString().split('T')[0];
+      const eStr = curEnd.toISOString().split('T')[0];
+
+      try {
+        const res = await client.get('/reports/documents', {
+          params: { date_start: sStr, date_end: eStr }
+        });
+        if (Array.isArray(res.data)) {
+          allReportDocs.push(...res.data);
+        }
+      } catch (e: any) {
+        console.warn(`[Report Documents Chunk] Warning fetching ${sStr} to ${eStr}:`, e.message);
       }
-    });
-    return Array.isArray(response.data) ? response.data : [];
+
+      curStart.setDate(curStart.getDate() + 30);
+    }
+
+    return allReportDocs;
   } catch (error: any) {
     console.error('❌ [Billing API Service] Error fetching report documents:', error.message);
     return [];
