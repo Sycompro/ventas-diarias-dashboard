@@ -103,14 +103,21 @@ router.get('/by-payment-detailed', async (req, res) => {
     // Map series to Sede description dynamically
     const config = await getCompanyConfig(companyId);
     const getSedeName = (seriesName: string): string => {
-      const seriesObj = config.series.find((s: any) => s.number === seriesName);
+      if (!seriesName) return config.establishments?.[0]?.description || 'Sede Principal';
+      
+      const seriesObj = config.series?.find((s: any) => s.number === seriesName);
       if (seriesObj) {
-        const estObj = config.establishments.find((e: any) => e.id === seriesObj.establishment_id);
+        const estObj = config.establishments?.find((e: any) => e.id === seriesObj.establishment_id);
         if (estObj && estObj.description) {
           return estObj.description;
         }
       }
-      return 'Sede Principal';
+      
+      if (config.establishments && config.establishments.length === 1 && config.establishments[0].description) {
+        return config.establishments[0].description;
+      }
+      
+      return `Sede ${seriesName}`;
     };
 
     const mappedResult = result.map(r => {
@@ -199,14 +206,21 @@ router.get('/pivot', async (req, res) => {
 
     // Helper to map series name to Sede description
     const getSedeName = (seriesName: string): string => {
-      const seriesObj = config.series.find((s: any) => s.number === seriesName);
+      if (!seriesName) return config.establishments?.[0]?.description || 'Sede Principal';
+      
+      const seriesObj = config.series?.find((s: any) => s.number === seriesName);
       if (seriesObj) {
-        const estObj = config.establishments.find((e: any) => e.id === seriesObj.establishment_id);
+        const estObj = config.establishments?.find((e: any) => e.id === seriesObj.establishment_id);
         if (estObj && estObj.description) {
           return estObj.description;
         }
       }
-      return 'Sede Principal';
+      
+      if (config.establishments && config.establishments.length === 1 && config.establishments[0].description) {
+        return config.establishments[0].description;
+      }
+      
+      return `Sede ${seriesName}`;
     };
 
     // Pre-populate active payment methods list for response

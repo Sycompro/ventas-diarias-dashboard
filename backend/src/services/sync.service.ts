@@ -142,6 +142,9 @@ export async function syncCompany(companyId: string, days: number = 30): Promise
         parsedNumber = doc.number || '';
       }
       
+      const docAny = doc as any;
+      const sellerName = doc.user_name || docAny.seller_name || docAny.user?.name || docAny.seller || 'Desconocido';
+      
       const [insertedSale] = await db.insert(sales).values({
         companyId,
         externalId: String(doc.external_id || doc.id),
@@ -150,7 +153,7 @@ export async function syncCompany(companyId: string, days: number = 30): Promise
         number: parsedNumber,
         total: doc.total.toString(),
         currency: 'PEN',
-        sellerName: doc.user_name || 'Desconocido',
+        sellerName,
         customerName: doc.customer_name || 'Cliente Varios',
         issuedAt,
         status: isVoided ? 'voided' : 'active',
@@ -161,6 +164,8 @@ export async function syncCompany(companyId: string, days: number = 30): Promise
           series: parsedSeries,
           number: parsedNumber,
           total: doc.total.toString(),
+          sellerName,
+          customerName: doc.customer_name || 'Cliente Varios',
           status: isVoided ? 'voided' : 'active',
           issuedAt,
           syncedAt: new Date(),
@@ -315,12 +320,18 @@ export async function syncCompany(companyId: string, days: number = 30): Promise
       const isVoided = ['09', '11', '13'].includes(stateId);
       
       let parsedSeries = note.series || '';
-      let parsedNumber = note.number || '';
-      if (!parsedSeries && note.number_full && note.number_full.includes('-')) {
-        const parts = note.number_full.split('-');
+      let parsedNumber = String(note.number || '');
+      if (note.number_full && String(note.number_full).includes('-')) {
+        const parts = String(note.number_full).split('-');
+        parsedSeries = parts[0];
+        parsedNumber = parts[1];
+      } else if (note.identifier && String(note.identifier).includes('-')) {
+        const parts = String(note.identifier).split('-');
         parsedSeries = parts[0];
         parsedNumber = parts[1];
       }
+
+      const sellerName = note.user_name || note.seller_name || note.user?.name || note.seller || 'Desconocido';
 
       const [insertedSale] = await db.insert(sales).values({
         companyId,
@@ -330,7 +341,7 @@ export async function syncCompany(companyId: string, days: number = 30): Promise
         number: parsedNumber,
         total: note.total.toString(),
         currency: note.currency_type_id || 'PEN',
-        sellerName: note.seller_name || 'Desconocido',
+        sellerName,
         customerName: note.customer_name || 'Cliente Varios',
         issuedAt,
         status: isVoided ? 'voided' : 'active',
@@ -341,6 +352,8 @@ export async function syncCompany(companyId: string, days: number = 30): Promise
           series: parsedSeries,
           number: parsedNumber,
           total: note.total.toString(),
+          sellerName,
+          customerName: note.customer_name || 'Cliente Varios',
           status: isVoided ? 'voided' : 'active',
           issuedAt,
           syncedAt: new Date(),
