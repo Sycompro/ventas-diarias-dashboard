@@ -139,69 +139,55 @@ export const SalesPage: React.FC = () => {
         <GlobalFilters />
       </div>
 
-      {/* Resumen General Unificado - Solicitud de Usuario */}
-      <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden animate-in fade-in duration-700 delay-100">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm">Resumen General de Ventas</h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">Comprobantes emitidos y desglose por categorías (Productos vs Servicios).</p>
+      {/* Resumen General Unificado */}
+      <div className="animate-in fade-in duration-700 delay-100">
+        {loadingDocTypes || loadingPivot ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="h-[120px] rounded-2xl bg-slate-200 animate-pulse" />
+            ))}
           </div>
-          {metrics && (
-            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 py-1 px-2.5 rounded-full">
-              Consolidado: {formatCurrency((metrics?.byItemType?.products || 0) + (metrics?.byItemType?.services || 0))}
-            </span>
-          )}
-        </div>
+        ) : docSummaryData.length === 0 ? (
+          <div className="py-6 text-center text-slate-400 text-sm">
+            No se encontraron datos registrados en el rango seleccionado.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {docSummaryData.map((doc) => (
+              <div
+                key={doc.name}
+                className={`relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between ${doc.colorCard}`}
+              >
+                {/* Watermark icon bottom-right */}
+                <div className="absolute -bottom-3 -right-3 pointer-events-none select-none">
+                  {doc.watermark}
+                </div>
 
-        <div className="p-5">
-          {loadingDocTypes || loadingPivot ? (
-            <div className="py-8 text-center text-slate-400 animate-pulse">
-              Cargando resumen general...
-            </div>
-          ) : docSummaryData.length === 0 ? (
-            <div className="py-8 text-center text-slate-400">
-              No se encontraron datos registrados en el rango seleccionado.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              {docSummaryData.map((doc) => {
-                return (
-                  <div
-                    key={doc.name}
-                    className={`relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between ${doc.colorCard}`}
-                  >
-                    {/* Watermark icon bottom-right */}
-                    <div className="absolute -bottom-3 -right-3 pointer-events-none select-none">
-                      {doc.watermark}
+                {/* Top row: icon + name + badge */}
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0">
+                      {doc.icon}
                     </div>
-
-                    {/* Top row: icon pill + badge */}
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm">
-                          {doc.icon}
-                        </div>
-                        <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-tight">
-                          {doc.name}
-                        </span>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 ${doc.pillColor || 'bg-white/25 text-white'}`}>
-                        {doc.count}{doc.type === 'category' ? '%' : ' emit.'}
-                      </span>
-                    </div>
-
-                    {/* Bottom: amount */}
-                    <div>
-                      <span className="text-lg font-black tabular-nums text-white drop-shadow-sm">
-                        {formatCurrency(doc.amount)}
-                      </span>
-                    </div>
+                    <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-tight truncate">
+                      {doc.name}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  <span className={`ml-1 px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 ${doc.pillColor || 'bg-white/25 text-white'}`}>
+                    {doc.count}{doc.type === 'category' ? '%' : ' emit.'}
+                  </span>
+                </div>
+
+                {/* Bottom: amount */}
+                <div>
+                  <span className="text-lg font-black tabular-nums text-white drop-shadow-sm">
+                    {formatCurrency(doc.amount)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Cuadro Estadístico Pivot - Solicitud de Usuario */}
