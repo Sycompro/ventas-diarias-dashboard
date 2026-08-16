@@ -47,7 +47,7 @@ function parseDocumentIssuedAt(item: any): Date {
   return new Date();
 }
 
-export async function syncCompany(companyId: string): Promise<SyncResult> {
+export async function syncCompany(companyId: string, days: number = 30): Promise<SyncResult> {
   const startedAt = new Date();
   let syncStatus = 'success';
   let documentsSynced = 0;
@@ -90,10 +90,10 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
       return '01'; // Default to Efectivo
     };
     
-    // Sincronizamos por defecto los últimos 30 días
+    // Sincronización inteligente de rango de días
     const dateEnd = new Date();
     const dateStart = new Date();
-    dateStart.setDate(dateStart.getDate() - 30);
+    dateStart.setDate(dateStart.getDate() - days);
     
     const startDateStr = dateStart.toISOString().split('T')[0];
     const endDateStr = dateEnd.toISOString().split('T')[0];
@@ -442,13 +442,13 @@ export async function syncCompany(companyId: string): Promise<SyncResult> {
   return { syncedCount: documentsSynced };
 }
 
-export async function syncAllCompanies(): Promise<void> {
+export async function syncAllCompanies(days: number = 5): Promise<void> {
   const activeCompanies = await db.query.companies.findMany({
     where: eq(companies.isActive, true)
   });
   
   const results = await Promise.allSettled(
-    activeCompanies.map(c => syncCompany(c.id))
+    activeCompanies.map(c => syncCompany(c.id, days))
   );
   
   results.forEach((result, idx) => {

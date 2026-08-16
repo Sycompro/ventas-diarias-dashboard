@@ -219,11 +219,13 @@ router.get('/:id/debug-trend', async (req: any, res) => {
 
 router.post('/:id/sync', async (req: any, res) => {
   try {
-    if (req.user.companyId && req.params.id !== req.user.companyId && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+    const targetCompanyId = req.params.id === 'all' || !req.params.id ? req.user.companyId : req.params.id;
+    if (req.user.companyId && targetCompanyId !== req.user.companyId && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({ message: 'Forbidden' });
     }
     
-    const result = await syncCompany(req.params.id);
+    const days = req.body?.days ? parseInt(req.body.days, 10) : 30;
+    const result = await syncCompany(targetCompanyId, days);
     res.json(result);
   } catch (error: any) {
     console.error(`[Companies Route] Error syncing:`, error.message);
