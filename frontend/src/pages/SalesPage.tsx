@@ -56,8 +56,8 @@ export const SalesPage: React.FC = () => {
     if (!companyId) return;
     setIsSyncing(true);
     try {
-      await companyService.sync(companyId);
-      queryClient.invalidateQueries();
+      await companyService.sync(companyId, { dateStart, dateEnd, days: 90 });
+      await queryClient.invalidateQueries();
     } catch (err) {
       console.error("Error triggering sync:", err);
     } finally {

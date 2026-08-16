@@ -224,8 +224,10 @@ router.post('/:id/sync', async (req: any, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
     
-    const days = req.body?.days ? parseInt(req.body.days, 10) : 30;
-    const result = await syncCompany(targetCompanyId, days);
+    const days = req.body?.days ? parseInt(req.body.days, 10) : 90;
+    const dateStart = req.body?.dateStart;
+    const dateEnd = req.body?.dateEnd;
+    const result = await syncCompany(targetCompanyId, days, dateStart, dateEnd);
     res.json(result);
   } catch (error: any) {
     console.error(`[Companies Route] Error syncing:`, error.message);

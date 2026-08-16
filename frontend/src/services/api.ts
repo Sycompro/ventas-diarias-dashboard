@@ -81,8 +81,8 @@ export const companyService = {
     const { data } = await api.post(`/companies/${id}/test`, { apiToken });
     return data;
   },
-  sync: async (id: string) => {
-    const { data } = await api.post(`/companies/${id}/sync`);
+  sync: async (id: string, options?: any) => {
+    const { data } = await api.post(`/companies/${id}/sync`, options || {});
     return data;
   },
   getSellers: async (id: string) => {

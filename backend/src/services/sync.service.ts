@@ -47,7 +47,7 @@ function parseDocumentIssuedAt(item: any): Date {
   return new Date();
 }
 
-export async function syncCompany(companyId: string, days: number = 30): Promise<SyncResult> {
+export async function syncCompany(companyId: string, days: number = 90, customStart?: string, customEnd?: string): Promise<SyncResult> {
   const startedAt = new Date();
   let syncStatus = 'success';
   let documentsSynced = 0;
@@ -95,8 +95,8 @@ export async function syncCompany(companyId: string, days: number = 30): Promise
     const dateStart = new Date();
     dateStart.setDate(dateStart.getDate() - days);
     
-    const startDateStr = dateStart.toISOString().split('T')[0];
-    const endDateStr = dateEnd.toISOString().split('T')[0];
+    const startDateStr = customStart || dateStart.toISOString().split('T')[0];
+    const endDateStr = customEnd || dateEnd.toISOString().split('T')[0];
     
     // Fetch documents list (main metadata)
     const documents = await fetchDocuments(client, startDateStr, endDateStr);
@@ -123,11 +123,122 @@ export async function syncCompany(companyId: string, days: number = 30): Promise
       }
     }
     
+    // 1. Procesar TODOS los comprobantes históricos desde reportDocs (contiene el rango completo con impuestos y pagos)
+    const processedKeys = new Set<string>();
+
+    for (const rd of reportDocs) {
+      const docTypeId = String(rd.document_type_id || '03');
+      const docNumber = String(rd.number || '');
+      const docKey = `${docTypeId}_${docNumber}`;
+      processedKeys.add(docKey);
+
+      let parsedSeries = '';
+      let parsedNumber = '';
+      if (docNumber && docNumber.includes('-')) {
+        const parts = docNumber.split('-');
+        parsedSeries = parts[0];
+        parsedNumber = parts[1];
+      } else {
+        parsedSeries = rd.series || '';
+        parsedNumber = docNumber;
+      }
+
+      const isVoided = rd.status === 'Anulado' || ['09', '11', '13'].includes(String(rd.state_type_id));
+      const sellerName = rd.user || rd.user_name || rd.seller_name || rd.seller || 'Desconocido';
+      const customerName = rd.name_customer || rd.customer_name || 'Cliente Varios';
+      const totalAmount = parseFloat(rd.total || 0).toString();
+
+      let issuedAt = new Date();
+      if (rd.date_of_issue) {
+        const timePart = rd.time_of_issue || '12:00:00';
+        issuedAt = new Date(`${rd.date_of_issue}T${timePart}-05:00`);
+      }
+
+      const rawJson = {
+        ...rd,
+        total_taxed: rd.total_taxed,
+        total_igv: rd.total_igv,
+        total_exonerated: rd.total_exonerated,
+        total_unaffected: rd.total_unaffected,
+        total: rd.total,
+        user_name: sellerName,
+        customer_name: customerName,
+      };
+
+      const externalId = rd.external_id ? String(rd.external_id) : `rep_${docTypeId}_${docNumber}`;
+
+      const [insertedSale] = await db.insert(sales).values({
+        companyId,
+        externalId,
+        documentTypeId: docTypeId,
+        series: parsedSeries,
+        number: parsedNumber,
+        total: totalAmount,
+        currency: rd.currency_type_id || 'PEN',
+        sellerName,
+        customerName,
+        issuedAt,
+        status: isVoided ? 'voided' : 'active',
+        rawJson,
+      }).onConflictDoUpdate({
+        target: [sales.companyId, sales.externalId],
+        set: {
+          series: parsedSeries,
+          number: parsedNumber,
+          total: totalAmount,
+          sellerName,
+          customerName,
+          status: isVoided ? 'voided' : 'active',
+          issuedAt,
+          rawJson,
+          syncedAt: new Date(),
+        },
+      }).returning({ id: sales.id });
+
+      if (insertedSale) {
+        // Items consolidado
+        const existingItems = await db.select().from(saleItems).where(eq(saleItems.saleId, insertedSale.id));
+        if (existingItems.length === 0) {
+          await db.insert(saleItems).values({
+            saleId: insertedSale.id,
+            description: 'Venta de Bienes o Servicios (Consolidado)',
+            quantity: '1',
+            unitPrice: totalAmount,
+            total: totalAmount,
+            category: '01'
+          });
+        }
+
+        // Payments
+        await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
+        const rawPayments = rd.payments?.PAGOS || rd.payments?.CUOTA || [];
+        if (Array.isArray(rawPayments) && rawPayments.length > 0) {
+          await db.insert(salePayments).values(
+            rawPayments.map((p: any) => ({
+              saleId: insertedSale.id,
+              paymentMethodId: getPaymentMethodId(p.description || 'Efectivo'),
+              amount: (p.amount || totalAmount).toString(),
+              reference: p.reference || '',
+            }))
+          );
+        } else {
+          await db.insert(salePayments).values({
+            saleId: insertedSale.id,
+            paymentMethodId: '01',
+            amount: totalAmount,
+            reference: 'Default Cash Payment (Synced)',
+          });
+        }
+      }
+      documentsSynced++;
+    }
+
+    // 2. Procesar documentos adicionales de la lista general (para enriquecer XML y items)
     for (const doc of documents) {
       const stateId = String(doc.state_type_id);
-      // Procesar documentos con estado válido o anulados/rechazados (01=registrado, 03=enviado, 05=aceptado, 11=anulado, 09=anulado, 13=anulado)
       if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
       
+      const docKey = `${doc.document_type_id}_${doc.number}`;
       const issuedAt = parseDocumentIssuedAt(doc);
       const isVoided = ['09', '11', '13'].includes(stateId);
       
@@ -168,139 +279,22 @@ export async function syncCompany(companyId: string, days: number = 30): Promise
           customerName: doc.customer_name || 'Cliente Varios',
           status: isVoided ? 'voided' : 'active',
           issuedAt,
+          rawJson: doc,
           syncedAt: new Date(),
         },
       }).returning({ id: sales.id });
       
-      if (insertedSale) {
-        // Verificar si ya tiene items guardados
-        const existingItems = await db
-          .select()
-          .from(saleItems)
-          .where(eq(saleItems.saleId, insertedSale.id));
-
-        const needsSync = existingItems.length === 0 ||
-          (existingItems.length === 1 && existingItems[0].description === 'Venta de Bienes o Servicios (Consolidado)');
-
-        if (needsSync) {
-          let itemsToInsert: any[] = [];
-
-          if (doc.download_xml) {
-            try {
-              const response = await fetch(doc.download_xml, {
-                method: 'GET',
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                  'Accept': 'application/xml, text/xml, */*'
-                }
-              });
-              if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-              }
-              const xmlText = await response.text();
-              
-              // Parsear items desde XML
-              let startIdx = 0;
-              while (true) {
-                const startNode = xmlText.indexOf('<cac:InvoiceLine>', startIdx);
-                if (startNode === -1) break;
-                const endNode = xmlText.indexOf('</cac:InvoiceLine>', startNode);
-                if (endNode === -1) break;
-                
-                const lineText = xmlText.substring(startNode, endNode + '</cac:InvoiceLine>'.length);
-                startIdx = endNode + '</cac:InvoiceLine>'.length;
-                
-                let description = '';
-                const descMatch = lineText.match(/<cbc:Description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/cbc:Description>/);
-                if (descMatch) {
-                  description = descMatch[1].trim();
-                }
-                
-                let quantity = '1';
-                let unitCode = '';
-                const qtyMatch = lineText.match(/<cbc:InvoicedQuantity\s+unitCode="([^"]+)">([^<]+)<\/cbc:InvoicedQuantity>/);
-                if (qtyMatch) {
-                  unitCode = qtyMatch[1];
-                  quantity = qtyMatch[2].trim();
-                }
-                
-                let unitPrice = '0';
-                const priceMatch = lineText.match(/<cac:AlternativeConditionPrice>[\s\S]*?<cbc:PriceAmount[^>]*>([^<]+)<\/cbc:PriceAmount>/);
-                if (priceMatch) {
-                  unitPrice = priceMatch[1].trim();
-                } else {
-                  const basePriceMatch = lineText.match(/<cac:Price>[\s\S]*?<cbc:PriceAmount[^>]*>([^<]+)<\/cbc:PriceAmount>/);
-                  if (basePriceMatch) {
-                    unitPrice = basePriceMatch[1].trim();
-                  }
-                }
-                
-                const qtyVal = parseFloat(quantity) || 0;
-                const priceVal = parseFloat(unitPrice) || 0;
-                const total = (qtyVal * priceVal).toFixed(2);
-                
-                const category = unitCode === 'ZZ' ? '02' : '01';
-                
-                itemsToInsert.push({
-                  saleId: insertedSale.id,
-                  description,
-                  quantity,
-                  unitPrice,
-                  total,
-                  category
-                });
-              }
-            } catch (err: any) {
-              console.warn(`[Sync Service] Warning: Failed to download/parse XML for doc ${doc.number}:`, err.message);
-            }
-          }
-
-          // Fallback si no se pudieron extraer items del XML
-          if (itemsToInsert.length === 0) {
-            itemsToInsert.push({
-              saleId: insertedSale.id,
-              description: 'Venta de Bienes o Servicios (Consolidado)',
-              quantity: '1',
-              unitPrice: doc.total.toString(),
-              total: doc.total.toString(),
-              category: '01' // Default a Producto
-            });
-          }
-
-          // Insertar los items
-          await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
-          await db.insert(saleItems).values(itemsToInsert);
-        }
-      }
-      
-      if (insertedSale) {
-        // Delete any existing payments for this sale to avoid duplicates
+      if (insertedSale && !processedKeys.has(docKey)) {
+        // Si no vino en reportDocs, insertar pagos por defecto
         await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
-        
-        // Search payments in report lookup map
-        const lookupKey = `${doc.document_type_id}_${doc.number}`;
-        const reportPayments = paymentsLookup.get(lookupKey);
-        
-        if (reportPayments && reportPayments.length > 0) {
-          await db.insert(salePayments).values(
-            reportPayments.map(p => ({
-              saleId: insertedSale.id,
-              paymentMethodId: getPaymentMethodId(p.description),
-              amount: p.amount.toString(),
-              reference: p.reference || '',
-            }))
-          );
-        } else {
-          // Fallback: If no payments are registered, insert a default payment as Cash (Efectivo - "01")
-          await db.insert(salePayments).values({
-            saleId: insertedSale.id,
-            paymentMethodId: '01',
-            amount: doc.total.toString(),
-            reference: 'Default Cash Payment (Synced)',
-          });
-        }
+        await db.insert(salePayments).values({
+          saleId: insertedSale.id,
+          paymentMethodId: '01',
+          amount: doc.total.toString(),
+          reference: 'Default Cash Payment (Synced)',
+        });
+        documentsSynced++;
       }
-      documentsSynced++;
     }
 
     // Sincronizar Notas de Venta (document_type_id = '80')
