@@ -39,7 +39,7 @@ export function createBillingClient(subdomain: string, decryptedToken: string): 
     
   return axios.create({
     baseURL,
-    timeout: 15000,
+    timeout: 45000,
     httpsAgent: new https.Agent({ rejectUnauthorized: false }), // Bypass certificate issues
     headers: {
       'Accept': 'application/json',
