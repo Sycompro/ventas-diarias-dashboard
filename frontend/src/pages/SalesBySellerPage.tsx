@@ -166,9 +166,47 @@ export const SalesBySellerPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Filtros Globales */}
+      {/* Filtros Globales Unificados */}
       <div className="animate-in fade-in duration-500">
-        <GlobalFilters showSellerFilter={false} showSearch={false} />
+        <GlobalFilters 
+          showSellerFilter={false} 
+          showSearch={true}
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Buscar usuario..."
+          actions={
+            <div className="flex items-center gap-2 shrink-0">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mr-1">Ordenar:</span>
+              <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                <button
+                  onClick={() => setSortBy('total')}
+                  className={`px-2 py-1 text-[9.5px] font-bold rounded-md transition-all cursor-pointer ${
+                    sortBy === 'total' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Ventas
+                </button>
+                <button
+                  onClick={() => setSortBy('count')}
+                  className={`px-2 py-1 text-[9.5px] font-bold rounded-md transition-all cursor-pointer ${
+                    sortBy === 'count' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Ops
+                </button>
+                <button
+                  onClick={() => setSortBy('avgTicket')}
+                  className={`px-2 py-1 text-[9.5px] font-bold rounded-md transition-all cursor-pointer ${
+                    sortBy === 'avgTicket' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Ticket
+                </button>
+              </div>
+            </div>
+          }
+        />
       </div>
 
       {/* KPI Cards */}
@@ -277,56 +315,6 @@ export const SalesBySellerPage: React.FC = () => {
 
         {/* Detailed List Card */}
         <div className="lg:col-span-2 space-y-4">
-          
-          {/* Filters Bar */}
-          <div className="bg-white rounded-xl border border-slate-200/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            
-            {/* Search Input */}
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar usuario..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input pl-9 py-1.5 text-xs placeholder:text-slate-400"
-              />
-            </div>
-
-            {/* Sort Toggle */}
-            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
-              <SlidersHorizontal className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mr-1">Ordenar:</span>
-              <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                <button
-                  onClick={() => setSortBy('total')}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
-                    sortBy === 'total' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Ventas
-                </button>
-                <button
-                  onClick={() => setSortBy('count')}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
-                    sortBy === 'count' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Ops
-                </button>
-                <button
-                  onClick={() => setSortBy('avgTicket')}
-                  className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
-                    sortBy === 'avgTicket' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Ticket Prom.
-                </button>
-              </div>
-            </div>
-
-          </div>
-
           {/* Table */}
           <DataTable 
             title="Matriz de Desglose Analítico"
