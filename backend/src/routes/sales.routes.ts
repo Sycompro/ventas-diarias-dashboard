@@ -59,6 +59,12 @@ async function ensureDeduplicated() {
       ) sub ON sub.sale_id = s.id
       WHERE si.sale_id = s.id AND sub.sum_total > s.total::numeric + 0.05;
     `;
+    await sqlClient`
+      CREATE INDEX IF NOT EXISTS idx_sales_perf ON sales (company_id, status, issued_at);
+      CREATE INDEX IF NOT EXISTS idx_sales_series ON sales (company_id, series);
+      CREATE INDEX IF NOT EXISTS idx_sale_payments_perf ON sale_payments (sale_id, payment_method_id);
+      CREATE INDEX IF NOT EXISTS idx_sale_items_perf ON sale_items (sale_id, category);
+    `;
     initialDedupDone = true;
   } catch (e: any) {
     console.warn('[Dedup] Warning during initial sales deduplication:', e.message);
@@ -66,15 +72,13 @@ async function ensureDeduplicated() {
 }
 
 /**
- * Sincroniza automáticamente en tiempo real los comprobantes del rango de fechas
- * solicitado consultando la API oficial del Facturador, sin necesidad de botones manuales.
- * Si la sincronización externa tarda más de 3 segundos, continúa en segundo plano y entrega
- * los datos actuales de la base de datos inmediatamente para que la UI nunca se congele.
+ * Sincroniza en segundo plano de forma 100% no bloqueante.
+ * La respuesta HTTP se devuelve de inmediato desde la base de datos (<10ms).
  */
 async function ensureDateRangeSynced(companyId?: string, dateStart?: string, dateEnd?: string) {
   if (!companyId || !dateStart || !dateEnd) return;
   
-  await ensureDeduplicated();
+  void ensureDeduplicated();
 
   const cacheKey = `sync_range:${companyId}:${dateStart}:${dateEnd}`;
   try {
@@ -83,37 +87,26 @@ async function ensureDateRangeSynced(companyId?: string, dateStart?: string, dat
   } catch {}
 
   const memKey = `${companyId}:${dateStart}:${dateEnd}`;
-  // Si ya hay una sincronización en marcha para este rango, no bloquear los otros endpoints
   if (memKey in syncInProgress) {
     return;
   }
 
   const syncPromise = (async () => {
     try {
-      console.log(`[Auto-Sync] Sincronizando datos de API oficial para ${companyId} del ${dateStart} al ${dateEnd}...`);
       await syncCompany(companyId, 0, dateStart, dateEnd);
       const isCurrentDay = dateEnd >= new Date().toISOString().split('T')[0];
-      const ttl = isCurrentDay ? 10 : 180; // 10 segundos para hoy, 3 minutos para histórico
+      const ttl = isCurrentDay ? 30 : 180;
       try {
         await redis.setex(cacheKey, ttl, '1');
       } catch {}
     } catch (err: any) {
-      console.warn(`[Auto-Sync] Error durante sincronización automática:`, err.message);
+      console.warn(`[Auto-Sync] Error durante sincronización en background:`, err.message);
     } finally {
       delete syncInProgress[memKey];
     }
   })();
 
   syncInProgress[memKey] = syncPromise;
-
-  // Esperar un máximo de 3 segundos. Si la API del facturador responde rápido, entrega datos frescos;
-  // si es un rango histórico grande y tarda más, continúa en background y entrega datos de BD sin bloquear al usuario.
-  try {
-    await Promise.race([
-      syncPromise,
-      new Promise((resolve) => setTimeout(resolve, 3000))
-    ]);
-  } catch {}
 }
 
 router.get('/metrics', async (req, res) => {
