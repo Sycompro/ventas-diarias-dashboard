@@ -53,7 +53,11 @@ router.get('/list-companies', async (req, res) => {
 
 router.get('/list-users', async (req, res) => {
   try {
-    const list = await sqlClient`SELECT id, email, name, role, company_id FROM users`;
+    const list = await sqlClient`
+      SELECT u.id, u.email, u.name, u.role, uc.company_id 
+      FROM users u
+      LEFT JOIN user_companies uc ON u.id = uc.user_id
+    `;
     res.json(list);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
