@@ -31,15 +31,12 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
-    // Test query parameter variations
+    // Compare plural and singular endpoints
     const tests = [
-      { name: 'date_from/date_to', url: '/sale-note/lists?date_from=2026-06-01&date_to=2026-06-30' },
-      { name: 'from/to', url: '/sale-note/lists?from=2026-06-01&to=2026-06-30' },
-      { name: 'start_date/end_date', url: '/sale-note/lists?start_date=2026-06-01&end_date=2026-06-30' },
-      { name: 'start/end', url: '/sale-note/lists?start=2026-06-01&end=2026-06-30' },
-      { name: 'd_start/d_end', url: '/sale-note/lists?d_start=2026-06-01&d_end=2026-06-30' },
-      { name: 'date_start/date_end', url: '/sale-note/lists?date_start=2026-06-01&date_end=2026-06-30' },
-      { name: 'date', url: '/sale-note/lists?date=2026-06-15' }
+      { name: 'singular_page1', url: '/sale-note/lists?page=1' },
+      { name: 'singular_page2', url: '/sale-note/lists?page=2' },
+      { name: 'plural_page1', url: '/sale-notes/lists?page=1' },
+      { name: 'plural_page2', url: '/sale-notes/lists?page=2' }
     ];
 
     const results: any[] = [];
@@ -47,15 +44,14 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
       try {
         const res = await client.get(test.url);
         const data = res.data?.data || res.data || [];
-        const dates = data.map((x: any) => x.date_of_issue || x.created_at);
-        const juneDates = dates.filter((d: string) => d && d.includes('-06-') || d && d.includes('/06/'));
         results.push({
           name: test.name,
           url: test.url,
           count: data.length,
-          juneCount: juneDates.length,
-          firstDate: dates[0],
-          lastDate: dates[dates.length - 1]
+          firstId: data[0]?.id,
+          firstNumber: data[0]?.number || data[0]?.identifier,
+          firstDate: data[0]?.date_of_issue,
+          meta: res.data?.meta || null
         });
       } catch (err: any) {
         results.push({
