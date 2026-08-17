@@ -55,11 +55,16 @@ router.get('/debug-seller-sql', async (req, res) => {
       GROUP BY seller_name, document_type_id
     `;
 
+    const companiesList = await sqlClient`
+      SELECT DISTINCT company_id FROM sales
+    `;
+
     res.json({
       sampleSellers,
       itemsCount: itemsCount[0]?.count || 0,
       sellerItems,
-      docTypes
+      docTypes,
+      companiesList
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
