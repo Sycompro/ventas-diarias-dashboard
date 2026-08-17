@@ -30,7 +30,18 @@ export interface DashboardMetrics {
     services: number;
   };
   topProducts: Array<{ description: string; quantity: number; total: number; category: string }>;
-  salesBySeller: Array<{ name: string; total: number; count: number; avgTicket: number }>;
+  salesBySeller: Array<{ 
+    name: string; 
+    total: number; 
+    count: number; 
+    avgTicket: number;
+    cpeTotal?: number;
+    notesTotal?: number;
+    cpeCount?: number;
+    notesCount?: number;
+    productsTotal?: number;
+    servicesTotal?: number;
+  }>;
 }
 
 export async function getDashboardMetrics(
@@ -197,7 +208,11 @@ export async function getDashboardMetrics(
     SELECT 
       COALESCE(seller_name, 'Sin Vendedor') as seller_name, 
       COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total,
-      COUNT(*) as count
+      COUNT(*) as count,
+      COALESCE(SUM(CASE WHEN document_type_id IN ('01', '03') THEN total::numeric WHEN document_type_id = '07' THEN -total::numeric ELSE 0 END), 0) as cpe_total,
+      COALESCE(SUM(CASE WHEN document_type_id = '80' THEN total::numeric ELSE 0 END), 0) as notes_total,
+      COALESCE(SUM(CASE WHEN document_type_id IN ('01', '03') THEN 1 ELSE 0 END), 0)::int as cpe_count,
+      COALESCE(SUM(CASE WHEN document_type_id = '80' THEN 1 ELSE 0 END), 0)::int as notes_count
     FROM sales
     WHERE status = 'active'
       AND (${!hasCompanyFilter} OR company_id = ${cId})
@@ -207,6 +222,22 @@ export async function getDashboardMetrics(
       AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
     GROUP BY seller_name
     ORDER BY total DESC
+  `;
+
+  const sellerItemsRes = await sqlClient`
+    SELECT 
+      COALESCE(s.seller_name, 'Sin Vendedor') as seller_name,
+      COALESCE(SUM(CASE WHEN i.category = '02' THEN i.total::numeric ELSE 0 END), 0) as services_total,
+      COALESCE(SUM(CASE WHEN i.category = '01' THEN i.total::numeric ELSE 0 END), 0) as products_total
+    FROM sale_items i
+    JOIN sales s ON i.sale_id = s.id
+    WHERE s.status = 'active'
+      AND (${!hasCompanyFilter} OR s.company_id = ${cId})
+      AND (${!hasSeriesFilter} OR s.series = ANY(${seriesArray}))
+      AND (${!hasSellerFilter} OR s.seller_name = ${sellerName})
+      AND (s.issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+      AND (s.issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
+    GROUP BY s.seller_name
   `;
 
   // 6. Query para Productos vs Servicios
@@ -333,11 +364,23 @@ export async function getDashboardMetrics(
     salesBySeller: sellersRes.map(r => {
       const total = parseFloat(r.total as string);
       const count = parseInt(r.count as string, 10);
+      const name = r.seller_name as string;
+      
+      const itemBreakdown = sellerItemsRes.find((item: any) => item.seller_name === name);
+      const productsTotal = itemBreakdown ? parseFloat(itemBreakdown.products_total as string) : 0;
+      const servicesTotal = itemBreakdown ? parseFloat(itemBreakdown.services_total as string) : 0;
+
       return {
-        name: r.seller_name as string,
+        name,
         total,
         count,
         avgTicket: count > 0 ? total / count : 0,
+        cpeTotal: parseFloat(r.cpe_total as string),
+        notesTotal: parseFloat(r.notes_total as string),
+        cpeCount: parseInt(r.cpe_count as string, 10),
+        notesCount: parseInt(r.notes_count as string, 10),
+        productsTotal,
+        servicesTotal
       };
     }),
   };
