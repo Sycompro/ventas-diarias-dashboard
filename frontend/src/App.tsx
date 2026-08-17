@@ -42,8 +42,6 @@ const SalesByPaymentPage = lazyWithRetry(() => import('./pages/SalesByPaymentPag
 const SalesByDocumentPage = lazyWithRetry(() => import('./pages/SalesByDocumentPage').then(m => ({ default: m.SalesByDocumentPage })));
 const ComparatorPage = lazyWithRetry(() => import('./pages/ComparatorPage').then(m => ({ default: m.ComparatorPage })));
 const GoalsPage = lazyWithRetry(() => import('./pages/GoalsPage').then(m => ({ default: m.GoalsPage })));
-const AlertsPage = lazyWithRetry(() => import('./pages/AlertsPage').then(m => ({ default: m.AlertsPage })));
-const InsightsPage = lazyWithRetry(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })));
 const CompaniesPage = lazyWithRetry(() => import('./pages/CompaniesPage').then(m => ({ default: m.CompaniesPage })));
 // Placeholder components for routing
 const Placeholder = ({ title }: { title: string }) => <div className="p-8 text-center text-xl text-neutral-500 font-medium">{title} - Próximamente</div>;
@@ -85,9 +83,6 @@ export const App: React.FC = () => {
               
               <Route path="comparador" element={<ComparatorPage />} />
               <Route path="metas" element={<GoalsPage />} />
-              <Route path="alertas" element={<AlertsPage />} />
-              <Route path="insights" element={<InsightsPage />} />
-              <Route path="reportes" element={<Placeholder title="Reportes" />} />
               <Route path="configuracion/empresas" element={<CompaniesPage />} />
             </Route>
             

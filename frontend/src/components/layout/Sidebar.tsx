@@ -41,14 +41,6 @@ const navGroups = [
       { name: 'Metas', path: '/metas', icon: Target },
     ]
   },
-  {
-    label: 'Sistema',
-    items: [
-      { name: 'Alertas', path: '/alertas', icon: Bell, badge: true },
-      { name: 'Insights', path: '/insights', icon: Lightbulb },
-      { name: 'Reportes', path: '/reportes', icon: FileText },
-    ]
-  }
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -143,15 +135,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           <span className="font-medium whitespace-nowrap overflow-hidden text-sm flex-1">
                             {item.name}
                           </span>
-                        )}
-
-                        {item.badge && !isCollapsed && (
-                          <span className="flex w-5 h-5 items-center justify-center rounded-full bg-danger-500 text-white text-[10px] font-bold shrink-0">
-                            3
-                          </span>
-                        )}
-                        {item.badge && isCollapsed && (
-                          <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-danger-500" />
                         )}
                       </NavLink>
                     </li>
