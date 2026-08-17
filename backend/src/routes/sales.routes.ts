@@ -59,12 +59,10 @@ async function ensureDeduplicated() {
       ) sub ON sub.sale_id = s.id
       WHERE si.sale_id = s.id AND sub.sum_total > s.total::numeric + 0.05;
     `;
-    await sqlClient`
-      CREATE INDEX IF NOT EXISTS idx_sales_perf ON sales (company_id, status, issued_at);
-      CREATE INDEX IF NOT EXISTS idx_sales_series ON sales (company_id, series);
-      CREATE INDEX IF NOT EXISTS idx_sale_payments_perf ON sale_payments (sale_id, payment_method_id);
-      CREATE INDEX IF NOT EXISTS idx_sale_items_perf ON sale_items (sale_id, category);
-    `;
+    await sqlClient`CREATE INDEX IF NOT EXISTS idx_sales_perf ON sales (company_id, status, issued_at)`;
+    await sqlClient`CREATE INDEX IF NOT EXISTS idx_sales_series ON sales (company_id, series)`;
+    await sqlClient`CREATE INDEX IF NOT EXISTS idx_sale_payments_perf ON sale_payments (sale_id, payment_method_id)`;
+    await sqlClient`CREATE INDEX IF NOT EXISTS idx_sale_items_perf ON sale_items (sale_id, category)`;
     initialDedupDone = true;
   } catch (e: any) {
     console.warn('[Dedup] Warning during initial sales deduplication:', e.message);
