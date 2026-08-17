@@ -19,6 +19,20 @@ import axios from 'axios';
 import https from 'https';
 
 const router = Router();
+
+router.get('/debug-purchases', async (req, res) => {
+  try {
+    const list = await sqlClient`SELECT id, name, subdomain FROM companies`;
+    const syncedPurchases = await sqlClient`SELECT id, number, total, supplier_name, synced_at FROM purchases ORDER BY synced_at DESC LIMIT 10`;
+    res.json({
+      companies: list,
+      syncedPurchases
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.use(authenticate);
 
 const parseDateRange = (req: any) => {
