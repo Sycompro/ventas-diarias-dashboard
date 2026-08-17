@@ -385,17 +385,24 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
         const noteItems = note.items || note.items_for_report || [];
 
         if (Array.isArray(noteItems) && noteItems.length > 0) {
+          const count = noteItems.length || 1;
+          const totalNum = parseFloat(note.total || '0') || 0;
+          const fallbackItemTotal = (totalNum / count).toFixed(2);
+
           await db.insert(saleItems).values(
             noteItems.map((item: any) => {
               const itDesc = item.item?.description || item.description || 'Ítem';
               const itUnit = item.item?.unit_type_id || item.unit_type_id || 'NIU';
+              const itemQty = parseFloat(item.quantity || '1') || 1;
+              const itTotal = item.total ? String(item.total) : (item.unit_price ? (parseFloat(item.unit_price) * itemQty).toFixed(2) : fallbackItemTotal);
+              const unitPrice = item.unit_price ? String(item.unit_price) : (parseFloat(itTotal) / itemQty).toFixed(2);
               const isService = itUnit === 'ZZ' || isServiceItem(itDesc);
               return {
                 saleId: insertedSale.id,
                 description: itDesc,
-                quantity: (item.quantity || 1).toString(),
-                unitPrice: item.unit_price ? item.unit_price.toString() : (item.total || note.total).toString(),
-                total: item.total ? item.total.toString() : note.total.toString(),
+                quantity: itemQty.toString(),
+                unitPrice,
+                total: itemTotal,
                 category: isService ? '02' : '01',
                 unitType: itUnit || null,
               };

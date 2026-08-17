@@ -184,18 +184,23 @@ export async function processBillingWebhook(
       const itemsList = docData.items || docData.items_for_report || [];
 
       if (Array.isArray(itemsList) && itemsList.length > 0) {
+        const count = itemsList.length || 1;
+        const totalNum = parseFloat(totalAmount) || 0;
+        const fallbackItemTotal = (totalNum / count).toFixed(2);
+
         await db.insert(saleItems).values(
           itemsList.map((item: any) => {
             const itDesc = item.item?.description || item.description || 'Ítem';
             const itUnit = item.item?.unit_type_id || item.unit_type_id || 'NIU';
-            const unitPrice = (item.unit_price || item.price || item.total || totalAmount).toString();
-            const itTotal = (item.total || item.total_value || totalAmount).toString();
+            const itemQty = parseFloat(item.quantity || '1') || 1;
+            const itTotal = item.total ? String(item.total) : (item.total_value ? String(item.total_value) : (item.unit_price ? (parseFloat(item.unit_price) * itemQty).toFixed(2) : fallbackItemTotal));
+            const unitPrice = item.unit_price ? String(item.unit_price) : (item.price ? String(item.price) : (parseFloat(itTotal) / itemQty).toFixed(2));
             const isService = itUnit === 'ZZ' || parseFloat(itTotal) >= 25.0 || parseFloat(itTotal) === 8.0;
 
             return {
               saleId: insertedSale.id,
               description: itDesc,
-              quantity: (item.quantity || 1).toString(),
+              quantity: itemQty.toString(),
               unitPrice,
               total: itTotal,
               category: isService ? '02' : '01',

@@ -45,6 +45,20 @@ async function ensureDeduplicated() {
         AND a.series = b.series 
         AND a.number = b.number;
     `;
+
+    await sqlClient`
+      UPDATE sale_items si
+      SET total = (s.total::numeric / sub.cnt)::numeric(12,2),
+          unit_price = (s.total::numeric / sub.cnt / GREATEST(si.quantity::numeric, 1))::numeric(12,2)
+      FROM sales s
+      JOIN (
+        SELECT sale_id, COUNT(*) as cnt, SUM(total::numeric) as sum_total
+        FROM sale_items
+        GROUP BY sale_id
+        HAVING COUNT(*) > 1
+      ) sub ON sub.sale_id = s.id
+      WHERE si.sale_id = s.id AND sub.sum_total > s.total::numeric + 0.05;
+    `;
     initialDedupDone = true;
   } catch (e: any) {
     console.warn('[Dedup] Warning during initial sales deduplication:', e.message);
