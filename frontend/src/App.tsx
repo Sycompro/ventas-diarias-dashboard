@@ -40,7 +40,6 @@ const SalesPage = lazyWithRetry(() => import('./pages/SalesPage').then(m => ({ d
 const SalesBySellerPage = lazyWithRetry(() => import('./pages/SalesBySellerPage').then(m => ({ default: m.SalesBySellerPage })));
 const SalesByPaymentPage = lazyWithRetry(() => import('./pages/SalesByPaymentPage').then(m => ({ default: m.SalesByPaymentPage })));
 const SalesByDocumentPage = lazyWithRetry(() => import('./pages/SalesByDocumentPage').then(m => ({ default: m.SalesByDocumentPage })));
-const TemporalAnalysisPage = lazyWithRetry(() => import('./pages/TemporalAnalysisPage').then(m => ({ default: m.TemporalAnalysisPage })));
 const ComparatorPage = lazyWithRetry(() => import('./pages/ComparatorPage').then(m => ({ default: m.ComparatorPage })));
 const GoalsPage = lazyWithRetry(() => import('./pages/GoalsPage').then(m => ({ default: m.GoalsPage })));
 const AlertsPage = lazyWithRetry(() => import('./pages/AlertsPage').then(m => ({ default: m.AlertsPage })));
@@ -84,7 +83,6 @@ export const App: React.FC = () => {
               <Route path="ventas/productos" element={<Placeholder title="Ventas por Producto" />} />
               <Route path="ventas/empresas" element={<Placeholder title="Ventas por Empresa" />} />
               
-              <Route path="analisis" element={<TemporalAnalysisPage />} />
               <Route path="comparador" element={<ComparatorPage />} />
               <Route path="metas" element={<GoalsPage />} />
               <Route path="alertas" element={<AlertsPage />} />

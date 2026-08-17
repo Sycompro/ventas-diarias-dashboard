@@ -37,7 +37,6 @@ const navGroups = [
   {
     label: 'Análisis',
     items: [
-      { name: 'Análisis Temporal', path: '/analisis', icon: LineChart },
       { name: 'Comparador', path: '/comparador', icon: ArrowLeftRight },
       { name: 'Metas', path: '/metas', icon: Target },
     ]
