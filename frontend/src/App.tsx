@@ -14,19 +14,38 @@ const queryClient = new QueryClient({
   },
 });
 
+// Helper to retry dynamic imports when a new deploy occurs and hashes change
+const lazyWithRetry = (componentImport: () => Promise<any>) => {
+  return lazy(async () => {
+    try {
+      const result = await componentImport();
+      sessionStorage.removeItem('chunk_reload_attempts');
+      return result;
+    } catch (error) {
+      console.error('Error loading chunk, forcing reload...', error);
+      const hasReloaded = sessionStorage.getItem('chunk_reload_attempts');
+      if (!hasReloaded) {
+        sessionStorage.setItem('chunk_reload_attempts', 'true');
+        window.location.reload();
+      }
+      throw error;
+    }
+  });
+};
+
 // Lazy load pages
-const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
-const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
-const SalesPage = lazy(() => import('./pages/SalesPage').then(m => ({ default: m.SalesPage })));
-const SalesBySellerPage = lazy(() => import('./pages/SalesBySellerPage').then(m => ({ default: m.SalesBySellerPage })));
-const SalesByPaymentPage = lazy(() => import('./pages/SalesByPaymentPage').then(m => ({ default: m.SalesByPaymentPage })));
-const SalesByDocumentPage = lazy(() => import('./pages/SalesByDocumentPage').then(m => ({ default: m.SalesByDocumentPage })));
-const TemporalAnalysisPage = lazy(() => import('./pages/TemporalAnalysisPage').then(m => ({ default: m.TemporalAnalysisPage })));
-const ComparatorPage = lazy(() => import('./pages/ComparatorPage').then(m => ({ default: m.ComparatorPage })));
-const GoalsPage = lazy(() => import('./pages/GoalsPage').then(m => ({ default: m.GoalsPage })));
-const AlertsPage = lazy(() => import('./pages/AlertsPage').then(m => ({ default: m.AlertsPage })));
-const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })));
-const CompaniesPage = lazy(() => import('./pages/CompaniesPage').then(m => ({ default: m.CompaniesPage })));
+const LoginPage = lazyWithRetry(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const DashboardPage = lazyWithRetry(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const SalesPage = lazyWithRetry(() => import('./pages/SalesPage').then(m => ({ default: m.SalesPage })));
+const SalesBySellerPage = lazyWithRetry(() => import('./pages/SalesBySellerPage').then(m => ({ default: m.SalesBySellerPage })));
+const SalesByPaymentPage = lazyWithRetry(() => import('./pages/SalesByPaymentPage').then(m => ({ default: m.SalesByPaymentPage })));
+const SalesByDocumentPage = lazyWithRetry(() => import('./pages/SalesByDocumentPage').then(m => ({ default: m.SalesByDocumentPage })));
+const TemporalAnalysisPage = lazyWithRetry(() => import('./pages/TemporalAnalysisPage').then(m => ({ default: m.TemporalAnalysisPage })));
+const ComparatorPage = lazyWithRetry(() => import('./pages/ComparatorPage').then(m => ({ default: m.ComparatorPage })));
+const GoalsPage = lazyWithRetry(() => import('./pages/GoalsPage').then(m => ({ default: m.GoalsPage })));
+const AlertsPage = lazyWithRetry(() => import('./pages/AlertsPage').then(m => ({ default: m.AlertsPage })));
+const InsightsPage = lazyWithRetry(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })));
+const CompaniesPage = lazyWithRetry(() => import('./pages/CompaniesPage').then(m => ({ default: m.CompaniesPage })));
 // Placeholder components for routing
 const Placeholder = ({ title }: { title: string }) => <div className="p-8 text-center text-xl text-neutral-500 font-medium">{title} - Próximamente</div>;
 
