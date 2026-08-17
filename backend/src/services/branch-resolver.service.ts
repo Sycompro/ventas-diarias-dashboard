@@ -135,20 +135,26 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     const off = officialSeries.find((os: any) => os.number === s);
     if (off && off.establishment_id) return off.establishment_id;
 
-    // B. Analizar correlativo numérico de la serie (ej: B001, F002, B006, etc.)
+    // B. Analizar correlativo numérico de la serie (ej: B005, B006, NV08, etc.)
     const match = s.match(/([A-Za-z]+)(\d+)/);
     if (match) {
-      const num = parseInt(match[2], 10);
+      const rawNum = match[2]; // "005", "006", "008", "009", "05", etc.
+      const num = parseInt(rawNum, 10);
       
+      // Regla de asignación por correlativo oficial de sucursal:
+      // 5 o 1 -> 1 (LA PRADERA)
+      // 6 -> 2 (LAS BRISAS)
+      // 7 o 3 -> 3 (LA VICTORIA)
+      // 8 -> 4 (PIMENTEL)
+      // 9 -> 5 (JOSE LEONARDO ORTIZ)
+      if ((rawNum.endsWith('5') || rawNum.endsWith('1')) && branchNameById[1]) return 1;
+      if (rawNum.endsWith('6') && branchNameById[2]) return 2;
+      if ((rawNum.endsWith('7') || rawNum.endsWith('3')) && branchNameById[3]) return 3;
+      if (rawNum.endsWith('8') && branchNameById[4]) return 4;
+      if (rawNum.endsWith('9') && branchNameById[5]) return 5;
+
       // Si el número coincide directamente con una sucursal registrada
       if (branchNameById[num]) return num;
-
-      // Mapeo estándar de correlativos para sucursales registradas
-      if (num === 6 && branchNameById[2]) return 2;
-      if (num === 9 && branchNameById[5]) return 5;
-      if (num === 8 && branchNameById[4]) return 4;
-      if ((num === 7 || num === 3) && branchNameById[3]) return 3;
-      if ((num === 5 || num === 1) && branchNameById[1]) return 1;
     }
     
     // C. Si hay un establecimiento principal oficial, usarlo
@@ -209,11 +215,31 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     }
   }
 
-  // 6. Filtrar sucursales que tengan series o ventas, o mantener las oficiales del tenant
-  const result = Object.values(branchesMap).filter(b => 
-    b.series.length > 0 || 
-    (b.establishmentId && officialEstablishments.some((e: any) => e.id === b.establishmentId))
-  );
+  // 6. Retornar TODAS las sucursales descubiertas (tengan o no ventas activas en el rango)
+  const result: BranchInfo[] = [];
+  const processedKeys = new Set<string>();
+
+  for (const [idStr, name] of Object.entries(branchNameById)) {
+    processedKeys.add(idStr);
+    const existing = branchesMap[idStr];
+    if (existing) {
+      result.push(existing);
+    } else {
+      result.push({
+        id: idStr,
+        name: name,
+        series: [],
+        establishmentId: parseInt(idStr, 10),
+        sellers: []
+      });
+    }
+  }
+
+  for (const [key, b] of Object.entries(branchesMap)) {
+    if (!processedKeys.has(key)) {
+      result.push(b);
+    }
+  }
 
   // Si queda vacía (empresa nueva sin datos), generar Sucursal Principal dinámica
   if (result.length === 0) {

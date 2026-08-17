@@ -119,11 +119,14 @@ router.get('/by-payment-detailed', async (req, res) => {
       const configMethod = config.paymentMethods?.find((m: any) => m.id === r.paymentMethodId);
       const methodName = configMethod?.description || defaultDescriptions[r.paymentMethodId] || `Método ${r.paymentMethodId}`;
 
+      const branchName = getBranchNameForSeries(r.series, branches);
       return {
         paymentMethodId: r.paymentMethodId,
         paymentMethodName: methodName,
+        method: methodName,
         seller: r.seller,
-        branch: getBranchNameForSeries(r.series, branches),
+        branch: branchName,
+        company: branchName,
         count: r.count,
         amount: parseFloat(r.amount || 0)
       };
@@ -204,6 +207,20 @@ router.get('/pivot', async (req, res) => {
       }>;
       total: number;
     }> = {};
+
+    // Inicializar todas las sucursales oficiales de la empresa
+    for (const b of branches) {
+      pivotMap[b.name] = {
+        sede: b.name,
+        sucursal: b.name,
+        payments: {},
+        vendedores: {},
+        total: 0
+      };
+      activePaymentMethods.forEach((m: any) => {
+        pivotMap[b.name].payments[m.id] = 0;
+      });
+    }
 
     for (const sale of salesList) {
       let seriesName = sale.series;

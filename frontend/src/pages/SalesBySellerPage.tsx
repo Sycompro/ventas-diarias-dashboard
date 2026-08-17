@@ -7,17 +7,25 @@ import { formatCurrency } from '../utils/formatters';
 import { Skeleton } from '../components/ui/Skeleton';
 
 const columns = [
-  { header: 'Vendedor', key: 'sellerName' },
-  { header: 'Operaciones', key: 'count' },
+  { 
+    header: 'Vendedor', 
+    key: 'name',
+    render: (item: any) => <span className="font-semibold text-slate-800">{item.name || item.sellerName}</span>
+  },
+  { 
+    header: 'Operaciones', 
+    key: 'count',
+    render: (item: any) => <span className="tabular-nums font-medium text-slate-600">{item.count} ops</span>
+  },
   { 
     header: 'Ticket Promedio', 
     key: 'avgTicket',
-    render: (item: any) => formatCurrency(item.avgTicket)
+    render: (item: any) => <span className="tabular-nums">{formatCurrency(item.avgTicket)}</span>
   },
   { 
     header: 'Total Vendido', 
     key: 'total',
-    render: (item: any) => <span className="font-bold text-primary">{formatCurrency(item.total)}</span>
+    render: (item: any) => <span className="font-bold text-primary tabular-nums">{formatCurrency(item.total)}</span>
   },
 ];
 
