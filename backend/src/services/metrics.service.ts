@@ -53,7 +53,7 @@ export async function getDashboardMetrics(
 ): Promise<DashboardMetrics> {
   const branchKey = branch || 'all';
   const sellerKey = seller || 'all';
-  const cacheKey = `metrics_v5:${companyId || 'all'}:${dateStart}:${dateEnd}:${branchKey}:${sellerKey}`;
+  const cacheKey = `metrics_v6:${companyId || 'all'}:${dateStart}:${dateEnd}:${branchKey}:${sellerKey}`;
   
   try {
     const cached = await redis.get(cacheKey);
