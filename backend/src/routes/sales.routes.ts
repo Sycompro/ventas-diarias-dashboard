@@ -18,6 +18,15 @@ import axios from 'axios';
 import https from 'https';
 
 const router = Router();
+router.get('/temp-debug-companies', async (req, res) => {
+  try {
+    const list = await sqlClient`SELECT id, name, subdomain FROM companies`;
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.use(authenticate);
 
 const parseDateRange = (req: any) => {
