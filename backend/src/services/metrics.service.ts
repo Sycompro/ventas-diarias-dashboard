@@ -74,10 +74,26 @@ export async function getDashboardMetrics(
       COUNT(CASE WHEN document_type_id = '07' THEN 1 END) as notas_credito_count,
       COALESCE(SUM(CASE WHEN document_type_id = '80' THEN total::numeric ELSE 0 END), 0) as notas_venta_amount,
       COUNT(CASE WHEN document_type_id = '80' THEN 1 END) as notas_venta_count,
-      COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_taxed')::numeric, 0) ELSE -COALESCE((raw_json->>'total_taxed')::numeric, 0) END), 0) as taxed_total,
-      COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_igv')::numeric, 0) ELSE -COALESCE((raw_json->>'total_igv')::numeric, 0) END), 0) as igv_total,
-      COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_exonerated')::numeric, 0) ELSE -COALESCE((raw_json->>'total_exonerated')::numeric, 0) END), 0) as exonerated_total,
-      COALESCE(SUM(CASE WHEN document_type_id != '07' THEN COALESCE((raw_json->>'total_unaffected')::numeric, 0) ELSE -COALESCE((raw_json->>'total_unaffected')::numeric, 0) END), 0) as unaffected_total
+      COALESCE(SUM(CASE 
+        WHEN document_type_id IN ('01', '03') THEN COALESCE((raw_json->>'total_taxed')::numeric, 0)
+        WHEN document_type_id = '07' THEN -COALESCE((raw_json->>'total_taxed')::numeric, 0)
+        ELSE 0 
+      END), 0) as taxed_total,
+      COALESCE(SUM(CASE 
+        WHEN document_type_id IN ('01', '03') THEN COALESCE((raw_json->>'total_igv')::numeric, 0)
+        WHEN document_type_id = '07' THEN -COALESCE((raw_json->>'total_igv')::numeric, 0)
+        ELSE 0 
+      END), 0) as igv_total,
+      COALESCE(SUM(CASE 
+        WHEN document_type_id IN ('01', '03') THEN COALESCE((raw_json->>'total_exonerated')::numeric, 0)
+        WHEN document_type_id = '07' THEN -COALESCE((raw_json->>'total_exonerated')::numeric, 0)
+        ELSE 0 
+      END), 0) as exonerated_total,
+      COALESCE(SUM(CASE 
+        WHEN document_type_id IN ('01', '03') THEN COALESCE((raw_json->>'total_unaffected')::numeric, 0)
+        WHEN document_type_id = '07' THEN -COALESCE((raw_json->>'total_unaffected')::numeric, 0)
+        ELSE 0 
+      END), 0) as unaffected_total
     FROM sales 
     WHERE status = 'active'
       AND (${!hasCompanyFilter} OR company_id = ${cId})
@@ -248,16 +264,27 @@ export async function getDashboardMetrics(
     }
   }
 
+  const facturasAmt = parseFloat(row.facturas_amount as string || '0');
+  const boletasAmt = parseFloat(row.boletas_amount as string || '0');
+  const ncAmount = parseFloat(row.notas_credito_amount as string || '0');
+  const electronicTotal = facturasAmt + boletasAmt - ncAmount;
+
   let taxedAmount = parseFloat(row.taxed_total as string || '0');
   let igvAmount = parseFloat(row.igv_total as string || '0');
   const exoneratedAmount = parseFloat(row.exonerated_total as string || '0');
   const unaffectedAmount = parseFloat(row.unaffected_total as string || '0');
 
-  // Fallback si no vinieron en raw_json
-  if (taxedAmount === 0 && igvAmount === 0 && totalSales > 0) {
-    taxedAmount = parseFloat((totalSales / 1.18).toFixed(2));
-    igvAmount = parseFloat((totalSales - taxedAmount).toFixed(2));
+  // Solo si existen comprobantes electrónicos oficiales (01, 03) y no vinieron los campos en raw_json
+  if (taxedAmount === 0 && igvAmount === 0 && electronicTotal > 0) {
+    taxedAmount = parseFloat((electronicTotal / 1.18).toFixed(2));
+    igvAmount = parseFloat((electronicTotal - taxedAmount).toFixed(2));
+  } else if (electronicTotal <= 0) {
+    // Si no hay comprobantes electrónicos (solo notas de venta 80), el IGV fiscal ante SUNAT es 0
+    taxedAmount = 0;
+    igvAmount = 0;
   }
+
+  const taxesTotal = electronicTotal > 0 ? (taxedAmount + igvAmount + exoneratedAmount + unaffectedAmount) : 0;
 
   const result: DashboardMetrics = {
     totalSales,
@@ -268,7 +295,7 @@ export async function getDashboardMetrics(
       igv: igvAmount,
       exonerated: exoneratedAmount,
       unaffected: unaffectedAmount,
-      total: totalSales,
+      total: taxesTotal,
     },
     byDocumentType: {
       facturas: {

@@ -29,8 +29,8 @@ export const TaxIgvCard: React.FC<TaxIgvCardProps> = ({ taxes, isLoading }) => {
   const exonerated = taxes?.exonerated || 0;
   const total = taxes?.total || (taxed + igv + exonerated);
 
-  const igvPercent = total > 0 ? (igv / total) * 100 : 15.25;
-  const taxedPercent = total > 0 ? (taxed / total) * 100 : 84.75;
+  const igvPercent = total > 0 ? (igv / total) * 100 : 0;
+  const taxedPercent = total > 0 ? (taxed / total) * 100 : 0;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-md relative overflow-hidden">
@@ -120,7 +120,7 @@ export const TaxIgvCard: React.FC<TaxIgvCardProps> = ({ taxes, isLoading }) => {
           <div className="flex items-center gap-2">
             <Scale size={13} className="text-emerald-400 shrink-0" />
             <span className="text-slate-200 text-[11px] font-bold">
-              Total Neto Facturado
+              Total Facturado SUNAT
             </span>
           </div>
           <span className="font-black tabular-nums text-emerald-400 text-sm">
