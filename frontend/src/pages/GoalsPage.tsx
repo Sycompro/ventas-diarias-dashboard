@@ -358,8 +358,8 @@ export const GoalsPage: React.FC = () => {
       {/* ─── NEW GOAL MODAL ─── */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/45 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-xl">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full overflow-visible animate-in fade-in zoom-in-95 duration-200 shadow-xl">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-2xl">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                 <Target className="w-4 h-4 text-blue-600" /> Registrar Nueva Meta
               </h3>
