@@ -33,45 +33,13 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
     
     // Page 1
     const p1 = await client.get('/sale-note/lists?page=1');
-    const p1Id = p1.data?.data?.[0]?.id;
-
-    // Test 1: page=2
-    const testPage = await client.get('/sale-note/lists?page=2');
-    const testPageId = testPage.data?.data?.[0]?.id;
-
-    // Test 2: URL path pagination
-    let testPathId = null;
-    try {
-      const testPath = await client.get('/sale-note/lists/2');
-      testPathId = testPath.data?.data?.[0]?.id || testPath.data?.[0]?.id;
-    } catch(e: any) {}
-
-    // Test 3: Date range in URL path (similar to documents)
-    let testDateRangeCount = null;
-    let testDateRangeFirstDate = null;
-    try {
-      const testDateRange = await client.get('/sale-note/lists/2026-06-01/2026-06-30');
-      const data = testDateRange.data?.data || testDateRange.data || [];
-      testDateRangeCount = data.length;
-      testDateRangeFirstDate = data[0]?.date_of_issue || data[0]?.created_at;
-    } catch(e: any) {}
-
-    // Test 4: query parameters for dates
-    let testQueryParamsCount = null;
-    let testQueryParamsFirstDate = null;
-    try {
-      const testQueryParams = await client.get('/sale-note/lists?date_start=2026-06-01&date_end=2026-06-30');
-      const data = testQueryParams.data?.data || testQueryParams.data || [];
-      testQueryParamsCount = data.length;
-      testQueryParamsFirstDate = data[0]?.date_of_issue || data[0]?.created_at;
-    } catch(e: any) {}
 
     res.json({
-      page1FirstId: p1Id,
-      testPage2FirstId: testPageId,
-      testPathPaginationFirstId: testPathId,
-      testDateRangeInPath: { count: testDateRangeCount, firstDate: testDateRangeFirstDate },
-      testDateRangeInQueryParams: { count: testQueryParamsCount, firstDate: testQueryParamsFirstDate }
+      keys: Object.keys(p1.data),
+      meta: p1.data.meta || null,
+      links: p1.data.links || null,
+      pagination: p1.data.pagination || null,
+      sampleFirstItemKeys: p1.data.data?.[0] ? Object.keys(p1.data.data[0]) : null
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message, stack: err.stack });
