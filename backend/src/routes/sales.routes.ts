@@ -31,30 +31,38 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
-    // Compare plural and singular endpoints without /lists
+    // Compare POST requests with different filter bodies
     const tests = [
-      { name: 'plural_no_lists', url: '/sale-notes' },
-      { name: 'singular_no_lists', url: '/sale-note' },
-      { name: 'singular_lists_page1', url: '/sale-note/lists?page=1' },
-      { name: 'singular_lists_page2', url: '/sale-note/lists?page=2' }
+      { name: 'post_date_start_end', method: 'post', url: '/sale-note/lists', body: { date_start: '2026-06-01', date_end: '2026-06-30' } },
+      { name: 'post_from_to', method: 'post', url: '/sale-note/lists', body: { from: '2026-06-01', to: '2026-06-30' } },
+      { name: 'post_page2', method: 'post', url: '/sale-note/lists', body: { page: 2 } },
+      { name: 'get_page1', method: 'get', url: '/sale-note/lists?page=1' }
     ];
 
     const results: any[] = [];
     for (const test of tests) {
       try {
-        const res = await client.get(test.url);
+        const res = test.method === 'post' 
+          ? await client.post(test.url, test.body)
+          : await client.get(test.url);
         const data = res.data?.data || res.data || [];
+        const dates = Array.isArray(data) ? data.map((x: any) => x.date_of_issue) : [];
+        const juneDates = dates.filter((d: string) => d && d.includes('-06-'));
+        
         results.push({
           name: test.name,
           url: test.url,
           count: Array.isArray(data) ? data.length : typeof data === 'object' ? Object.keys(data).length : 'unknown',
-          firstId: Array.isArray(data) ? data[0]?.id : data.id || null,
+          firstId: Array.isArray(data) ? data[0]?.id : null,
+          firstDate: Array.isArray(data) ? data[0]?.date_of_issue : null,
+          juneCount: juneDates.length,
           meta: res.data?.meta || null
         });
       } catch (err: any) {
         results.push({
           name: test.name,
-          error: err.message
+          error: err.message,
+          response: err.response?.data
         });
       }
     }
