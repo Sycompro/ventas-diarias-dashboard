@@ -402,7 +402,7 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
                 description: itDesc,
                 quantity: itemQty.toString(),
                 unitPrice,
-                total: itemTotal,
+                total: itTotal,
                 category: isService ? '02' : '01',
                 unitType: itUnit || null,
               };
