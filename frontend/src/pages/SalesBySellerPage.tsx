@@ -19,6 +19,7 @@ import { DataTable } from '../components/ui/DataTable';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useHeaderStore } from '../hooks/useHeader';
+import { GlobalFilters } from '../components/filters/GlobalFilters';
 
 export const SalesBySellerPage: React.FC = () => {
   const { data, isLoading } = useSalesBySeller();
@@ -165,6 +166,11 @@ export const SalesBySellerPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Filtros Globales */}
+      <div className="animate-in fade-in duration-500">
+        <GlobalFilters />
+      </div>
+
       {/* KPI Cards */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
