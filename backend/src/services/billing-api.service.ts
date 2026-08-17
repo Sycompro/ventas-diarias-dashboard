@@ -95,6 +95,7 @@ export async function fetchReportDocuments(client: AxiosInstance, dateStart: str
 
 export async function fetchSaleNotes(client: AxiosInstance, dateStart: string, dateEnd: string): Promise<any[]> {
   const allSaleNotes: any[] = [];
+  const seenIds = new Set<number>();
   let currentPage = 1;
   let hasMorePages = true;
   const maxPages = 100; // Cap de seguridad (antes era 25)
@@ -110,8 +111,14 @@ export async function fetchSaleNotes(client: AxiosInstance, dateStart: string, d
         break;
       }
 
+      let newItemsFound = false;
       let olderThanRangeCount = 0;
+
       for (const item of data) {
+        if (seenIds.has(item.id)) continue;
+        seenIds.add(item.id);
+        newItemsFound = true;
+
         const itemDate = item.date_of_issue || (item.created_at ? item.created_at.split(' ')[0] : null);
         if (itemDate) {
           if (itemDate >= dateStart && itemDate <= dateEnd) {
@@ -122,6 +129,12 @@ export async function fetchSaleNotes(client: AxiosInstance, dateStart: string, d
         } else {
           allSaleNotes.push(item);
         }
+      }
+
+      // Si no hay nuevos registros en esta página (la API nos devolvió la misma página repetida)
+      if (!newItemsFound) {
+        hasMorePages = false;
+        break;
       }
 
       // Parar si todas las notas de esta página son más antiguas que el rango
