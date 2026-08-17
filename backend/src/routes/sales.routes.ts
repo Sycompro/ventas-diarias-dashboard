@@ -84,6 +84,18 @@ router.get('/debug-seller-sql', async (req, res) => {
   }
 });
 
+router.get('/debug-metrics-response', async (req, res) => {
+  try {
+    const companyId = req.query.companyId as string || '51089e80-446d-461c-ae37-1518381eb051';
+    const dateStart = req.query.dateStart as string || '2026-07-01';
+    const dateEnd = req.query.dateEnd as string || '2026-08-17';
+    const metrics = await getDashboardMetrics(companyId, dateStart, dateEnd, null, null);
+    res.json(metrics.salesBySeller);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.use(authenticate);
 
 const parseDateRange = (req: any) => {
