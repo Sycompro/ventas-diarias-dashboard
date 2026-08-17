@@ -51,12 +51,36 @@ router.get('/test-sync-gymbra', async (req, res) => {
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
 
-    const apiRes = await client.get('/purchases/records');
-    
+    let purchasesData = null;
+    let expensesData = null;
+    let cashData = null;
+
+    try {
+      const r = await client.get('/purchases/records');
+      purchasesData = { status: r.status, count: r.data?.data?.length || 0, data: r.data };
+    } catch (e: any) {
+      purchasesData = { error: e.message, response: e.response?.data };
+    }
+
+    try {
+      const r = await client.get('/expenses/records');
+      expensesData = { status: r.status, count: r.data?.data?.length || 0, data: r.data };
+    } catch (e: any) {
+      expensesData = { error: e.message, response: e.response?.data };
+    }
+
+    try {
+      const r = await client.get('/cash/records');
+      cashData = { status: r.status, count: r.data?.data?.length || 0, data: r.data };
+    } catch (e: any) {
+      cashData = { error: e.message, response: e.response?.data };
+    }
+
     res.json({
       subdomain: company.subdomain,
-      status: apiRes.status,
-      data: apiRes.data
+      purchases: purchasesData,
+      expenses: expensesData,
+      cash: cashData
     });
   } catch (err: any) {
     res.status(500).json({
