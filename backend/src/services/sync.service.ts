@@ -157,7 +157,6 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
     for (const chunk of dateChunks) {
       console.log(`[Sync Service] Sincronizando bloque de ${chunk.start} a ${chunk.end}...`);
       
-      // 1. Fetch y procesar Documentos
       let documents: any[] = [];
       try {
         documents = await fetchDocuments(client, chunk.start, chunk.end);
@@ -190,7 +189,6 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
         const customerName = doc.customer_name || docAny.customer_name || docAny.name_customer || 'Cliente Varios';
         const totalAmount = parseFloat(doc.total as any || 0).toString();
 
-        // Guardar el establecimiento real en rawJson
         const rawJson = {
           ...doc,
           establishment_id: docAny.establishment_id || docAny.establishment?.id || null,
@@ -229,13 +227,13 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
         }).returning({ id: sales.id });
         
         if (insertedSale) {
-          // 1. Items
           await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
+          
           if (docAny.items && Array.isArray(docAny.items) && docAny.items.length > 0) {
-            for (const rawItem of docAny.items) {
-              const rawItemAny = rawItem as any;
-              const itDesc = rawItemAny.item?.description || rawItemAny.description || 'Ítem';
-              const itUnit = rawItemAny.item?.unit_type_id || rawItemAny.unit_type_id || 'NIU';
+            for (const item of docAny.items) {
+              const rawItemAny = item as any;
+              const itDesc = rawItemAny.description || rawItemAny.item?.description || 'Ítem';
+              const itUnit = rawItemAny.unit_type_id || rawItemAny.item?.unit_type_id || 'NIU';
               const itQty = (rawItemAny.quantity || 1).toString();
               const itPrice = (rawItemAny.unit_price || rawItemAny.unit_value || totalAmount).toString();
               const itTotal = (rawItemAny.total || totalAmount).toString();
@@ -254,9 +252,7 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
               });
             }
           } else {
-            // Fallback genérico: clasificar basado en monto (sin heurísticas específicas por empresa)
             const totalNum = parseFloat(totalAmount) || 0;
-            // Criterio universal: montos > 20 tienden a ser servicios, <= 20 tienden a ser productos
             const itemCategory = totalNum > 20 ? '02' : '01';
             const itemDescription = itemCategory === '02' 
               ? `Servicio (S/. ${totalNum.toFixed(2)})` 
@@ -272,26 +268,36 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
             });
           }
 
-          // 2. Payments
           await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
           
           let pList: any[] = [];
-          const rawPayments = docAny.payments?.PAGOS || docAny.payments?.CUOTA || docAny.payments || [];
-          if (Array.isArray(rawPayments)) {
-            pList = rawPayments;
-          } else if (rawPayments && typeof rawPayments === 'object') {
-            pList = Array.isArray(rawPayments.PAGOS) ? rawPayments.PAGOS : (Array.isArray(rawPayments.CUOTA) ? rawPayments.CUOTA : []);
+          if (docAny.payments) {
+            if (Array.isArray(docAny.payments)) {
+              pList = docAny.payments;
+            } else if (typeof docAny.payments === 'object') {
+              if (Array.isArray(docAny.payments.PAGOS)) {
+                pList = docAny.payments.PAGOS;
+              } else if (Array.isArray(docAny.payments.CUOTA)) {
+                pList = docAny.payments.CUOTA;
+              } else {
+                pList = Object.values(docAny.payments);
+              }
+            }
           }
 
           if (pList.length > 0) {
-            await db.insert(salePayments).values(
-              pList.map((p: any) => ({
+            for (const p of pList) {
+              const pType = String(p.payment_method_type_id || p.codigo || p.id || '01');
+              const pAmount = (p.payment || p.amount || p.total || totalAmount).toString();
+              const pRef = p.reference || p.referencia || p.destination_description || '';
+              
+              await db.insert(salePayments).values({
                 saleId: insertedSale.id,
-                paymentMethodId: getPaymentMethodId(p.description || p.payment_method_type?.description || 'Efectivo'),
-                amount: (p.amount || p.payment || totalAmount).toString(),
-                reference: p.reference || '',
-              }))
-            );
+                paymentMethodId: getPaymentMethodId(p.payment_method_type?.description || p.description || 'Efectivo'),
+                amount: pAmount,
+                reference: pRef,
+              });
+            }
           } else {
             await db.insert(salePayments).values({
               saleId: insertedSale.id,
@@ -304,141 +310,130 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
           documentsSynced++;
         }
       }
+    }
 
-      // 2. Fetch y procesar Notas de Venta
-      let saleNotes: any[] = [];
-      try {
-        saleNotes = await fetchSaleNotes(client, chunk.start, chunk.end);
-      } catch (noteErr: any) {
-        console.warn(`[Sync Service] Warning: Error al obtener notas de venta del ${chunk.start} al ${chunk.end}:`, noteErr.message);
+    console.log(`[Sync Service] Consultando notas de venta del ${startDateStr} al ${endDateStr}...`);
+    let saleNotes: any[] = [];
+    try {
+      saleNotes = await fetchSaleNotes(client, startDateStr, endDateStr);
+    } catch (noteErr: any) {
+      console.warn(`[Sync Service] Warning: Error al obtener notas de venta:`, noteErr.message);
+    }
+
+    for (const note of saleNotes) {
+      const stateId = String(note.state_type_id);
+      if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
+
+      const issuedAt = parseDocumentIssuedAt(note);
+      const isVoided = ['09', '11', '13'].includes(stateId);
+      
+      let parsedSeries = note.series || '';
+      let parsedNumber = String(note.number || '');
+      if (note.number_full && String(note.number_full).includes('-')) {
+        const parts = String(note.number_full).split('-');
+        parsedSeries = parts[0];
+        parsedNumber = parts[1];
+      } else if (note.identifier && String(note.identifier).includes('-')) {
+        const parts = String(note.identifier).split('-');
+        parsedSeries = parts[0];
+        parsedNumber = parts[1];
       }
 
-      for (const note of saleNotes) {
-        const stateId = String(note.state_type_id);
-        if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
+      const sellerName = note.user_name || note.seller_name || note.user?.name || note.seller || 'Desconocido';
 
-        const issuedAt = parseDocumentIssuedAt(note);
-        const isVoided = ['09', '11', '13'].includes(stateId);
-        
-        let parsedSeries = note.series || '';
-        let parsedNumber = String(note.number || '');
-        if (note.number_full && String(note.number_full).includes('-')) {
-          const parts = String(note.number_full).split('-');
-          parsedSeries = parts[0];
-          parsedNumber = parts[1];
-        } else if (note.identifier && String(note.identifier).includes('-')) {
-          const parts = String(note.identifier).split('-');
-          parsedSeries = parts[0];
-          parsedNumber = parts[1];
-        }
-
-        const sellerName = note.user_name || note.seller_name || note.user?.name || note.seller || 'Desconocido';
-
-        const [insertedSale] = await db.insert(sales).values({
-          companyId,
-          externalId: String(note.external_id || note.id),
-          documentTypeId: '80', // Codigo para Nota de Venta
+      const [insertedSale] = await db.insert(sales).values({
+        companyId,
+        externalId: String(note.external_id || note.id),
+        documentTypeId: '80',
+        series: parsedSeries,
+        number: parsedNumber,
+        total: note.total.toString(),
+        currency: note.currency_type_id || 'PEN',
+        sellerName,
+        customerName: note.customer_name || 'Cliente Varios',
+        issuedAt,
+        status: isVoided ? 'voided' : 'active',
+        rawJson: {
+          ...note,
+          establishment_id: note.seller?.establishment_id || note.establishment_id || null,
+          establishment_description: note.seller?.establishment?.description || note.establishment?.description || null,
+        },
+      }).onConflictDoUpdate({
+        target: [sales.companyId, sales.externalId],
+        set: {
           series: parsedSeries,
           number: parsedNumber,
           total: note.total.toString(),
-          currency: note.currency_type_id || 'PEN',
           sellerName,
           customerName: note.customer_name || 'Cliente Varios',
-          issuedAt,
           status: isVoided ? 'voided' : 'active',
+          issuedAt,
           rawJson: {
             ...note,
-            // Enriquecer con datos del establecimiento desde el seller
             establishment_id: note.seller?.establishment_id || note.establishment_id || null,
             establishment_description: note.seller?.establishment?.description || note.establishment?.description || null,
           },
-        }).onConflictDoUpdate({
-          target: [sales.companyId, sales.externalId],
-          set: {
-            series: parsedSeries,
-            number: parsedNumber,
+          syncedAt: new Date(),
+        },
+      }).returning({ id: sales.id });
+
+      if (insertedSale) {
+        await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
+
+        const noteItems = note.items || note.items_for_report || [];
+
+        if (Array.isArray(noteItems) && noteItems.length > 0) {
+          await db.insert(saleItems).values(
+            noteItems.map((item: any) => {
+              const itDesc = item.item?.description || item.description || 'Ítem';
+              const itUnit = item.item?.unit_type_id || item.unit_type_id || 'NIU';
+              const isService = itUnit === 'ZZ' || isServiceItem(itDesc);
+              return {
+                saleId: insertedSale.id,
+                description: itDesc,
+                quantity: (item.quantity || 1).toString(),
+                unitPrice: item.unit_price ? item.unit_price.toString() : (item.total || note.total).toString(),
+                total: item.total ? item.total.toString() : note.total.toString(),
+                category: isService ? '02' : '01',
+                unitType: itUnit || null,
+              };
+            })
+          );
+        } else {
+          const totalNum = parseFloat(note.total || '0') || 0;
+          const itemCategory = totalNum > 20 ? '02' : '01';
+          const itemDescription = itemCategory === '02'
+            ? `Servicio (S/. ${totalNum.toFixed(2)})`
+            : `Producto (S/. ${totalNum.toFixed(2)})`;
+
+          await db.insert(saleItems).values({
+            saleId: insertedSale.id,
+            description: itemDescription,
+            quantity: '1',
+            unitPrice: note.total.toString(),
             total: note.total.toString(),
-            sellerName,
-            customerName: note.customer_name || 'Cliente Varios',
-            status: isVoided ? 'voided' : 'active',
-            issuedAt,
-            syncedAt: new Date(),
-          },
-        }).returning({ id: sales.id });
-
-        if (insertedSale) {
-          // Primero borrar items previos
-          await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
-
-          // Intentar obtener los items detallados desde el record endpoint
-          let detailedItems: any[] | null = null;
-          try {
-            const detail = await fetchSaleNoteDetail(client, note.external_id);
-            if (detail && Array.isArray(detail.items)) {
-              detailedItems = detail.items;
-            }
-          } catch (err: any) {
-            // Ignorar fallas del record endpoint
-          }
-
-          if (detailedItems && detailedItems.length > 0) {
-            await db.insert(saleItems).values(
-              detailedItems.map(item => {
-                const itDesc = item.item?.description || item.description || 'Ítem';
-                const itUnit = item.item?.unit_type_id || item.unit_type_id || 'NIU';
-                const isService = itUnit === 'ZZ' || isServiceItem(itDesc);
-                return {
-                  saleId: insertedSale.id,
-                  description: itDesc,
-                  quantity: (item.quantity || 1).toString(),
-                  unitPrice: item.unit_price ? item.unit_price.toString() : (item.total || note.total).toString(),
-                  total: item.total ? item.total.toString() : note.total.toString(),
-                  category: isService ? '02' : '01',
-                  unitType: itUnit || null,
-                };
-              })
-            );
-          } else {
-            // Fallback genérico para Notas de Venta sin ítems detallados
-            const totalNum = parseFloat(note.total || '0') || 0;
-            const itemCategory = totalNum > 20 ? '02' : '01';
-            const itemDescription = itemCategory === '02'
-              ? `Servicio (S/. ${totalNum.toFixed(2)})`
-              : `Producto (S/. ${totalNum.toFixed(2)})`;
-
-            await db.insert(saleItems).values({
-              saleId: insertedSale.id,
-              description: itemDescription,
-              quantity: '1',
-              unitPrice: note.total.toString(),
-              total: note.total.toString(),
-              category: itemCategory,
-            });
-          }
+            category: itemCategory,
+          });
         }
 
-        if (insertedSale) {
-          // Borrar pagos anteriores
-          await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
+        await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
 
-          if (note.payments && note.payments.length > 0) {
-            await db.insert(salePayments).values(
-              note.payments.map((p: any) => ({
-                saleId: insertedSale.id,
-                paymentMethodId: getPaymentMethodId(p.payment_method_type?.description || p.description || 'Efectivo'),
-                amount: (p.payment || p.amount || note.total).toString(),
-                reference: p.reference || '',
-              }))
-            );
-          } else {
-            // Fallback a Efectivo (Cash - "01")
-            await db.insert(salePayments).values({
+        if (note.payments && note.payments.length > 0) {
+          await db.insert(salePayments).values(
+            note.payments.map((p: any) => ({
               saleId: insertedSale.id,
-              paymentMethodId: '01',
-              amount: note.total.toString(),
-              reference: 'Default Cash Payment (Synced NV)',
-            });
-          }
+              paymentMethodId: getPaymentMethodId(p.payment_method_type?.description || p.description || 'Efectivo'),
+              amount: (p.payment || p.amount || note.total).toString(),
+              reference: p.reference || '',
+            }))
+          );
+        } else {
+          await db.insert(salePayments).values({
+            saleId: insertedSale.id,
+            paymentMethodId: '01',
+            amount: note.total.toString(),
+            reference: 'Default Cash Payment (Synced NV)',
+          });
         }
 
         documentsSynced++;
