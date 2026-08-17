@@ -73,7 +73,7 @@ export const SalesPage: React.FC = () => {
   useEffect(() => {
     setHeader(
       'Detalle de Ventas',
-      'Cuadro estadístico de ingresos consolidado por sucursales, vendedores y métodos de pago.'
+      'Cuadro estadístico de ingresos consolidado por sucursales, usuarios y métodos de pago.'
     );
     return () => clearHeader();
   }, [companyId, dateStart, dateEnd, token]);
@@ -224,7 +224,7 @@ export const SalesPage: React.FC = () => {
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/60">
                 <th className="py-2.5 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest min-w-[200px]">
-                  Sucursal / Vendedor
+                  Sucursal / Usuario
                 </th>
                 {paymentMethods.map((m: any) => {
                   const descUpper = m.description.toUpperCase();

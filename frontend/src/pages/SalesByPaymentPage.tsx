@@ -69,7 +69,7 @@ export const SalesByPaymentPage: React.FC = () => {
       }
     },
     { header: 'Sucursal', key: 'company' },
-    { header: 'Vendedor', key: 'seller' },
+    { header: 'Usuario', key: 'seller' },
     { 
       header: 'Operaciones', 
       key: 'count',
@@ -101,7 +101,7 @@ export const SalesByPaymentPage: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <CreditCard className="text-primary" /> Medios de Pago por Sucursal y Vendedor
+          <CreditCard className="text-primary" /> Medios de Pago por Sucursal y Usuario
         </h2>
         <p className="text-xs text-slate-500 mt-1">
           Análisis multidimensional de cobros y distribución de fondos.
@@ -123,7 +123,7 @@ export const SalesByPaymentPage: React.FC = () => {
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar por sede, vendedor..."
+                placeholder="Buscar por sede, usuario..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="input pl-9 py-1.5 text-xs placeholder:text-slate-400"

@@ -8,7 +8,7 @@ import { Skeleton } from '../components/ui/Skeleton';
 
 const columns = [
   { 
-    header: 'Vendedor', 
+    header: 'Usuario', 
     key: 'name',
     render: (item: any) => <span className="font-semibold text-slate-800">{item.name || item.sellerName}</span>
   },
@@ -43,16 +43,16 @@ export const SalesBySellerPage: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
-          <Users className="text-primary" /> Ventas por Vendedor
+          <Users className="text-primary" /> Ventas por Usuario
         </h2>
-        <p className="text-sm text-neutral-500 mt-1">Rendimiento y ranking del equipo de ventas.</p>
+        <p className="text-sm text-neutral-500 mt-1">Rendimiento y ranking de usuarios registrados.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="lg:col-span-2">
           {isLoading ? <Skeleton variant="chart" /> : (
             <RankingBarChart 
-              title="Ranking de Vendedores" 
+              title="Ranking de Usuarios" 
               data={formattedChartData} 
             />
           )}
@@ -61,10 +61,10 @@ export const SalesBySellerPage: React.FC = () => {
 
       <div className="card">
         <div className="p-4  bg-neutral-50">
-          <h3 className="font-semibold text-neutral-900">Desglose por Vendedor</h3>
+          <h3 className="font-semibold text-neutral-900">Desglose por Usuario</h3>
         </div>
         <div className="p-4">
-          <DataTable title="Desglose por Vendedor" columns={columns} data={data || []} isLoading={isLoading} />
+          <DataTable title="Desglose por Usuario" columns={columns} data={data || []} isLoading={isLoading} />
         </div>
       </div>
     </div>

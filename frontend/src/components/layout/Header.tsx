@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({ setIsMobileOpen }) => {
     const path = location.pathname;
     if (path === '/') return 'Dashboard Principal';
     if (path.includes('sales')) return 'Ventas';
-    if (path.includes('sellers')) return 'Vendedores';
+    if (path.includes('sellers') || path.includes('vendedores')) return 'Usuarios';
     if (path.includes('companies')) return 'Empresas';
     if (path.includes('temporal')) return 'Análisis Temporal';
     if (path.includes('comparator')) return 'Comparador';
