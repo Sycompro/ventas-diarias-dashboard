@@ -36,6 +36,10 @@ export function DataTable<T>({
       );
     });
   }, [data, searchTerm]);
+
+  // Identify primary column (first one) and detail columns (rest)
+  const primaryCol = columns[0];
+  const detailCols = columns.slice(1);
   
   return (
     <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden flex flex-col">
@@ -47,7 +51,7 @@ export function DataTable<T>({
             <input
               type="text"
               placeholder="Buscar..."
-              className="pl-9 pr-4 py-2 text-sm rounded-lg focus:outline-none focus:-blue-500 focus:ring-1 focus:ring-blue-500 transition-shadow w-full sm:w-64"
+              className="pl-9 pr-4 py-2 text-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition-shadow w-full sm:w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -55,7 +59,8 @@ export function DataTable<T>({
         )}
       </div>
       
-      <div className="overflow-x-auto">
+      {/* ─── Desktop: Table ─── */}
+      <div className="overflow-x-auto hidden lg:block">
         <table className="w-full text-left">
           <thead className="bg-slate-100/50">
             <tr className="bg-slate-50/80">
@@ -69,7 +74,7 @@ export function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="">
+          <tbody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="even:bg-slate-50 hover:bg-slate-100/50 transition-colors">
@@ -77,7 +82,7 @@ export function DataTable<T>({
                 </tr>
               ))
             ) : filteredData.length === 0 ? (
-              <tr className="even:bg-slate-50 hover:bg-slate-100/50 transition-colors">
+              <tr>
                 <td colSpan={columns.length} className="py-12 text-center text-sm text-slate-500">
                   {emptyMessage}
                 </td>
@@ -96,6 +101,44 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
+
+      {/* ─── Mobile/Tablet: Card List ─── */}
+      <div className="lg:hidden">
+        {isLoading ? (
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))}
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div className="py-12 text-center text-sm text-slate-500">{emptyMessage}</div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {filteredData.map((row, i) => (
+              <div key={i} className="px-4 py-3.5 hover:bg-slate-50/60 transition-colors">
+                {/* Primary column (first col) rendered at full width */}
+                <div className="mb-2.5">
+                  {primaryCol.render ? primaryCol.render(row) : (row as any)[primaryCol.key]}
+                </div>
+                {/* Detail columns in a responsive grid */}
+                <div className="grid grid-cols-3 gap-x-3 gap-y-2.5 pl-12">
+                  {detailCols.map((col, idx) => (
+                    <div key={idx} className="min-w-0">
+                      <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 truncate">
+                        {col.header}
+                      </div>
+                      <div>
+                        {col.render ? col.render(row) : (row as any)[col.key]}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="px-5 py-3.5 bg-slate-50/50 flex items-center justify-between">
         <span className="text-xs text-slate-500">Mostrando {filteredData.length} registros</span>
         <div className="flex gap-1.5">
