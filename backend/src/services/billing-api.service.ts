@@ -56,12 +56,7 @@ export async function fetchDocuments(client: AxiosInstance, dateStart: string, d
   let hasMorePages = true;
 
   while (hasMorePages) {
-    const response = await client.get(`/documents/lists?page=${currentPage}`, {
-      params: {
-        date_start: dateStart,
-        date_end: dateEnd
-      }
-    });
+    const response = await client.get(`/documents/lists/${dateStart}/${dateEnd}?page=${currentPage}`);
     
     const { data, meta } = response.data;
     if (data && Array.isArray(data)) {
@@ -94,49 +89,8 @@ export async function testConnection(subdomain: string, token: string): Promise<
 }
 
 export async function fetchReportDocuments(client: AxiosInstance, dateStart: string, dateEnd: string): Promise<any[]> {
-  try {
-    const start = new Date(dateStart);
-    const end = new Date(dateEnd);
-    const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (diffDays <= 31) {
-      const response = await client.get('/reports/documents', {
-        params: { date_start: dateStart, date_end: dateEnd }
-      });
-      return Array.isArray(response.data) ? response.data : [];
-    }
-
-    // Dividir en bloques de 30 días para evitar timeouts en facturador
-    const allReportDocs: any[] = [];
-    let curStart = new Date(start);
-
-    while (curStart <= end) {
-      let curEnd = new Date(curStart);
-      curEnd.setDate(curEnd.getDate() + 29);
-      if (curEnd > end) curEnd = new Date(end);
-
-      const sStr = curStart.toISOString().split('T')[0];
-      const eStr = curEnd.toISOString().split('T')[0];
-
-      try {
-        const res = await client.get('/reports/documents', {
-          params: { date_start: sStr, date_end: eStr }
-        });
-        if (Array.isArray(res.data)) {
-          allReportDocs.push(...res.data);
-        }
-      } catch (e: any) {
-        console.warn(`[Report Documents Chunk] Warning fetching ${sStr} to ${eStr}:`, e.message);
-      }
-
-      curStart.setDate(curStart.getDate() + 30);
-    }
-
-    return allReportDocs;
-  } catch (error: any) {
-    console.error('❌ [Billing API Service] Error fetching report documents:', error.message);
-    return [];
-  }
+  // Obsoleto/Deprecated: Ya no se usa para evitar timeouts y obtener datos completos con establishment_id
+  return [];
 }
 
 export async function fetchSaleNotes(client: AxiosInstance, dateStart: string, dateEnd: string): Promise<any[]> {
@@ -146,12 +100,7 @@ export async function fetchSaleNotes(client: AxiosInstance, dateStart: string, d
 
   while (hasMorePages) {
     try {
-      const response = await client.get(`/sale-note/lists?page=${currentPage}`, {
-        params: {
-          date_start: dateStart,
-          date_end: dateEnd
-        }
-      });
+      const response = await client.get(`/sale-notes/lists/${dateStart}/${dateEnd}?page=${currentPage}`);
       
       const { data, meta } = response.data;
       if (data && Array.isArray(data)) {

@@ -98,30 +98,8 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
     const startDateStr = customStart || dateStart.toISOString().split('T')[0];
     const endDateStr = customEnd || dateEnd.toISOString().split('T')[0];
     
-    // Fetch documents list (main metadata)
+    // Fetch documents list (main metadata with items, payments, establishment_id)
     const documents = await fetchDocuments(client, startDateStr, endDateStr);
-    
-    // Fetch report documents (contains desgloses de pagos in PAGOS key)
-    const reportDocs = await fetchReportDocuments(client, startDateStr, endDateStr);
-    
-    // Build a map of key -> payments array
-    const paymentsLookup = new Map<string, any[]>();
-    for (const rd of reportDocs) {
-      const key = `${rd.document_type_id}_${rd.number}`;
-      if (rd.payments) {
-        if (Array.isArray(rd.payments.PAGOS) && rd.payments.PAGOS.length > 0) {
-          paymentsLookup.set(key, rd.payments.PAGOS);
-        } else if (Array.isArray(rd.payments.CUOTA) && rd.payments.CUOTA.length > 0) {
-          // Map cuotas as payments with description "Crédito"
-          paymentsLookup.set(key, rd.payments.CUOTA.map((c: any) => ({
-            description: c.description || 'Crédito',
-            reference: c.reference || '',
-            amount: c.amount,
-            symbol: c.symbol || 'S/'
-          })));
-        }
-      }
-    }
     
     // Helper to determine category: '02' for Service, '01' for Product
     const isServiceItem = (desc: string = ''): boolean => {
@@ -158,24 +136,16 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
       );
     };
 
-    // Pre-build metadata lookup map from documents list
-    const docMetaLookup = new Map<string, { issuedAt: Date; downloadXml?: string; items?: any[] }>();
-    for (const d of documents) {
-      const issuedAt = parseDocumentIssuedAt(d);
-      const k1 = `${d.document_type_id}_${d.number}`;
-      docMetaLookup.set(k1, { issuedAt, downloadXml: d.download_xml, items: d.items });
-      if (d.number) docMetaLookup.set(d.number, { issuedAt, downloadXml: d.download_xml, items: d.items });
-    }
-
-    // 1. Procesar TODOS los comprobantes históricos desde reportDocs (contiene el rango completo con impuestos y pagos)
-    const processedKeys = new Set<string>();
-
-    for (const rd of reportDocs) {
-      const docTypeId = String(rd.document_type_id || '03');
-      const docNumber = String(rd.number || '');
-      const docKey = `${docTypeId}_${docNumber}`;
-      processedKeys.add(docKey);
-
+    // Procesar todos los documentos oficiales
+    for (const doc of documents) {
+      const stateId = String(doc.state_type_id);
+      if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
+      
+      const docTypeId = String(doc.document_type_id || '03');
+      const docNumber = String(doc.number || '');
+      const issuedAt = parseDocumentIssuedAt(doc);
+      const isVoided = ['09', '11', '13'].includes(stateId);
+      
       let parsedSeries = '';
       let parsedNumber = '';
       if (docNumber && docNumber.includes('-')) {
@@ -183,48 +153,25 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
         parsedSeries = parts[0];
         parsedNumber = parts[1];
       } else {
-        parsedSeries = rd.series || '';
+        parsedSeries = doc.series || '';
         parsedNumber = docNumber;
       }
+      
+      const docAny = doc as any;
+      const sellerName = doc.user_name || docAny.seller_name || docAny.user?.name || docAny.seller || 'Desconocido';
+      const customerName = doc.customer_name || docAny.customer_name || docAny.name_customer || 'Cliente Varios';
+      const totalAmount = parseFloat(doc.total as any || 0).toString();
 
-      const isVoided = rd.status === 'Anulado' || ['09', '11', '13'].includes(String(rd.state_type_id));
-      const sellerName = rd.user || rd.user_name || rd.seller_name || rd.seller || 'Desconocido';
-      const customerName = rd.name_customer || rd.customer_name || 'Cliente Varios';
-      const totalAmount = parseFloat(rd.total || 0).toString();
-
-      // Resolver hora real precisa
-      let issuedAt = new Date();
-      const metaMatch = docMetaLookup.get(docKey) || docMetaLookup.get(docNumber);
-      if (metaMatch?.issuedAt) {
-        issuedAt = metaMatch.issuedAt;
-      } else if (rd.created_at) {
-        issuedAt = parseDocumentIssuedAt(rd);
-      } else if (rd.time_of_issue && rd.date_of_issue) {
-        issuedAt = new Date(`${rd.date_of_issue}T${rd.time_of_issue}-05:00`);
-      } else if (rd.date_of_issue) {
-        // Distribución horaria realista en horario comercial (8 AM a 9 PM) basada en correlativo
-        let hash = 0;
-        for (let i = 0; i < docNumber.length; i++) hash = (hash * 31 + docNumber.charCodeAt(i)) & 0xffffffff;
-        const hour = 8 + (Math.abs(hash) % 14);
-        const min = (Math.abs(hash) >> 4) % 60;
-        const hourStr = String(hour).padStart(2, '0');
-        const minStr = String(min).padStart(2, '0');
-        issuedAt = new Date(`${rd.date_of_issue}T${hourStr}:${minStr}:00-05:00`);
-      }
-
+      // Guardar el establecimiento real en rawJson
       const rawJson = {
-        ...rd,
-        total_taxed: rd.total_taxed,
-        total_igv: rd.total_igv,
-        total_exonerated: rd.total_exonerated,
-        total_unaffected: rd.total_unaffected,
-        total: rd.total,
+        ...doc,
+        establishment_id: docAny.establishment_id || docAny.establishment?.id || null,
         user_name: sellerName,
         customer_name: customerName,
       };
-
-      const externalId = rd.external_id ? String(rd.external_id) : `rep_${docTypeId}_${docNumber}`;
-
+      
+      const externalId = doc.external_id ? String(doc.external_id) : `doc_${docTypeId}_${docNumber}`;
+      
       const [insertedSale] = await db.insert(sales).values({
         companyId,
         externalId,
@@ -232,7 +179,7 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
         series: parsedSeries,
         number: parsedNumber,
         total: totalAmount,
-        currency: rd.currency_type_id || 'PEN',
+        currency: docAny.currency_type_id || 'PEN',
         sellerName,
         customerName,
         issuedAt,
@@ -252,23 +199,18 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
           syncedAt: new Date(),
         },
       }).returning({ id: sales.id });
-
+      
       if (insertedSale) {
-        // Clasificación inteligente y precisa de Productos vs Servicios
-        const totalNum = parseFloat(totalAmount) || 0;
-        let itemCategory = '02'; // '02' = Servicio, '01' = Producto
-        let itemDescription = 'Servicio / Membresía';
-
-        // 1. Si vinieron items explícitos en docMetaLookup
-        const metaMatch = docMetaLookup.get(docKey) || docMetaLookup.get(docNumber);
-        if (metaMatch?.items && Array.isArray(metaMatch.items) && metaMatch.items.length > 0) {
-          await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
-          for (const rawItem of metaMatch.items) {
-            const itDesc = rawItem.item?.description || rawItem.description || 'Ítem';
-            const itUnit = rawItem.item?.unit_type_id || rawItem.unit_type_id || 'NIU';
-            const itQty = (rawItem.quantity || 1).toString();
-            const itPrice = (rawItem.unit_price || totalAmount).toString();
-            const itTotal = (rawItem.total || totalAmount).toString();
+        // 1. Items
+        await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
+        if (docAny.items && Array.isArray(docAny.items) && docAny.items.length > 0) {
+          for (const rawItem of docAny.items) {
+            const rawItemAny = rawItem as any;
+            const itDesc = rawItemAny.item?.description || rawItemAny.description || 'Ítem';
+            const itUnit = rawItemAny.item?.unit_type_id || rawItemAny.unit_type_id || 'NIU';
+            const itQty = (rawItemAny.quantity || 1).toString();
+            const itPrice = (rawItemAny.unit_price || rawItemAny.unit_value || totalAmount).toString();
+            const itTotal = (rawItemAny.total || totalAmount).toString();
             
             const isService = itUnit === 'ZZ' || isServiceItem(itDesc);
             const cat = isService ? '02' : '01';
@@ -283,9 +225,12 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
             });
           }
         } else {
-          // 2. Si no hay líneas de ítems detalladas en el resumen, clasificar por monto y reglas de negocio:
+          // Fallback inteligente para clasificar por negocio
+          const totalNum = parseFloat(totalAmount) || 0;
+          let itemCategory = '02';
+          let itemDescription = 'Servicio General';
+
           const isGymOrServiceCompany = company.subdomain?.toLowerCase().includes('gym') || company.name?.toLowerCase().includes('gym');
-          
           if (isGymOrServiceCompany) {
             if (totalNum === 8.0) {
               itemCategory = '02';
@@ -306,7 +251,6 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
               itemCategory = '02';
               itemDescription = `Rutina / Membresía (S/. ${totalNum.toFixed(2)})`;
             } else {
-              // Montos menores a S/. 25 (excepto 8.0) corresponden a bebidas, aguas, energizantes y suplementos
               itemCategory = '01';
               if (totalNum === 1.5 || totalNum === 2.0) itemDescription = 'Agua Mineral San Carlos';
               else if (totalNum === 2.5) itemDescription = 'Gatorade / Agua San Luis';
@@ -322,7 +266,6 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
             itemDescription = itemCategory === '02' ? 'Servicio General' : 'Venta de Producto / Mercadería';
           }
 
-          await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
           await db.insert(saleItems).values({
             saleId: insertedSale.id,
             description: itemDescription,
@@ -333,15 +276,23 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
           });
         }
 
-        // Payments
+        // 2. Payments
         await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
-        const rawPayments = rd.payments?.PAGOS || rd.payments?.CUOTA || [];
-        if (Array.isArray(rawPayments) && rawPayments.length > 0) {
+        
+        let pList: any[] = [];
+        const rawPayments = docAny.payments?.PAGOS || docAny.payments?.CUOTA || docAny.payments || [];
+        if (Array.isArray(rawPayments)) {
+          pList = rawPayments;
+        } else if (rawPayments && typeof rawPayments === 'object') {
+          pList = Array.isArray(rawPayments.PAGOS) ? rawPayments.PAGOS : (Array.isArray(rawPayments.CUOTA) ? rawPayments.CUOTA : []);
+        }
+
+        if (pList.length > 0) {
           await db.insert(salePayments).values(
-            rawPayments.map((p: any) => ({
+            pList.map((p: any) => ({
               saleId: insertedSale.id,
-              paymentMethodId: getPaymentMethodId(p.description || 'Efectivo'),
-              amount: (p.amount || totalAmount).toString(),
+              paymentMethodId: getPaymentMethodId(p.description || p.payment_method_type?.description || 'Efectivo'),
+              amount: (p.amount || p.payment || totalAmount).toString(),
               reference: p.reference || '',
             }))
           );
@@ -353,70 +304,7 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
             reference: 'Default Cash Payment (Synced)',
           });
         }
-      }
-      documentsSynced++;
-    }
-
-    // 2. Procesar documentos adicionales de la lista general (para enriquecer XML y items)
-    for (const doc of documents) {
-      const stateId = String(doc.state_type_id);
-      if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
-      
-      const docKey = `${doc.document_type_id}_${doc.number}`;
-      const issuedAt = parseDocumentIssuedAt(doc);
-      const isVoided = ['09', '11', '13'].includes(stateId);
-      
-      let parsedSeries = '';
-      let parsedNumber = '';
-      if (doc.number && doc.number.includes('-')) {
-        const parts = doc.number.split('-');
-        parsedSeries = parts[0];
-        parsedNumber = parts[1];
-      } else {
-        parsedSeries = doc.series || '';
-        parsedNumber = doc.number || '';
-      }
-      
-      const docAny = doc as any;
-      const sellerName = doc.user_name || docAny.seller_name || docAny.user?.name || docAny.seller || 'Desconocido';
-      
-      const [insertedSale] = await db.insert(sales).values({
-        companyId,
-        externalId: String(doc.external_id || doc.id),
-        documentTypeId: doc.document_type_id,
-        series: parsedSeries,
-        number: parsedNumber,
-        total: doc.total.toString(),
-        currency: 'PEN',
-        sellerName,
-        customerName: doc.customer_name || 'Cliente Varios',
-        issuedAt,
-        status: isVoided ? 'voided' : 'active',
-        rawJson: doc,
-      }).onConflictDoUpdate({
-        target: [sales.companyId, sales.externalId],
-        set: {
-          series: parsedSeries,
-          number: parsedNumber,
-          total: doc.total.toString(),
-          sellerName,
-          customerName: doc.customer_name || 'Cliente Varios',
-          status: isVoided ? 'voided' : 'active',
-          issuedAt,
-          rawJson: doc,
-          syncedAt: new Date(),
-        },
-      }).returning({ id: sales.id });
-      
-      if (insertedSale && !processedKeys.has(docKey)) {
-        // Si no vino en reportDocs, insertar pagos por defecto
-        await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
-        await db.insert(salePayments).values({
-          saleId: insertedSale.id,
-          paymentMethodId: '01',
-          amount: doc.total.toString(),
-          reference: 'Default Cash Payment (Synced)',
-        });
+        
         documentsSynced++;
       }
     }
@@ -545,7 +433,7 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
           await db.insert(salePayments).values(
             note.payments.map((p: any) => ({
               saleId: insertedSale.id,
-              paymentMethodId: p.payment_method_type_id || '01',
+              paymentMethodId: getPaymentMethodId(p.payment_method_type?.description || p.description || 'Efectivo'),
               amount: (p.payment || p.amount || note.total).toString(),
               reference: p.reference || '',
             }))

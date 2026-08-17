@@ -16,41 +16,7 @@ import {
 } from '../services/branch-resolver.service.js';
 import axios from 'axios';
 import https from 'https';
-
 const router = Router();
-router.get('/temp-debug-companies', async (req, res) => {
-  try {
-    const list = await sqlClient`SELECT id, name, subdomain FROM companies`;
-    res.json(list);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/temp-debug-gymbra', async (req, res) => {
-  try {
-    const gymbraId = '51089e80-446d-461c-ae37-1518381eb051';
-    const config = await getCompanyBillingConfig(gymbraId);
-    const branches = await getCompanyBranches(gymbraId);
-
-    const sampleNote = await sqlClient`
-      SELECT id, series, number, raw_json
-      FROM sales
-      WHERE company_id = ${gymbraId} AND document_type_id = '80' AND status = 'active'
-      LIMIT 1
-    `;
-
-    res.json({
-      officialEstablishments: config.establishments,
-      officialSeries: config.series,
-      branches,
-      sampleNote
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message, stack: err.stack });
-  }
-});
-
 router.use(authenticate);
 
 const parseDateRange = (req: any) => {
