@@ -68,6 +68,20 @@ router.get('/list-tokens', async (req, res) => {
   }
 });
 
+router.get('/list-sync-logs', async (req, res) => {
+  try {
+    const list = await sqlClient`
+      SELECT id, status, documents_synced, error_message, started_at, finished_at 
+      FROM sync_logs 
+      ORDER BY started_at DESC 
+      LIMIT 10
+    `;
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/verify-distribution', async (req, res) => {
   try {
     const { companyId } = parseDateRange(req);

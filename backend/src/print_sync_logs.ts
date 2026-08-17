@@ -13,14 +13,14 @@ async function main() {
     const { accessToken } = loginRes.data;
     console.log("Logged in successfully.");
     
-    console.log("2. Querying list-tokens endpoint...");
-    const res = await axios.get(`${backendUrl}/api/sales/list-tokens`, {
+    console.log("2. Querying list-sync-logs endpoint...");
+    const res = await axios.get(`${backendUrl}/api/sales/list-sync-logs`, {
       headers: {
         Authorization: `Bearer ${accessToken}`
       }
     });
     
-    console.log("\n--- LIST TOKENS RESPONSE ---");
+    console.log("\n--- LIST SYNC LOGS RESPONSE ---");
     console.log(JSON.stringify(res.data, null, 2));
     
   } catch (err: any) {

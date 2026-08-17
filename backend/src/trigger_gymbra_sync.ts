@@ -7,8 +7,8 @@ async function main() {
   try {
     console.log("1. Logging in...");
     const loginRes = await axios.post(`${backendUrl}/api/auth/login`, {
-      subdomain: 'autefsaceirl',
-      apiToken: 'MB8NwXxYh938o7iaCqZvcWGh9sv3gyy0BbvVCf9YIrdX8Kti1k'
+      subdomain: 'gymbra',
+      apiToken: 'cqDCgshoLx8trC68n66XutHUGl6yKmu4HTUAiLemjfThNwZqEJ'
     });
     
     const { accessToken } = loginRes.data;
