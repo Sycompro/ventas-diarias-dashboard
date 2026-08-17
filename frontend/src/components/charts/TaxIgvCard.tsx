@@ -49,7 +49,7 @@ export const TaxIgvCard: React.FC<TaxIgvCardProps> = ({ taxes, nonDeclaredAmount
             <ShieldCheck size={12} className="text-emerald-500" />
           </h4>
           <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider block mt-1.5 leading-none">
-            SUNAT 18%
+            {taxed > 0 ? `SUNAT ${(igv / taxed * 100).toFixed(0)}%` : 'SUNAT'}
           </span>
         </div>
       </div>
