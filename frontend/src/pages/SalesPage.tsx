@@ -23,10 +23,9 @@ import { HourlySalesAnalysis } from '../components/charts/HourlySalesAnalysis';
 import { TaxIgvCard } from '../components/charts/TaxIgvCard';
 import { formatCurrency } from '../utils/formatters';
 import { useAuthStore } from '../hooks/useAuth';
-import axios from 'axios';
+import api, { companyService } from '../services/api';
 import { useHeaderStore } from '../hooks/useHeader';
 import { useQueryClient } from '@tanstack/react-query';
-import { companyService } from '../services/api';
 
 export const SalesPage: React.FC = () => {
   const { companyId, dateStart, dateEnd } = useFilters();
@@ -52,12 +51,11 @@ export const SalesPage: React.FC = () => {
 
   const handleExport = () => {
     if (!companyId) return;
-    axios({
-      url: `/api/reports/excel`,
+    api({
+      url: `/reports/excel`,
       method: 'GET',
       params: { companyId, dateStart, dateEnd },
-      responseType: 'blob',
-      headers: { Authorization: `Bearer ${token}` }
+      responseType: 'blob'
     }).then((response) => {
       const href = URL.createObjectURL(response.data);
       const link = document.createElement('a');

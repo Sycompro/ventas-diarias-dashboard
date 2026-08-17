@@ -6,8 +6,7 @@ import { es } from 'date-fns/locale';
 import { useFilters } from '../hooks/useFilters';
 import { useAuthStore } from '../hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-import { companyService } from '../services/api';
+import api, { companyService } from '../services/api';
 import { GlobalFilters } from '../components/filters/GlobalFilters';
 import { useHeaderStore } from '../hooks/useHeader';
 
@@ -20,12 +19,11 @@ export const DashboardPage: React.FC = () => {
 
   const handleExport = () => {
     if (!companyId) return;
-    axios({
-      url: `/api/reports/excel`,
+    api({
+      url: `/reports/excel`,
       method: 'GET',
       params: { companyId, dateStart, dateEnd },
-      responseType: 'blob',
-      headers: { Authorization: `Bearer ${token}` }
+      responseType: 'blob'
     }).then((response) => {
       const href = URL.createObjectURL(response.data);
       const link = document.createElement('a');

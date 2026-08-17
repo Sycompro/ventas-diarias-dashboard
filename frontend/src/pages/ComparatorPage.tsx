@@ -4,10 +4,9 @@ import { ComparisonChart } from '../components/charts/ComparisonChart';
 import { DataTable } from '../components/ui/DataTable';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import { useFilters } from '../hooks/useFilters';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { salesService } from '../services/api';
+import api, { salesService } from '../services/api';
 import { useAuthStore } from '../hooks/useAuth';
 import { CustomDatePicker } from '../components/ui/CustomDatePicker';
 
@@ -28,9 +27,8 @@ export const ComparatorPage: React.FC = () => {
   const { data: compareData, isLoading: loadingCompare } = useQuery({
     queryKey: ['compare-periods', companyId, p1Start, p1End, p2Start, p2End],
     queryFn: async () => {
-      const { data } = await axios.get('/api/analytics/compare', {
-        params: { companyId, p1Start, p1End, p2Start, p2End },
-        headers: { Authorization: `Bearer ${token}` }
+      const { data } = await api.get('/analytics/compare', {
+        params: { companyId, p1Start, p1End, p2Start, p2End }
       });
       return data;
     },
