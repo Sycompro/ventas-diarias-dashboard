@@ -26,7 +26,24 @@ router.get('/debug-june', async (req, res) => {
     const dateStart = '2026-06-01';
     const dateEnd = '2026-06-30';
     const metrics = await getDashboardMetrics(companyId, dateStart, dateEnd, null, null);
-    res.json(metrics.salesBySeller);
+    
+    const docTypesInJune = await sqlClient`
+      SELECT 
+        document_type_id, 
+        count(*)::int as count, 
+        sum(total::numeric) as total
+      FROM sales
+      WHERE status = 'active' 
+        AND company_id = '51089e80-446d-461c-ae37-1518381eb051'
+        AND (issued_at AT TIME ZONE 'America/Lima')::date >= '2026-06-01'::date
+        AND (issued_at AT TIME ZONE 'America/Lima')::date <= '2026-06-30'::date
+      GROUP BY document_type_id
+    `;
+
+    res.json({
+      salesBySeller: metrics.salesBySeller,
+      docTypesInJune
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
