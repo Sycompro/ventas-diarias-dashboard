@@ -160,8 +160,9 @@ const mapBackendMetricsToFrontend = (data: any, filters: any): DashboardMetrics 
 };
 
 const queryOptions = {
-  staleTime: 2 * 60 * 1000, // 2 minutes
-  refetchInterval: 3 * 60 * 1000, // 3 minutes
+  staleTime: 5 * 1000, // 5 segundos para actualización instantánea
+  refetchInterval: 15 * 1000, // Auto-refresco cada 15 segundos en tiempo real
+  refetchOnWindowFocus: true, // Refrescar inmediatamente cuando el usuario enfoca la pestaña
 };
 
 export const useDashboardMetrics = () => {
