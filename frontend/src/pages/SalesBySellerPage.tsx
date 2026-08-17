@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, 
   Trophy, 
@@ -18,9 +18,20 @@ import { useSalesBySeller } from '../hooks/useSalesMetrics';
 import { DataTable } from '../components/ui/DataTable';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 import { Skeleton } from '../components/ui/Skeleton';
+import { useHeaderStore } from '../hooks/useHeader';
 
 export const SalesBySellerPage: React.FC = () => {
   const { data, isLoading } = useSalesBySeller();
+  const setHeader = useHeaderStore((state: any) => state.setHeader);
+  const clearHeader = useHeaderStore((state: any) => state.clearHeader);
+
+  useEffect(() => {
+    setHeader(
+      'Ventas por Usuario',
+      'Análisis del rendimiento y productividad de los vendedores registrados.'
+    );
+    return () => clearHeader();
+  }, []);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'total' | 'count' | 'avgTicket'>('total');
@@ -154,16 +165,6 @@ export const SalesBySellerPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Title */}
-      <div>
-        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <Users className="text-primary" /> Ventas por Usuario
-        </h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Análisis del rendimiento y productividad de los vendedores registrados.
-        </p>
-      </div>
-
       {/* KPI Cards */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
