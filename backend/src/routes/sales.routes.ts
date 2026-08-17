@@ -247,27 +247,38 @@ router.get('/pivot', async (req, res) => {
     const config = companyId ? await getCompanyBillingConfig(companyId) : { paymentMethods: [] };
     const seriesFilter = companyId ? await resolveBranchSeries(companyId, branch) : null;
     
-    let conditions = and(
-      companyId ? eq(sales.companyId, companyId) : undefined,
-      eq(sales.status, 'active'),
-      gte(sales.issuedAt, new Date(dateStart + 'T00:00:00-05:00')),
-      lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999-05:00'))
-    );
-    
-    if (seriesFilter && seriesFilter.length > 0) {
-      conditions = and(conditions, inArray(sales.series, seriesFilter));
-    }
-    
-    if (seller) {
-      conditions = and(conditions, eq(sales.sellerName, seller));
-    }
+    const hasSeriesFilter = seriesFilter !== null && seriesFilter.length > 0;
+    const hasSellerFilter = Boolean(seller && seller.trim() !== '');
+    const hasCompanyFilter = Boolean(companyId);
 
-    const salesList = await db.query.sales.findMany({
-      where: conditions,
-      with: {
-        payments: true
-      }
-    });
+    const seriesArray = seriesFilter || [];
+    const sellerName = seller || '';
+    const cId = companyId || '';
+
+    // Consultar las ventas utilizando exactamente el mismo filtro de huso horario
+    const salesList = await sqlClient`
+      SELECT 
+        s.id,
+        s.series,
+        s.number,
+        s.total,
+        s.seller_name as "sellerName",
+        COALESCE(
+          (
+            SELECT json_agg(json_build_object('amount', p.amount, 'paymentMethodId', p.payment_method_id))
+            FROM sale_payments p
+            WHERE p.sale_id = s.id
+          ),
+          '[]'::json
+        ) as payments
+      FROM sales s
+      WHERE s.status = 'active'
+        AND (${!hasCompanyFilter} OR s.company_id = ${cId})
+        AND (${!hasSeriesFilter} OR s.series = ANY(${seriesArray}))
+        AND (${!hasSellerFilter} OR s.seller_name = ${sellerName})
+        AND (s.issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+        AND (s.issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
+    `;
 
     // Payment methods activos
     const activePaymentMethods = (config.paymentMethods || []).map((m: any) => ({
@@ -294,8 +305,12 @@ router.get('/pivot', async (req, res) => {
       total: number;
     }> = {};
 
-    // Inicializar todas las sucursales oficiales de la empresa
-    for (const b of branches) {
+    // Si hay un filtro de sucursal activo, solo inicializamos la sucursal seleccionada
+    const filteredBranches = branch && branch !== 'all'
+      ? branches.filter(b => b.id === String(branch) || b.name.toLowerCase() === branch.toLowerCase())
+      : branches;
+
+    for (const b of filteredBranches) {
       pivotMap[b.name] = {
         sede: b.name,
         sucursal: b.name,
@@ -317,17 +332,9 @@ router.get('/pivot', async (req, res) => {
       const branchName = getBranchNameForSeries(seriesName, branches);
       const sellerName = sale.sellerName || 'Sin Vendedor';
 
+      // Si no fue inicializada (debido al filtro de sucursal), la ignoramos
       if (!pivotMap[branchName]) {
-        pivotMap[branchName] = {
-          sede: branchName,
-          sucursal: branchName,
-          payments: {},
-          vendedores: {},
-          total: 0
-        };
-        activePaymentMethods.forEach((m: any) => {
-          pivotMap[branchName].payments[m.id] = 0;
-        });
+        continue;
       }
 
       if (!pivotMap[branchName].vendedores[sellerName]) {
@@ -404,25 +411,40 @@ router.get('/documents', async (req, res) => {
     
     const seriesFilter = companyId ? await resolveBranchSeries(companyId, branch) : null;
     
-    let conditions = and(
-      companyId ? eq(sales.companyId, companyId) : undefined,
-      gte(sales.issuedAt, new Date(dateStart + 'T00:00:00-05:00')),
-      lte(sales.issuedAt, new Date(dateEnd + 'T23:59:59.999-05:00'))
-    );
-    
-    if (seriesFilter && seriesFilter.length > 0) {
-      conditions = and(conditions, inArray(sales.series, seriesFilter));
-    }
-    if (seller) {
-      conditions = and(conditions, eq(sales.sellerName, seller));
-    }
-    
-    const result = await db.query.sales.findMany({
-      where: conditions,
-      limit,
-      offset,
-      orderBy: (sales, { desc }) => [desc(sales.issuedAt)]
-    });
+    const hasSeriesFilter = seriesFilter !== null && seriesFilter.length > 0;
+    const hasSellerFilter = Boolean(seller && seller.trim() !== '');
+    const hasCompanyFilter = Boolean(companyId);
+
+    const seriesArray = seriesFilter || [];
+    const sellerName = seller || '';
+    const cId = companyId || '';
+
+    const result = await sqlClient`
+      SELECT 
+        id,
+        company_id as "companyId",
+        external_id as "externalId",
+        document_type_id as "documentTypeId",
+        series,
+        number,
+        total,
+        currency,
+        seller_name as "sellerName",
+        customer_name as "customerName",
+        issued_at as "issuedAt",
+        status,
+        synced_at as "syncedAt"
+      FROM sales
+      WHERE status = 'active'
+        AND (${!hasCompanyFilter} OR company_id = ${cId})
+        AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
+        AND (${!hasSellerFilter} OR seller_name = ${sellerName})
+        AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+        AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
+      ORDER BY issued_at DESC
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
     
     res.json(result);
   } catch (err: any) {
