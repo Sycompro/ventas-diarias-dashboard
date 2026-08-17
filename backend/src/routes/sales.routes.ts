@@ -8,6 +8,7 @@ import { eq, and, sql, gte, lte, inArray } from 'drizzle-orm';
 import { redis } from '../config/redis.js';
 import { decrypt } from '../services/crypto.service.js';
 import { createBillingClient, fetchDocuments } from '../services/billing-api.service.js';
+import { syncCompany } from '../services/sync.service.js';
 import { 
   getCompanyBillingConfig, 
   getCompanyBranches, 
@@ -16,6 +17,7 @@ import {
 } from '../services/branch-resolver.service.js';
 import axios from 'axios';
 import https from 'https';
+
 const router = Router();
 router.use(authenticate);
 
@@ -29,9 +31,49 @@ const parseDateRange = (req: any) => {
   return { companyId, dateStart, dateEnd };
 };
 
+const syncInProgress: Record<string, Promise<any>> = {};
+
+/**
+ * Sincroniza automáticamente en tiempo real los comprobantes del rango de fechas
+ * solicitado consultando la API oficial del Facturador, sin necesidad de botones manuales.
+ */
+async function ensureDateRangeSynced(companyId?: string, dateStart?: string, dateEnd?: string) {
+  if (!companyId || !dateStart || !dateEnd) return;
+  
+  const cacheKey = `sync_range:${companyId}:${dateStart}:${dateEnd}`;
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) return;
+  } catch {}
+
+  const memKey = `${companyId}:${dateStart}:${dateEnd}`;
+  if (memKey in syncInProgress) {
+    await syncInProgress[memKey];
+    return;
+  }
+
+  const syncPromise = (async () => {
+    try {
+      console.log(`[Auto-Sync] Sincronizando datos de API oficial para ${companyId} del ${dateStart} al ${dateEnd}...`);
+      await syncCompany(companyId, 0, dateStart, dateEnd);
+      try {
+        await redis.setex(cacheKey, 180, '1'); // 3 minutos de caché
+      } catch {}
+    } catch (err: any) {
+      console.warn(`[Auto-Sync] Error durante sincronización automática:`, err.message);
+    } finally {
+      delete syncInProgress[memKey];
+    }
+  })();
+
+  syncInProgress[memKey] = syncPromise;
+  await syncPromise;
+}
+
 router.get('/metrics', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    await ensureDateRangeSynced(companyId, dateStart, dateEnd);
     const branch = req.query.branch as string;
     const seller = req.query.seller as string;
     const data = await getDashboardMetrics(companyId, dateStart, dateEnd, branch, seller);
@@ -42,104 +84,10 @@ router.get('/metrics', async (req, res) => {
   }
 });
 
-router.get('/list-companies', async (req, res) => {
-  try {
-    const list = await sqlClient`SELECT id, name, subdomain FROM companies`;
-    res.json(list);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/list-tokens', async (req, res) => {
-  try {
-    const list = await sqlClient`SELECT id, name, subdomain, api_token_encrypted, api_token_iv, api_token_tag FROM companies`;
-    const result = list.map((c: any) => {
-      try {
-        const decrypted = decrypt(c.api_token_encrypted, c.api_token_iv, c.api_token_tag);
-        return { id: c.id, name: c.name, subdomain: c.subdomain, apiToken: decrypted };
-      } catch (err) {
-        return { id: c.id, name: c.name, subdomain: c.subdomain, error: 'Decryption failed' };
-      }
-    });
-    res.json(result);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/list-sync-logs', async (req, res) => {
-  try {
-    const list = await sqlClient`
-      SELECT id, status, documents_synced, error_message, started_at, finished_at 
-      FROM sync_logs 
-      ORDER BY started_at DESC 
-      LIMIT 10
-    `;
-    res.json(list);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/verify-distribution', async (req, res) => {
-  try {
-    const { companyId } = parseDateRange(req);
-    const salesSample = await sqlClient`
-      SELECT 
-        series, 
-        number, 
-        seller_name, 
-        total,
-        issued_at,
-        COALESCE(
-          (raw_json->>'establishment_id')::int,
-          (raw_json->'establishment'->>'id')::int,
-          (raw_json->>'establishmentId')::int
-        ) as est_id
-      FROM sales
-      WHERE company_id = ${companyId} AND series IS NOT NULL
-      ORDER BY id DESC
-      LIMIT 10
-    `;
-    const branchDistribution = await sqlClient`
-      SELECT 
-        series,
-        COALESCE(
-          (raw_json->>'establishment_id')::int,
-          (raw_json->'establishment'->>'id')::int,
-          (raw_json->>'establishmentId')::int
-        ) as est_id,
-        COUNT(*)::int as count_sales,
-        SUM(total::numeric)::numeric as total_amount
-      FROM sales
-      WHERE company_id = ${companyId} AND series IS NOT NULL AND status = 'active'
-      GROUP BY series, est_id
-      ORDER BY est_id, series
-    `;
-    const sellerDist = await sqlClient`
-      SELECT 
-        COALESCE(
-          (raw_json->>'establishment_id')::int,
-          (raw_json->'establishment'->>'id')::int,
-          (raw_json->>'establishmentId')::int
-        ) as est_id,
-        seller_name,
-        COUNT(*)::int as count_sales
-      FROM sales
-      WHERE company_id = ${companyId} AND series IS NOT NULL AND status = 'active'
-      GROUP BY est_id, seller_name
-      ORDER BY est_id, count_sales DESC
-    `;
-    res.json({ salesSample, branchDistribution, sellerDist });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 router.get('/trend', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    await ensureDateRangeSynced(companyId, dateStart, dateEnd);
     const branch = req.query.branch as string;
     const seller = req.query.seller as string;
     const granularity = (req.query.granularity as any) || 'day';
@@ -154,6 +102,7 @@ router.get('/trend', async (req, res) => {
 router.get('/by-hour', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    await ensureDateRangeSynced(companyId, dateStart, dateEnd);
     const branch = req.query.branch as string;
     const seller = req.query.seller as string;
     const data = await getSalesByHour(companyId, dateStart, dateEnd, branch, seller);
@@ -167,6 +116,7 @@ router.get('/by-hour', async (req, res) => {
 router.get('/by-payment-detailed', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    await ensureDateRangeSynced(companyId, dateStart, dateEnd);
     const branch = req.query.branch as string;
     const seller = req.query.seller as string;
 
@@ -239,6 +189,7 @@ router.get('/by-payment-detailed', async (req, res) => {
 router.get('/by-seller', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    await ensureDateRangeSynced(companyId, dateStart, dateEnd);
     const branch = req.query.branch as string;
     const data = await getRankingBySeller(companyId, dateStart, dateEnd, branch);
     res.json(data);
@@ -251,6 +202,7 @@ router.get('/by-seller', async (req, res) => {
 router.get('/pivot', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    await ensureDateRangeSynced(companyId, dateStart, dateEnd);
     const branch = req.query.branch as string;
     const seller = req.query.seller as string;
     
@@ -407,6 +359,7 @@ router.get('/pivot', async (req, res) => {
 router.get('/documents', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
+    await ensureDateRangeSynced(companyId, dateStart, dateEnd);
     const limit = parseInt(req.query.limit as string || '50', 10);
     const offset = parseInt(req.query.offset as string || '0', 10);
     const branch = req.query.branch as string;

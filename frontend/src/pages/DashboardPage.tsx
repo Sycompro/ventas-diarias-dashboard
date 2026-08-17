@@ -18,22 +18,6 @@ export const DashboardPage: React.FC = () => {
   const setHeader = useHeaderStore((state: any) => state.setHeader);
   const clearHeader = useHeaderStore((state: any) => state.clearHeader);
 
-  const queryClient = useQueryClient();
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  const handleSync = async () => {
-    if (!companyId) return;
-    setIsSyncing(true);
-    try {
-      await companyService.sync(companyId);
-      queryClient.invalidateQueries();
-    } catch (err) {
-      console.error("Error triggering sync:", err);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleExport = () => {
     if (!companyId) return;
     axios({
@@ -64,14 +48,6 @@ export const DashboardPage: React.FC = () => {
       today,
       <>
         <button 
-          onClick={handleSync}
-          disabled={isSyncing}
-          className="inline-flex items-center gap-1 py-1 px-2 bg-white border border-slate-200 text-slate-700 text-[10px] sm:text-[11px] font-semibold rounded-lg hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200"
-        >
-          <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
-          {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
-        </button>
-        <button 
           onClick={handleExport}
           className="inline-flex items-center gap-1 py-1 px-2.5 bg-slate-900 text-white text-[10px] sm:text-[11px] font-semibold rounded-lg hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900"
         >
@@ -81,7 +57,7 @@ export const DashboardPage: React.FC = () => {
       </>
     );
     return () => clearHeader();
-  }, [userName, today, isSyncing, companyId, dateStart, dateEnd, token]);
+  }, [userName, today, companyId, dateStart, dateEnd, token]);
 
   return (
     <div className="space-y-6">

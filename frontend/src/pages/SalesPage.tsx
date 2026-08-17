@@ -32,7 +32,6 @@ export const SalesPage: React.FC = () => {
   const { companyId, dateStart, dateEnd } = useFilters();
   const token = useAuthStore((state) => state.accessToken);
   const queryClient = useQueryClient();
-  const [isSyncing, setIsSyncing] = useState(false);
   
   const { data: pivotResponse, isLoading: loadingPivot } = useSalesPivot();
   const { data: docTypeMetrics, isLoading: loadingDocTypes } = useSalesByDocumentType();
@@ -49,19 +48,6 @@ export const SalesPage: React.FC = () => {
 
   const toggleSucursal = (sucursalName: string) => {
     setExpandedSucursales(prev => ({ ...prev, [sucursalName]: !prev[sucursalName] }));
-  };
-
-  const handleSync = async () => {
-    if (!companyId) return;
-    setIsSyncing(true);
-    try {
-      await companyService.sync(companyId, { dateStart, dateEnd, days: 90 });
-      await queryClient.invalidateQueries();
-    } catch (err) {
-      console.error("Error triggering sync:", err);
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
   const handleExport = () => {
@@ -148,20 +134,11 @@ export const SalesPage: React.FC = () => {
   return (
     <div className="space-y-6">
 
-      {/* Filtros Globales + Exportar + Sincronizar */}
+      {/* Filtros Globales + Exportar */}
       <div className="animate-in fade-in duration-500">
         <GlobalFilters
           actions={
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleSync}
-                disabled={isSyncing}
-                title="Sincronizar datos con Facturador Pro"
-                className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold rounded-xl transition-all duration-200 border border-indigo-200/80 shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
-                <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
-              </button>
               <button
                 onClick={handleExport}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md shrink-0 cursor-pointer"
