@@ -321,6 +321,7 @@ export const SalesBySellerPage: React.FC = () => {
             columns={columns} 
             data={processedData} 
             isLoading={isLoading} 
+            showSearch={false}
           />
         </div>
       </div>
