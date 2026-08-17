@@ -174,15 +174,24 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     console.warn(`[Branch Resolver] Could not query sales series:`, e.message);
   }
 
-  // C. Construir mapa de correlación de sufijo numérico
-  // Ejemplo: si F006 -> est_id=2, entonces NV06 (sufijo "06") también -> est_id=2
+  // C. Construir mapa de correlación de sufijo numérico y detectar offset si existe
+  // Ejemplo: si F006 -> est_id=2, entonces offset = 6 - 2 = 4
   const suffixToEstId: Record<string, number> = {};
+  let detectedOffset: number | null = null;
+
   for (const [s, estId] of Object.entries(seriesToEstId)) {
     const match = s.match(/([A-Za-z]+)(\d+)/);
     if (match) {
-      const suffix = match[2];
-      if (!suffixToEstId[suffix]) {
-        suffixToEstId[suffix] = estId;
+      const rawSuffix = match[2];
+      const numVal = parseInt(rawSuffix, 10);
+      
+      suffixToEstId[rawSuffix] = estId;
+      suffixToEstId[String(numVal)] = estId;
+      suffixToEstId[String(numVal).padStart(2, '0')] = estId;
+      suffixToEstId[String(numVal).padStart(3, '0')] = estId;
+
+      if (numVal > estId && detectedOffset === null) {
+        detectedOffset = numVal - estId;
       }
     }
   }
@@ -192,29 +201,26 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     // Paso 1: Asignación directa conocida desde la API o desde raw_json
     if (seriesToEstId[s]) return seriesToEstId[s];
 
-    // Paso 2: Correlación por sufijo numérico con series conocidas
     const match = s.match(/([A-Za-z]+)(\d+)/);
     if (match) {
       const rawSuffix = match[2];
-      // Buscar sufijo exacto
-      if (suffixToEstId[rawSuffix]) return suffixToEstId[rawSuffix];
-
-      // Buscar variantes del sufijo (con/sin padding de ceros)
       const numericVal = parseInt(rawSuffix, 10);
-      const variants = [
-        String(numericVal),
-        String(numericVal).padStart(2, '0'),
-        String(numericVal).padStart(3, '0')
-      ];
-      for (const v of variants) {
-        if (suffixToEstId[v]) return suffixToEstId[v];
+
+      // Paso 2: Coincidencia en suffixToEstId
+      if (suffixToEstId[rawSuffix]) return suffixToEstId[rawSuffix];
+      if (suffixToEstId[String(numericVal)]) return suffixToEstId[String(numericVal)];
+
+      // Paso 3: Aplicar offset detectado (ej: serie 5 -> estId 1, serie 9 -> estId 5)
+      if (detectedOffset !== null) {
+        const offsetEstId = numericVal - detectedOffset;
+        if (branchNameById[offsetEstId]) return offsetEstId;
       }
 
-      // Paso 3: Si el número coincide con un ID de establecimiento conocido
+      // Paso 4: Si el número coincide directamente con un ID de establecimiento
       if (branchNameById[numericVal]) return numericVal;
     }
 
-    // Paso 4: Fallback al primer establecimiento oficial
+    // Paso 5: Fallback al primer establecimiento oficial
     if (officialEstablishments.length > 0 && officialEstablishments[0].id) {
       return officialEstablishments[0].id;
     }
