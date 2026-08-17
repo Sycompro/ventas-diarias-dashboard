@@ -254,20 +254,84 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
       }).returning({ id: sales.id });
 
       if (insertedSale) {
-        // Clasificación inteligente de Productos vs Servicios
-        const isGymOrServiceCompany = company.subdomain?.toLowerCase().includes('gym') || company.name?.toLowerCase().includes('gym');
-        const defaultCategory = isGymOrServiceCompany ? '02' : '01';
-        const defaultDesc = defaultCategory === '02' ? 'Servicios de Gimnasio / Membresías' : 'Venta de Bienes o Servicios (Consolidado)';
+        // Clasificación inteligente y precisa de Productos vs Servicios
+        const totalNum = parseFloat(totalAmount) || 0;
+        let itemCategory = '02'; // '02' = Servicio, '01' = Producto
+        let itemDescription = 'Servicio / Membresía';
 
-        await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
-        await db.insert(saleItems).values({
-          saleId: insertedSale.id,
-          description: defaultDesc,
-          quantity: '1',
-          unitPrice: totalAmount,
-          total: totalAmount,
-          category: defaultCategory
-        });
+        // 1. Si vinieron items explícitos en docMetaLookup
+        const metaMatch = docMetaLookup.get(docKey) || docMetaLookup.get(docNumber);
+        if (metaMatch?.items && Array.isArray(metaMatch.items) && metaMatch.items.length > 0) {
+          await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
+          for (const rawItem of metaMatch.items) {
+            const itDesc = rawItem.item?.description || rawItem.description || 'Ítem';
+            const itUnit = rawItem.item?.unit_type_id || rawItem.unit_type_id || 'NIU';
+            const itQty = (rawItem.quantity || 1).toString();
+            const itPrice = (rawItem.unit_price || totalAmount).toString();
+            const itTotal = (rawItem.total || totalAmount).toString();
+            
+            const isService = itUnit === 'ZZ' || isServiceItem(itDesc);
+            const cat = isService ? '02' : '01';
+
+            await db.insert(saleItems).values({
+              saleId: insertedSale.id,
+              description: itDesc,
+              quantity: itQty,
+              unitPrice: itPrice,
+              total: itTotal,
+              category: cat
+            });
+          }
+        } else {
+          // 2. Si no hay líneas de ítems detalladas en el resumen, clasificar por monto y reglas de negocio:
+          const isGymOrServiceCompany = company.subdomain?.toLowerCase().includes('gym') || company.name?.toLowerCase().includes('gym');
+          
+          if (isGymOrServiceCompany) {
+            if (totalNum === 8.0) {
+              itemCategory = '02';
+              itemDescription = 'Rutina Diaria (Pase Diario)';
+            } else if (totalNum === 80.0) {
+              itemCategory = '02';
+              itemDescription = 'Rutina Mensual';
+            } else if (totalNum === 180.0 || totalNum === 60.0) {
+              itemCategory = '02';
+              itemDescription = 'Rutina de Tres Meses';
+            } else if (totalNum === 75.0) {
+              itemCategory = '02';
+              itemDescription = 'Promo 3 Personas';
+            } else if (totalNum === 70.0) {
+              itemCategory = '02';
+              itemDescription = 'Promo 5 Personas';
+            } else if (totalNum >= 25.0) {
+              itemCategory = '02';
+              itemDescription = `Rutina / Membresía (S/. ${totalNum.toFixed(2)})`;
+            } else {
+              // Montos menores a S/. 25 (excepto 8.0) corresponden a bebidas, aguas, energizantes y suplementos
+              itemCategory = '01';
+              if (totalNum === 1.5 || totalNum === 2.0) itemDescription = 'Agua Mineral San Carlos';
+              else if (totalNum === 2.5) itemDescription = 'Gatorade / Agua San Luis';
+              else if (totalNum === 3.0) itemDescription = 'Agua San Luis 1L / Powerade';
+              else if (totalNum === 5.0) itemDescription = 'Dilyte / Quemador';
+              else if (totalNum === 6.0) itemDescription = 'Bebida Fury Energy / Proteína Sachet';
+              else if (totalNum === 7.0) itemDescription = 'Pre Entreno Sachet';
+              else if (totalNum === 10.0) itemDescription = 'Monster Energy 473ml';
+              else itemDescription = `Bebida / Suplemento Físico (S/. ${totalNum.toFixed(2)})`;
+            }
+          } else {
+            itemCategory = totalNum > 50 ? '02' : '01';
+            itemDescription = itemCategory === '02' ? 'Servicio General' : 'Venta de Producto / Mercadería';
+          }
+
+          await db.delete(saleItems).where(eq(saleItems.saleId, insertedSale.id));
+          await db.insert(saleItems).values({
+            saleId: insertedSale.id,
+            description: itemDescription,
+            quantity: '1',
+            unitPrice: totalAmount,
+            total: totalAmount,
+            category: itemCategory
+          });
+        }
 
         // Payments
         await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
@@ -431,27 +495,45 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
 
         if (detailedItems && detailedItems.length > 0) {
           await db.insert(saleItems).values(
-            detailedItems.map(item => ({
-              saleId: insertedSale.id,
-              description: item.item?.description || item.description,
-              quantity: item.quantity.toString(),
-              unitPrice: item.unit_price ? item.unit_price.toString() : '0',
-              total: item.total ? item.total.toString() : '0',
-              category: item.item?.item_type_id || ((item.item?.description || item.description || '').toLowerCase().includes('servicio') ? '02' : '01'),
-            }))
+            detailedItems.map(item => {
+              const itDesc = item.item?.description || item.description || 'Ítem';
+              const itUnit = item.item?.unit_type_id || item.unit_type_id || 'NIU';
+              const isService = itUnit === 'ZZ' || isServiceItem(itDesc);
+              return {
+                saleId: insertedSale.id,
+                description: itDesc,
+                quantity: (item.quantity || 1).toString(),
+                unitPrice: item.unit_price ? item.unit_price.toString() : (item.total || note.total).toString(),
+                total: item.total ? item.total.toString() : note.total.toString(),
+                category: isService ? '02' : '01',
+              };
+            })
           );
-        } else if (note.items_for_report && note.items_for_report.length > 0) {
-          // Fallback a items_for_report si no hay detalle
-          await db.insert(saleItems).values(
-            note.items_for_report.map((item: any) => ({
-              saleId: insertedSale.id,
-              description: item.description,
-              quantity: item.quantity.toString(),
-              unitPrice: '0',
-              total: '0',
-              category: (item.description || '').toLowerCase().includes('servicio') ? '02' : '01',
-            }))
-          );
+        } else {
+          // Fallback inteligente para Notas de Venta
+          const totalNum = parseFloat(note.total || '0') || 0;
+          let itemCategory = '02';
+          let itemDescription = 'Rutina / Membresía (NV)';
+
+          if (totalNum === 8.0) {
+            itemCategory = '02';
+            itemDescription = 'Rutina Diaria (Pase Diario)';
+          } else if (totalNum === 80.0) {
+            itemCategory = '02';
+            itemDescription = 'Rutina Mensual';
+          } else if (totalNum < 25.0) {
+            itemCategory = '01';
+            itemDescription = `Bebida / Suplemento Físico (S/. ${totalNum.toFixed(2)})`;
+          }
+
+          await db.insert(saleItems).values({
+            saleId: insertedSale.id,
+            description: itemDescription,
+            quantity: '1',
+            unitPrice: note.total.toString(),
+            total: note.total.toString(),
+            category: itemCategory,
+          });
         }
       }
 

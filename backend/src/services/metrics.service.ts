@@ -197,7 +197,7 @@ export async function getDashboardMetrics(
   const itemTypeRes = await sqlClient`
     SELECT 
       COALESCE(SUM(CASE WHEN i.category = '02' THEN i.total::numeric ELSE 0 END), 0) as services_total,
-      COALESCE(SUM(CASE WHEN i.category != '02' THEN i.total::numeric ELSE 0 END), 0) as products_total
+      COALESCE(SUM(CASE WHEN i.category = '01' THEN i.total::numeric ELSE 0 END), 0) as products_total
     FROM sale_items i
     JOIN sales s ON i.sale_id = s.id
     WHERE s.status = 'active'
@@ -212,9 +212,28 @@ export async function getDashboardMetrics(
   let productsTotal = parseFloat(itemTypeRow.products_total as string || '0');
   let servicesTotal = parseFloat(itemTypeRow.services_total as string || '0');
 
-  // Si no hay items desglosados en sale_items pero hay ventas, asignar a servicios/productos según total
-  if (productsTotal === 0 && servicesTotal === 0 && totalSales > 0) {
-    servicesTotal = totalSales; // Para gimnasios la gran mayoría son servicios
+  // Si no hay desglose en sale_items o todos quedaron como 0, clasificar dinámicamente desde las ventas
+  if (productsTotal === 0 && totalSales > 0) {
+    const fallbackRes = await sqlClient`
+      SELECT 
+        COALESCE(SUM(CASE WHEN total::numeric < 25.0 AND total::numeric != 8.0 THEN total::numeric ELSE 0 END), 0) as p_total,
+        COALESCE(SUM(CASE WHEN total::numeric >= 25.0 OR total::numeric = 8.0 THEN total::numeric ELSE 0 END), 0) as s_total
+      FROM sales
+      WHERE status = 'active'
+        AND (${!hasCompanyFilter} OR company_id = ${cId})
+        AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
+        AND (${!hasSellerFilter} OR seller_name = ${sellerName})
+        AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+        AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
+    `;
+    if (fallbackRes.length > 0) {
+      const pFallback = parseFloat(fallbackRes[0].p_total as string || '0');
+      const sFallback = parseFloat(fallbackRes[0].s_total as string || '0');
+      if (pFallback > 0 || sFallback > 0) {
+        productsTotal = pFallback;
+        servicesTotal = sFallback;
+      }
+    }
   }
 
   let taxedAmount = parseFloat(row.taxed_total as string || '0');
