@@ -31,12 +31,12 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
-    // Compare plural and singular endpoints
+    // Compare plural and singular endpoints without /lists
     const tests = [
-      { name: 'singular_page1', url: '/sale-note/lists?page=1' },
-      { name: 'singular_page2', url: '/sale-note/lists?page=2' },
-      { name: 'plural_page1', url: '/sale-notes/lists?page=1' },
-      { name: 'plural_page2', url: '/sale-notes/lists?page=2' }
+      { name: 'plural_no_lists', url: '/sale-notes' },
+      { name: 'singular_no_lists', url: '/sale-note' },
+      { name: 'singular_lists_page1', url: '/sale-note/lists?page=1' },
+      { name: 'singular_lists_page2', url: '/sale-note/lists?page=2' }
     ];
 
     const results: any[] = [];
@@ -47,10 +47,8 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
         results.push({
           name: test.name,
           url: test.url,
-          count: data.length,
-          firstId: data[0]?.id,
-          firstNumber: data[0]?.number || data[0]?.identifier,
-          firstDate: data[0]?.date_of_issue,
+          count: Array.isArray(data) ? data.length : typeof data === 'object' ? Object.keys(data).length : 'unknown',
+          firstId: Array.isArray(data) ? data[0]?.id : data.id || null,
           meta: res.data?.meta || null
         });
       } catch (err: any) {
