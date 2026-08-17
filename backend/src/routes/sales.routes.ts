@@ -92,8 +92,10 @@ async function ensureDateRangeSynced(companyId?: string, dateStart?: string, dat
     try {
       console.log(`[Auto-Sync] Sincronizando datos de API oficial para ${companyId} del ${dateStart} al ${dateEnd}...`);
       await syncCompany(companyId, 0, dateStart, dateEnd);
+      const isCurrentDay = dateEnd >= new Date().toISOString().split('T')[0];
+      const ttl = isCurrentDay ? 10 : 180; // 10 segundos para hoy, 3 minutos para histórico
       try {
-        await redis.setex(cacheKey, 180, '1'); // 3 minutos de caché
+        await redis.setex(cacheKey, ttl, '1');
       } catch {}
     } catch (err: any) {
       console.warn(`[Auto-Sync] Error durante sincronización automática:`, err.message);
