@@ -1,11 +1,11 @@
 import { db, sqlClient } from '../config/database.js';
 import { redis } from '../config/redis.js';
-import { companies, sales, saleItems, salePayments, syncLogs } from '../db/schema.js';
+import { companies, sales, saleItems, salePayments, syncLogs, purchases as purchasesTable, purchasePayments as purchasePaymentsTable } from '../db/schema.js';
 import { eq, sql } from 'drizzle-orm';
 import axios from 'axios';
 import https from 'https';
 import { decrypt } from './crypto.service.js';
-import { createBillingClient, fetchDocuments, fetchReportDocuments, fetchSaleNotes, fetchSaleNoteDetail } from './billing-api.service.js';
+import { createBillingClient, fetchDocuments, fetchReportDocuments, fetchSaleNotes, fetchSaleNoteDetail, fetchPurchases } from './billing-api.service.js';
 
 export interface SyncResult {
   syncedCount: number;
@@ -448,6 +448,72 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
         }
 
         documentsSynced++;
+      }
+    }
+
+    console.log(`[Sync Service] Consultando compras del ${startDateStr} al ${endDateStr}...`);
+    let purchasesList: any[] = [];
+    try {
+      purchasesList = await fetchPurchases(client, startDateStr, endDateStr);
+    } catch (purchErr: any) {
+      console.warn(`[Sync Service] Warning: Error al obtener compras:`, purchErr.message);
+    }
+
+    for (const purchase of purchasesList) {
+      const stateId = String(purchase.state_type_id);
+      if (!['01', '03', '05', '07', '09', '11', '13'].includes(stateId)) continue;
+
+      const issuedAt = parseDocumentIssuedAt(purchase);
+      const isVoided = ['09', '11', '13'].includes(stateId);
+      
+      const numberFull = purchase.number || '';
+      const supplierName = purchase.supplier?.name || purchase.supplier_name || 'Proveedor Varios';
+
+      const [insertedPurchase] = await db.insert(purchasesTable).values({
+        companyId,
+        externalId: String(purchase.external_id || purchase.id),
+        number: numberFull,
+        total: purchase.total.toString(),
+        currency: purchase.currency_type_id || 'PEN',
+        supplierName,
+        issuedAt,
+        status: isVoided ? 'voided' : 'active',
+        rawJson: purchase,
+        establishmentId: purchase.establishment_id || null,
+      }).onConflictDoUpdate({
+        target: [purchasesTable.companyId, purchasesTable.externalId],
+        set: {
+          number: numberFull,
+          total: purchase.total.toString(),
+          supplierName,
+          status: isVoided ? 'voided' : 'active',
+          issuedAt,
+          rawJson: purchase,
+          establishmentId: purchase.establishment_id || null,
+          syncedAt: new Date(),
+        },
+      }).returning({ id: purchasesTable.id });
+
+      if (insertedPurchase) {
+        await db.delete(purchasePaymentsTable).where(eq(purchasePaymentsTable.purchaseId, insertedPurchase.id));
+
+        if (purchase.payments && purchase.payments.length > 0) {
+          await db.insert(purchasePaymentsTable).values(
+            purchase.payments.map((p: any) => ({
+              purchaseId: insertedPurchase.id,
+              paymentMethodId: getPaymentMethodId(p.payment_method_type?.description || p.description || 'Efectivo'),
+              amount: (p.payment || p.amount || purchase.total).toString(),
+              reference: p.reference || '',
+            }))
+          );
+        } else {
+          await db.insert(purchasePaymentsTable).values({
+            purchaseId: insertedPurchase.id,
+            paymentMethodId: '01',
+            amount: purchase.total.toString(),
+            reference: 'Default Cash Purchase (Synced)',
+          });
+        }
       }
     }
 

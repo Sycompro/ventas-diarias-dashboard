@@ -151,3 +151,38 @@ export const saleItemsRelations = relations(saleItems, ({ one }) => ({
 export const salePaymentsRelations = relations(salePayments, ({ one }) => ({
   sale: one(sales, { fields: [salePayments.saleId], references: [sales.id] }),
 }));
+
+export const purchases = pgTable('purchases', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  companyId: uuid('company_id').references(() => companies.id, { onDelete: 'cascade' }).notNull(),
+  externalId: text('external_id').notNull(),
+  number: text('number').notNull(),
+  supplierName: text('supplier_name'),
+  total: numeric('total', { precision: 12, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 5 }).default('PEN').notNull(),
+  issuedAt: timestamp('issued_at', { withTimezone: true }).notNull(),
+  status: text('status').default('active').notNull(),
+  rawJson: jsonb('raw_json'),
+  syncedAt: timestamp('synced_at', { withTimezone: true }).defaultNow().notNull(),
+  establishmentId: integer('establishment_id'),
+}, (t) => ({
+  unqCompanyPurchaseExternal: unique('company_purchase_external_unq').on(t.companyId, t.externalId),
+}));
+
+export const purchasePayments = pgTable('purchase_payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  purchaseId: uuid('purchase_id').references(() => purchases.id, { onDelete: 'cascade' }).notNull(),
+  paymentMethodId: varchar('payment_method_id', { length: 5 }).notNull(),
+  amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+  reference: text('reference'),
+});
+
+export const purchasesRelations = relations(purchases, ({ one, many }) => ({
+  company: one(companies, { fields: [purchases.companyId], references: [companies.id] }),
+  payments: many(purchasePayments),
+}));
+
+export const purchasePaymentsRelations = relations(purchasePayments, ({ one }) => ({
+  purchase: one(purchases, { fields: [purchasePayments.purchaseId], references: [purchases.id] }),
+}));
+

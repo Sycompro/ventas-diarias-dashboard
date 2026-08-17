@@ -255,13 +255,14 @@ router.get('/pivot', async (req, res) => {
     const sellerName = seller || '';
     const cId = companyId || '';
 
-    // Consultar las ventas utilizando exactamente el mismo filtro de huso horario
+    // 1. Consultar las ventas utilizando exactamente el mismo filtro de huso horario
     const salesList = await sqlClient`
       SELECT 
         s.id,
         s.series,
         s.number,
         s.total,
+        s.document_type_id as "documentTypeId",
         s.seller_name as "sellerName",
         COALESCE(
           (
@@ -280,6 +281,37 @@ router.get('/pivot', async (req, res) => {
         AND (s.issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
     `;
 
+    // Si hay un filtro de sucursal activo, solo inicializamos la sucursal seleccionada
+    const filteredBranches = branch && branch !== 'all'
+      ? branches.filter(b => b.id === String(branch) || b.name.toLowerCase() === branch.toLowerCase())
+      : branches;
+
+    // Obtener IDs de establecimientos de las sucursales permitidas
+    const allowedEstIds = filteredBranches.map(b => b.establishmentId).filter(Boolean) as number[];
+
+    // 2. Consultar compras (egresos). Se excluyen si se filtra por un vendedor específico
+    const purchasesList = hasSellerFilter ? [] : await sqlClient`
+      SELECT 
+        p.id,
+        p.number,
+        p.total,
+        p.establishment_id as "establishmentId",
+        COALESCE(
+          (
+            SELECT json_agg(json_build_object('amount', pay.amount, 'paymentMethodId', pay.payment_method_id))
+            FROM purchase_payments pay
+            WHERE pay.purchase_id = p.id
+          ),
+          '[]'::json
+        ) as payments
+      FROM purchases p
+      WHERE p.status = 'active'
+        AND (${!hasCompanyFilter} OR p.company_id = ${cId})
+        AND (${allowedEstIds.length === 0} OR p.establishment_id = ANY(${allowedEstIds}))
+        AND (p.issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
+        AND (p.issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
+    `;
+
     // Payment methods activos
     const activePaymentMethods = (config.paymentMethods || []).map((m: any) => ({
       id: m.id,
@@ -296,6 +328,9 @@ router.get('/pivot', async (req, res) => {
     const pivotMap: Record<string, {
       sede: string;
       sucursal?: string;
+      cpePayments: Record<string, number>;
+      notePayments: Record<string, number>;
+      purchasePayments: Record<string, number>;
       payments: Record<string, number>;
       vendedores: Record<string, {
         vendedor: string;
@@ -303,26 +338,36 @@ router.get('/pivot', async (req, res) => {
         total: number;
       }>;
       total: number;
+      totalCpe: number;
+      totalNotes: number;
+      totalPurchases: number;
+      saldo: number;
     }> = {};
-
-    // Si hay un filtro de sucursal activo, solo inicializamos la sucursal seleccionada
-    const filteredBranches = branch && branch !== 'all'
-      ? branches.filter(b => b.id === String(branch) || b.name.toLowerCase() === branch.toLowerCase())
-      : branches;
 
     for (const b of filteredBranches) {
       pivotMap[b.name] = {
         sede: b.name,
         sucursal: b.name,
+        cpePayments: {},
+        notePayments: {},
+        purchasePayments: {},
         payments: {},
         vendedores: {},
-        total: 0
+        total: 0,
+        totalCpe: 0,
+        totalNotes: 0,
+        totalPurchases: 0,
+        saldo: 0
       };
       activePaymentMethods.forEach((m: any) => {
+        pivotMap[b.name].cpePayments[m.id] = 0;
+        pivotMap[b.name].notePayments[m.id] = 0;
+        pivotMap[b.name].purchasePayments[m.id] = 0;
         pivotMap[b.name].payments[m.id] = 0;
       });
     }
 
+    // 3. Procesar las ventas (Ingresos)
     for (const sale of salesList) {
       let seriesName = sale.series;
       if (!seriesName && sale.number && sale.number.includes('-')) {
@@ -332,7 +377,6 @@ router.get('/pivot', async (req, res) => {
       const branchName = getBranchNameForSeries(seriesName, branches);
       const sellerName = sale.sellerName || 'Sin Vendedor';
 
-      // Si no fue inicializada (debido al filtro de sucursal), la ignoramos
       if (!pivotMap[branchName]) {
         continue;
       }
@@ -349,46 +393,117 @@ router.get('/pivot', async (req, res) => {
       }
 
       const saleTotal = parseFloat(sale.total);
+      const isCpe = ['01', '03'].includes(sale.documentTypeId);
+      const isNote = sale.documentTypeId === '80';
+      const isNC = sale.documentTypeId === '07';
+      const factor = isNC ? -1 : 1;
 
       if (sale.payments && sale.payments.length > 0) {
         for (const payment of sale.payments) {
-          const amount = parseFloat(payment.amount);
+          const amount = parseFloat(payment.amount) * factor;
           const method = payment.paymentMethodId;
 
           if (pivotMap[branchName].payments[method] === undefined) {
             pivotMap[branchName].payments[method] = 0;
+            pivotMap[branchName].cpePayments[method] = 0;
+            pivotMap[branchName].notePayments[method] = 0;
           }
           if (pivotMap[branchName].vendedores[sellerName].payments[method] === undefined) {
             pivotMap[branchName].vendedores[sellerName].payments[method] = 0;
           }
 
+          // Sumas legacy
           pivotMap[branchName].payments[method] += amount;
           pivotMap[branchName].total += amount;
+
+          // Sumas específicas
+          if (isCpe || isNC) {
+            pivotMap[branchName].cpePayments[method] += amount;
+            pivotMap[branchName].totalCpe += amount;
+          } else if (isNote) {
+            pivotMap[branchName].notePayments[method] += amount;
+            pivotMap[branchName].totalNotes += amount;
+          }
 
           pivotMap[branchName].vendedores[sellerName].payments[method] += amount;
           pivotMap[branchName].vendedores[sellerName].total += amount;
         }
       } else {
         const defaultMethod = '01';
+        const amount = saleTotal * factor;
+
         if (pivotMap[branchName].payments[defaultMethod] === undefined) {
           pivotMap[branchName].payments[defaultMethod] = 0;
+          pivotMap[branchName].cpePayments[defaultMethod] = 0;
+          pivotMap[branchName].notePayments[defaultMethod] = 0;
         }
         if (pivotMap[branchName].vendedores[sellerName].payments[defaultMethod] === undefined) {
           pivotMap[branchName].vendedores[sellerName].payments[defaultMethod] = 0;
         }
 
-        pivotMap[branchName].payments[defaultMethod] += saleTotal;
-        pivotMap[branchName].total += saleTotal;
+        pivotMap[branchName].payments[defaultMethod] += amount;
+        pivotMap[branchName].total += amount;
 
-        pivotMap[branchName].vendedores[sellerName].payments[defaultMethod] += saleTotal;
-        pivotMap[branchName].vendedores[sellerName].total += saleTotal;
+        if (isCpe || isNC) {
+          pivotMap[branchName].cpePayments[defaultMethod] += amount;
+          pivotMap[branchName].totalCpe += amount;
+        } else if (isNote) {
+          pivotMap[branchName].notePayments[defaultMethod] += amount;
+          pivotMap[branchName].totalNotes += amount;
+        }
+
+        pivotMap[branchName].vendedores[sellerName].payments[defaultMethod] += amount;
+        pivotMap[branchName].vendedores[sellerName].total += amount;
       }
     }
 
-    const pivotData = Object.values(pivotMap).map(s => ({
-      ...s,
-      vendedores: Object.values(s.vendedores).sort((a, b) => b.total - a.total)
-    })).sort((a, b) => b.total - a.total);
+    // 4. Procesar las compras (Egresos)
+    for (const purchase of purchasesList) {
+      const branchMatch = branches.find(b => b.establishmentId === purchase.establishmentId);
+      const branchName = branchMatch ? branchMatch.name : 'Desconocido';
+
+      if (!pivotMap[branchName]) {
+        continue;
+      }
+
+      const purchaseTotal = parseFloat(purchase.total);
+
+      if (purchase.payments && purchase.payments.length > 0) {
+        for (const payment of purchase.payments) {
+          const amount = parseFloat(payment.amount);
+          const method = payment.paymentMethodId;
+
+          if (pivotMap[branchName].purchasePayments[method] === undefined) {
+            pivotMap[branchName].purchasePayments[method] = 0;
+          }
+
+          pivotMap[branchName].purchasePayments[method] += amount;
+          pivotMap[branchName].totalPurchases += amount;
+        }
+      } else {
+        const defaultMethod = '01';
+        if (pivotMap[branchName].purchasePayments[defaultMethod] === undefined) {
+          pivotMap[branchName].purchasePayments[defaultMethod] = 0;
+        }
+
+        pivotMap[branchName].purchasePayments[defaultMethod] += purchaseTotal;
+        pivotMap[branchName].totalPurchases += purchaseTotal;
+      }
+    }
+
+    // 5. Garantizar que todos los métodos tengan números y calcular saldo
+    const pivotData = Object.values(pivotMap).map(s => {
+      activePaymentMethods.forEach((m: any) => {
+        if (s.cpePayments[m.id] === undefined) s.cpePayments[m.id] = 0;
+        if (s.notePayments[m.id] === undefined) s.notePayments[m.id] = 0;
+        if (s.purchasePayments[m.id] === undefined) s.purchasePayments[m.id] = 0;
+      });
+      s.saldo = s.totalCpe + s.totalNotes - s.totalPurchases;
+      return {
+        ...s,
+        vendedores: Object.values(s.vendedores).sort((a, b) => b.total - a.total)
+      };
+    }).sort((a, b) => b.total - a.total);
 
     res.json({
       paymentMethods: activePaymentMethods,

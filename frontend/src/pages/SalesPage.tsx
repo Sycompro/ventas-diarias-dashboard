@@ -41,13 +41,13 @@ export const SalesPage: React.FC = () => {
   const pivotData = pivotResponse?.pivotData || [];
   const paymentMethods = pivotResponse?.paymentMethods || [];
 
-  const [expandedSucursales, setExpandedSucursales] = useState<Record<string, boolean>>({});
+  const [expandedMethods, setExpandedMethods] = useState<Record<string, boolean>>({});
 
   const setHeader = useHeaderStore((state: any) => state.setHeader);
   const clearHeader = useHeaderStore((state: any) => state.clearHeader);
 
-  const toggleSucursal = (sucursalName: string) => {
-    setExpandedSucursales(prev => ({ ...prev, [sucursalName]: !prev[sucursalName] }));
+  const toggleMethod = (methodId: string) => {
+    setExpandedMethods(prev => ({ ...prev, [methodId]: !prev[methodId] }));
   };
 
   const handleExport = () => {
@@ -78,21 +78,25 @@ export const SalesPage: React.FC = () => {
     return () => clearHeader();
   }, [companyId, dateStart, dateEnd, token]);
 
-  // Calcular totales generales dinámicamente
+  // Calcular totales generales dinámicamente para el Flujo de Caja
   const grandTotals = useMemo(() => {
-    const totals: Record<string, number> = { total: 0 };
-    paymentMethods.forEach((m: any) => {
-      totals[m.id] = 0;
+    let cpe = 0;
+    let notes = 0;
+    let purchases = 0;
+    
+    pivotData.forEach((s: any) => {
+      cpe += parseFloat(s.totalCpe || 0);
+      notes += parseFloat(s.totalNotes || 0);
+      purchases += parseFloat(s.totalPurchases || 0);
     });
 
-    pivotData.forEach((s: any) => {
-      paymentMethods.forEach((m: any) => {
-        totals[m.id] += parseFloat(s.payments?.[m.id] || 0);
-      });
-      totals.total += parseFloat(s.total || 0);
-    });
-    return totals;
-  }, [pivotData, paymentMethods]);
+    return {
+      cpe,
+      notes,
+      purchases,
+      saldo: cpe + notes - purchases
+    };
+  }, [pivotData]);
 
   const docSummaryData = useMemo(() => {
     if (!docTypeMetrics) return [];
@@ -216,10 +220,10 @@ export const SalesPage: React.FC = () => {
             <div className="p-1.5 bg-indigo-100 rounded-lg">
               <CreditCard size={13} className="text-indigo-600" />
             </div>
-            <span className="font-bold text-slate-800 text-sm tracking-tight">Ventas por Método de Pago</span>
+            <span className="font-bold text-slate-800 text-sm tracking-tight">Ingresos y Egresos por Método de Pago</span>
           </div>
           <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-[10px] font-bold uppercase tracking-wider">
-            Consolidado
+            Flujo de Caja
           </span>
         </div>
 
@@ -228,31 +232,23 @@ export const SalesPage: React.FC = () => {
             {/* Table head */}
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/60">
-                <th className="py-2.5 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest min-w-[200px]">
-                  Sucursal / Usuario
+                <th className="py-2.5 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest min-w-[220px]">
+                  Descripción / Método de Pago
                 </th>
-                {paymentMethods.map((m: any) => {
-                  const descUpper = m.description.toUpperCase();
-                  let icon = <HelpCircle size={10} className="text-slate-400" />;
-                  let pillClass = 'bg-slate-100 text-slate-600';
-                  if (descUpper.includes('EFECTIVO')) { icon = <DollarSign size={10} className="text-emerald-600" />; pillClass = 'bg-emerald-50 text-emerald-700 border border-emerald-100'; }
-                  else if (descUpper === 'CRÉDITO' || descUpper === 'CREDITO') { icon = <ArrowLeftRight size={10} className="text-amber-600" />; pillClass = 'bg-amber-50 text-amber-700 border border-amber-100'; }
-                  else if (descUpper.includes('CONTADO')) { icon = <DollarSign size={10} className="text-emerald-600" />; pillClass = 'bg-emerald-50 text-emerald-700 border border-emerald-100'; }
-                  else if (descUpper.includes('TARJETA') || descUpper.includes('VISA') || descUpper.includes('DEBITO')) { icon = <CreditCard size={10} className="text-blue-600" />; pillClass = 'bg-blue-50 text-blue-700 border border-blue-100'; }
-                  else if (descUpper.includes('TRANSFERENCIA')) { icon = <ArrowLeftRight size={10} className="text-indigo-600" />; pillClass = 'bg-indigo-50 text-indigo-700 border border-indigo-100'; }
-                  else if (descUpper.includes('YAPE') || descUpper.includes('PLIN')) { icon = <Smartphone size={10} className="text-violet-600" />; pillClass = 'bg-violet-50 text-violet-700 border border-violet-100'; }
-                  return (
-                    <th key={m.id} className="py-2.5 px-3 text-right">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold ${pillClass}`}>
-                        {icon} {m.description}
-                      </span>
-                    </th>
-                  );
-                })}
-                <th className="py-2.5 px-4 text-right">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-white">
-                    Total General
-                  </span>
+                <th className="py-2.5 px-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  CPE (Boletas/Facturas)
+                </th>
+                <th className="py-2.5 px-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Notas de Venta
+                </th>
+                <th className="py-2.5 px-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Ingresos (Finanzas)
+                </th>
+                <th className="py-2.5 px-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Compras (Egresos)
+                </th>
+                <th className="py-2.5 px-4 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Saldo Neto
                 </th>
               </tr>
             </thead>
@@ -261,86 +257,137 @@ export const SalesPage: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {loadingPivot ? (
                 <tr>
-                  <td colSpan={(paymentMethods.length || 5) + 2} className="py-10 text-center text-slate-400 text-xs">
-                    <span className="inline-block animate-pulse">Cargando estadísticas...</span>
+                  <td colSpan={6} className="py-10 text-center text-slate-400 text-xs">
+                    <span className="inline-block animate-pulse">Cargando estadísticas de caja...</span>
                   </td>
                 </tr>
               ) : !pivotData || pivotData.length === 0 ? (
                 <tr>
-                  <td colSpan={(paymentMethods.length || 5) + 2} className="py-10 text-center text-slate-400 text-xs">
+                  <td colSpan={6} className="py-10 text-center text-slate-400 text-xs">
                     No se encontraron transacciones en el rango de fechas seleccionado.
                   </td>
                 </tr>
               ) : (
                 <>
-                  {pivotData.map((branchItem: any) => {
-                    const branchName = branchItem.sucursal || branchItem.sede;
-                    const isExpanded = !!expandedSucursales[branchName];
+                  {paymentMethods.map((m: any) => {
+                    const isExpanded = !!expandedMethods[m.id];
+                    
+                    // Calcular totales de este método de pago cruzando todas las sucursales
+                    let mCpe = 0;
+                    let mNotes = 0;
+                    let mPurchases = 0;
+
+                    pivotData.forEach((s: any) => {
+                      mCpe += parseFloat(s.cpePayments?.[m.id] || 0);
+                      mNotes += parseFloat(s.notePayments?.[m.id] || 0);
+                      mPurchases += parseFloat(s.purchasePayments?.[m.id] || 0);
+                    });
+
+                    const mSaldo = mCpe + mNotes - mPurchases;
+
+                    const descUpper = m.description.toUpperCase();
+                    let icon = <HelpCircle size={11} className="text-slate-400" />;
+                    if (descUpper.includes('EFECTIVO')) icon = <DollarSign size={11} className="text-emerald-600" />;
+                    else if (descUpper === 'CRÉDITO' || descUpper === 'CREDITO') icon = <ArrowLeftRight size={11} className="text-amber-600" />;
+                    else if (descUpper.includes('CONTADO')) icon = <DollarSign size={11} className="text-emerald-600" />;
+                    else if (descUpper.includes('TARJETA') || descUpper.includes('VISA') || descUpper.includes('DEBITO')) icon = <CreditCard size={11} className="text-blue-600" />;
+                    else if (descUpper.includes('TRANSFERENCIA')) icon = <ArrowLeftRight size={11} className="text-indigo-600" />;
+                    else if (descUpper.includes('YAPE') || descUpper.includes('PLIN')) icon = <Smartphone size={11} className="text-violet-600" />;
+
                     return (
-                      <React.Fragment key={branchName}>
-                        {/* Sucursal row */}
-                        <tr className="bg-slate-50/70 hover:bg-slate-100/50 transition-colors">
+                      <React.Fragment key={m.id}>
+                        {/* Fila principal del Método de Pago */}
+                        <tr className="bg-slate-50/75 hover:bg-slate-100/50 transition-colors">
                           <td className="py-2.5 px-4">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => toggleSucursal(branchName)}
-                                className="p-0.5 rounded-md hover:bg-slate-200 transition-colors text-slate-500 shrink-0"
+                                onClick={() => toggleMethod(m.id)}
+                                className="p-0.5 rounded-md hover:bg-slate-200 transition-colors text-slate-500 shrink-0 cursor-pointer"
                               >
                                 {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                               </button>
                               <div className="flex items-center gap-1.5">
-                                <div className="p-1 bg-indigo-100 rounded-md shrink-0">
-                                  <Building2 size={11} className="text-indigo-600" />
+                                <div className="p-1 bg-slate-100 rounded-md shrink-0">
+                                  {icon}
                                 </div>
-                                <span className="text-xs font-bold text-slate-800">{branchName}</span>
+                                <span className="text-xs font-bold text-slate-800">{m.description}</span>
                               </div>
                             </div>
                           </td>
-                          {paymentMethods.map((m: any) => (
-                            <td key={m.id} className="py-2.5 px-3 text-right text-xs font-semibold text-slate-700 tabular-nums">
-                              {formatCurrency(branchItem.payments?.[m.id] || 0)}
-                            </td>
-                          ))}
+                          <td className="py-2.5 px-3 text-right text-xs font-semibold text-slate-700 tabular-nums">
+                            {formatCurrency(mCpe)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-xs font-semibold text-slate-700 tabular-nums">
+                            {formatCurrency(mNotes)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-xs font-semibold text-slate-400/80 tabular-nums">
+                            S/. 0.00
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-xs font-semibold text-rose-600 tabular-nums">
+                            {mPurchases > 0 ? `-${formatCurrency(mPurchases)}` : 'S/. 0.00'}
+                          </td>
                           <td className="py-2.5 px-4 text-right text-xs font-extrabold text-indigo-700 tabular-nums">
-                            {formatCurrency(branchItem.total)}
+                            {formatCurrency(mSaldo)}
                           </td>
                         </tr>
 
-                        {/* Vendor rows (expanded) */}
-                        {isExpanded && branchItem.vendedores.map((vendedor: any) => (
-                          <tr key={vendedor.vendedor} className="hover:bg-slate-50/50 transition-colors border-l-2 border-indigo-100">
-                            <td className="py-2 pl-12 pr-4">
-                              <div className="flex items-center gap-1.5">
-                                <User size={11} className="text-slate-400 shrink-0" />
-                                <span className="text-[11px] text-slate-600 font-medium">{vendedor.vendedor}</span>
-                              </div>
-                            </td>
-                            {paymentMethods.map((m: any) => (
-                              <td key={m.id} className="py-2 px-3 text-right text-[11px] text-slate-500 tabular-nums">
-                                {formatCurrency(vendedor.payments?.[m.id] || 0)}
+                        {/* Desglose por Sucursal (expandido) */}
+                        {isExpanded && pivotData.map((branchItem: any) => {
+                          const branchName = branchItem.sucursal || branchItem.sede;
+                          const bCpe = parseFloat(branchItem.cpePayments?.[m.id] || 0);
+                          const bNotes = parseFloat(branchItem.notePayments?.[m.id] || 0);
+                          const bPurchases = parseFloat(branchItem.purchasePayments?.[m.id] || 0);
+                          const bSaldo = bCpe + bNotes - bPurchases;
+
+                          return (
+                            <tr key={branchName} className="hover:bg-slate-50/50 transition-colors border-l-2 border-indigo-100">
+                              <td className="py-2 pl-12 pr-4">
+                                <div className="flex items-center gap-1.5">
+                                  <Building2 size={11} className="text-slate-400 shrink-0" />
+                                  <span className="text-[11px] text-slate-600 font-medium">{branchName}</span>
+                                </div>
                               </td>
-                            ))}
-                            <td className="py-2 px-4 text-right text-[11px] font-semibold text-slate-700 tabular-nums">
-                              {formatCurrency(vendedor.total)}
-                            </td>
-                          </tr>
-                        ))}
+                              <td className="py-2 px-3 text-right text-[11px] text-slate-500 tabular-nums">
+                                {formatCurrency(bCpe)}
+                              </td>
+                              <td className="py-2 px-3 text-right text-[11px] text-slate-500 tabular-nums">
+                                {formatCurrency(bNotes)}
+                              </td>
+                              <td className="py-2 px-3 text-right text-[11px] text-slate-300/80 tabular-nums">
+                                S/. 0.00
+                              </td>
+                              <td className="py-2 px-3 text-right text-[11px] text-rose-500/80 tabular-nums">
+                                {bPurchases > 0 ? `-${formatCurrency(bPurchases)}` : 'S/. 0.00'}
+                              </td>
+                              <td className="py-2 px-4 text-right text-[11px] font-semibold text-slate-700 tabular-nums">
+                                {formatCurrency(bSaldo)}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </React.Fragment>
                     );
                   })}
 
-                  {/* Grand total footer row */}
+                  {/* Fila de Totales Generales Consolidados */}
                   <tr className="bg-slate-800 text-white">
                     <td className="py-3 px-4 text-xs font-extrabold uppercase tracking-widest text-slate-200">
                       Total General
                     </td>
-                    {paymentMethods.map((m: any) => (
-                      <td key={m.id} className="py-3 px-3 text-right text-xs font-bold tabular-nums text-slate-100">
-                        {formatCurrency(grandTotals[m.id] || 0)}
-                      </td>
-                    ))}
+                    <td className="py-3 px-3 text-right text-xs font-bold tabular-nums text-slate-100">
+                      {formatCurrency(grandTotals.cpe)}
+                    </td>
+                    <td className="py-3 px-3 text-right text-xs font-bold tabular-nums text-slate-100">
+                      {formatCurrency(grandTotals.notes)}
+                    </td>
+                    <td className="py-3 px-3 text-right text-xs font-bold tabular-nums text-slate-400">
+                      S/. 0.00
+                    </td>
+                    <td className="py-3 px-3 text-right text-xs font-bold tabular-nums text-rose-400">
+                      {grandTotals.purchases > 0 ? `-${formatCurrency(grandTotals.purchases)}` : 'S/. 0.00'}
+                    </td>
                     <td className="py-3 px-4 text-right text-sm font-extrabold tabular-nums text-white">
-                      {formatCurrency(grandTotals.total)}
+                      {formatCurrency(grandTotals.saldo)}
                     </td>
                   </tr>
                 </>

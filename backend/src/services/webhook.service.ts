@@ -1,5 +1,5 @@
 import { db, sqlClient } from '../config/database.js';
-import { sales, saleItems, salePayments, companies } from '../db/schema.js';
+import { sales, saleItems, salePayments, companies, purchases, purchasePayments } from '../db/schema.js';
 import { eq, or, sql } from 'drizzle-orm';
 import { redis } from '../config/redis.js';
 
@@ -83,6 +83,86 @@ export async function processBillingWebhook(
 
     if (!docData) {
       return { success: false, message: 'No se encontraron datos del documento en el payload' };
+    }
+
+    // --- MANEJAR EVENTO DE COMPRA (EGRESO) ---
+    if (eventName === 'purchase.created' || docData.is_purchase || eventName.includes('purchase')) {
+      const numberFull = docData.number || '';
+      const supplierName = docData.supplier?.name || docData.supplier_name || 'Proveedor Varios';
+      const totalAmount = parseFloat(docData.total || docData.total_value || '0').toFixed(2);
+      const currency = docData.currency_type_id || 'PEN';
+      const isVoided = ['09', '11', '13'].includes(String(docData.state_type_id));
+      
+      let issuedAt = new Date();
+      if (docData.date_of_issue) {
+        const timeStr = docData.time_of_issue || '00:00:00';
+        issuedAt = new Date(`${docData.date_of_issue}T${timeStr}`);
+      } else if (docData.created_at) {
+        issuedAt = new Date(docData.created_at);
+      }
+
+      const [insertedPurchase] = await db.insert(purchases).values({
+        companyId,
+        externalId: String(docData.external_id || docData.id || numberFull),
+        number: numberFull,
+        total: totalAmount,
+        currency,
+        supplierName,
+        issuedAt,
+        status: isVoided ? 'voided' : 'active',
+        rawJson: docData,
+        establishmentId: docData.establishment_id || docData.establishment?.id || null,
+      }).onConflictDoUpdate({
+        target: [purchases.companyId, purchases.externalId],
+        set: {
+          number: numberFull,
+          total: totalAmount,
+          supplierName,
+          status: isVoided ? 'voided' : 'active',
+          issuedAt,
+          rawJson: docData,
+          establishmentId: docData.establishment_id || docData.establishment?.id || null,
+          syncedAt: new Date(),
+        },
+      }).returning({ id: purchases.id });
+
+      if (insertedPurchase && !isVoided) {
+        await db.delete(purchasePayments).where(eq(purchasePayments.purchaseId, insertedPurchase.id));
+        const paymentsList = docData.payments || [];
+
+        if (Array.isArray(paymentsList) && paymentsList.length > 0) {
+          await db.insert(purchasePayments).values(
+            paymentsList.map((p: any) => ({
+              purchaseId: insertedPurchase.id,
+              paymentMethodId: mapPaymentMethodId(p.payment_method_type?.description || p.description || 'Efectivo'),
+              amount: (p.payment || p.amount || totalAmount).toString(),
+              reference: p.reference || p.referencia || p.destination_description || '',
+            }))
+          );
+        } else {
+          await db.insert(purchasePayments).values({
+            purchaseId: insertedPurchase.id,
+            paymentMethodId: '01',
+            amount: totalAmount,
+            reference: 'Default Cash Purchase (Webhook)',
+          });
+        }
+      }
+
+      try {
+        const keys = await redis.keys(`*${companyId}*`);
+        if (keys.length > 0) {
+          await redis.del(...keys);
+        }
+      } catch {}
+
+      console.log(`[Webhook Service] ✅ Procesado evento '${eventName}' para compra ${numberFull} (S/. ${totalAmount})`);
+
+      return {
+        success: true,
+        message: `Compra ${numberFull} procesada exitosamente`,
+        saleId: insertedPurchase?.id,
+      };
     }
 
     // Identificar si es anulación

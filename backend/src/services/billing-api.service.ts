@@ -163,3 +163,62 @@ export async function fetchSaleNoteDetail(client: AxiosInstance, externalId: str
     return null;
   }
 }
+
+export async function fetchPurchases(client: AxiosInstance, dateStart: string, dateEnd: string): Promise<any[]> {
+  const allPurchases: any[] = [];
+  const seenIds = new Set<number>();
+  let currentPage = 1;
+  let hasMorePages = true;
+  const maxPages = 100;
+
+  while (hasMorePages && currentPage <= maxPages) {
+    try {
+      const response = await client.get(`/purchases/records?page=${currentPage}`);
+      const data = response.data?.data || [];
+      const meta = response.data?.meta;
+      
+      if (!Array.isArray(data) || data.length === 0) {
+        hasMorePages = false;
+        break;
+      }
+
+      let newItemsFound = false;
+      let olderThanRangeCount = 0;
+
+      for (const item of data) {
+        if (seenIds.has(item.id)) continue;
+        seenIds.add(item.id);
+        newItemsFound = true;
+
+        const itemDate = item.date_of_issue || (item.created_at ? item.created_at.split(' ')[0] : null);
+        if (itemDate) {
+          if (itemDate >= dateStart && itemDate <= dateEnd) {
+            allPurchases.push(item);
+          } else if (itemDate < dateStart) {
+            olderThanRangeCount++;
+          }
+        } else {
+          allPurchases.push(item);
+        }
+      }
+
+      if (!newItemsFound) {
+        hasMorePages = false;
+        break;
+      }
+
+      if (olderThanRangeCount === data.length) {
+        hasMorePages = false;
+      } else if (meta?.last_page && currentPage >= meta.last_page) {
+        hasMorePages = false;
+      } else {
+        currentPage++;
+      }
+    } catch (error: any) {
+      console.warn(`[Billing API Service] Warning fetching purchases on page ${currentPage}:`, error.message);
+      hasMorePages = false;
+    }
+  }
+
+  return allPurchases;
+}

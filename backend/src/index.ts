@@ -71,6 +71,12 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 async function initDatabaseIndexes() {
   try {
     const { sqlClient } = await import('./config/database.js');
+    const { runSchemaMigrations } = await import('./db/migrations/apply.js');
+    
+    // 1. Correr migraciones de base de datos
+    await runSchemaMigrations();
+
+    // 2. Crear índices de rendimiento
     await sqlClient.unsafe(`
       CREATE INDEX IF NOT EXISTS idx_sales_company_issued ON sales(company_id, issued_at DESC);
       CREATE INDEX IF NOT EXISTS idx_sales_company_series_issued ON sales(company_id, series, issued_at DESC);
