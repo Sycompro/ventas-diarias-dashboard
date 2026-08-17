@@ -57,6 +57,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [alignRight, setAlignRight] = useState(false);
 
   // Sync state when props change (e.g. from preset buttons)
   useEffect(() => {
@@ -252,7 +253,20 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
       {/* Popover Calendar Container */}
       {isOpen && (
-        <div className="absolute left-0 mt-1.5 p-4 bg-white border border-slate-200 rounded-xl z-50 min-w-[290px] animate-in fade-in slide-in-from-top-1.5 duration-150">
+        <div
+          ref={(el) => {
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              const viewportWidth = window.innerWidth;
+              if (rect.right > viewportWidth - 8 && !alignRight) {
+                setAlignRight(true);
+              } else if (rect.right <= viewportWidth - 8 && alignRight) {
+                setAlignRight(false);
+              }
+            }
+          }}
+          className={`absolute ${alignRight ? 'right-0' : 'left-0'} mt-1.5 p-4 bg-white border border-slate-200 rounded-xl shadow-xl z-50 min-w-[290px] animate-in fade-in slide-in-from-top-1.5 duration-150`}
+        >
           
           {/* Header Month Navigation */}
           <div className="flex items-center justify-between mb-4">
