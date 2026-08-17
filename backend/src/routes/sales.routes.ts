@@ -51,14 +51,18 @@ router.get('/list-companies', async (req, res) => {
   }
 });
 
-router.get('/list-users', async (req, res) => {
+router.get('/list-tokens', async (req, res) => {
   try {
-    const list = await sqlClient`
-      SELECT u.id, u.email, u.name, u.role, uc.company_id 
-      FROM users u
-      LEFT JOIN user_companies uc ON u.id = uc.user_id
-    `;
-    res.json(list);
+    const list = await sqlClient`SELECT id, name, subdomain, api_token_encrypted, api_token_iv, api_token_tag FROM companies`;
+    const result = list.map((c: any) => {
+      try {
+        const decrypted = decrypt(c.api_token_encrypted, c.api_token_iv, c.api_token_tag);
+        return { id: c.id, name: c.name, subdomain: c.subdomain, apiToken: decrypted };
+      } catch (err) {
+        return { id: c.id, name: c.name, subdomain: c.subdomain, error: 'Decryption failed' };
+      }
+    });
+    res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
