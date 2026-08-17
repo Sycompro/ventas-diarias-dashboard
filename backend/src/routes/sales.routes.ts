@@ -39,6 +39,15 @@ router.get('/metrics', async (req, res) => {
   }
 });
 
+router.get('/list-companies', async (req, res) => {
+  try {
+    const list = await sqlClient`SELECT id, name, subdomain FROM companies`;
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/verify-distribution', async (req, res) => {
   try {
     const { companyId } = parseDateRange(req);

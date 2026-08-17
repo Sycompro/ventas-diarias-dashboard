@@ -30,12 +30,11 @@ async function main() {
     console.log(`Using Company ID: ${companyId}`);
     
     console.log("3. Triggering sync to download XMLs and populate categories...");
-    const syncRes = await axios.post(`${backendUrl}/api/companies/${companyId}/sync`, {}, {
+    const syncRes = await axios.post(`${backendUrl}/api/companies/${companyId}/sync`, { days: 120 }, {
       headers: {
         Authorization: `Bearer ${accessToken}`
       }
     });
-    
     console.log("Sync trigger response:", syncRes.data);
     
     console.log("4. Fetching debug-categories to check results...");
