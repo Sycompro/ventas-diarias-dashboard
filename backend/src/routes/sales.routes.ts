@@ -20,6 +20,18 @@ import https from 'https';
 
 const router = Router();
 
+router.get('/debug-june', async (req, res) => {
+  try {
+    const companyId = '51089e80-446d-461c-ae37-1518381eb051';
+    const dateStart = '2026-06-01';
+    const dateEnd = '2026-06-30';
+    const metrics = await getDashboardMetrics(companyId, dateStart, dateEnd, null, null);
+    res.json(metrics.salesBySeller);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.use(authenticate);
 
 const parseDateRange = (req: any) => {
