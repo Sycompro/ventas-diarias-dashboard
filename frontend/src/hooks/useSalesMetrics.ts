@@ -116,10 +116,17 @@ const mapBackendMetricsToFrontend = (data: any, filters: any): DashboardMetrics 
 
   // Sellers
   const bySeller = (data.salesBySeller || []).map((s: any) => ({
+    name: s.name || 'VENDEDOR',
     sellerName: s.name || 'VENDEDOR',
     total: parseFloat(s.total || 0),
     count: parseInt(s.count || 0, 10),
-    avgTicket: parseFloat(s.avgTicket || 0)
+    avgTicket: parseFloat(s.avgTicket || 0),
+    cpeTotal: parseFloat(s.cpeTotal || 0),
+    notesTotal: parseFloat(s.notesTotal || 0),
+    cpeCount: parseInt(s.cpeCount || 0, 10),
+    notesCount: parseInt(s.notesCount || 0, 10),
+    productsTotal: parseFloat(s.productsTotal || 0),
+    servicesTotal: parseFloat(s.servicesTotal || 0)
   }));
 
   const taxes = data.taxes ? {
