@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Plus, RefreshCw, Trash2, Edit, Check, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Building2, Plus, RefreshCw, Trash2, Edit, Check, ShieldCheck, Globe, Key, Link2, Clock, Coins, Copy, CheckCircle2, X, Zap, Settings } from 'lucide-react';
 import { useCompanies } from '../hooks/useCompany';
 import { useAuthStore } from '../hooks/useAuth';
 import { companyService } from '../services/api';
-import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { ToastContainer } from '../components/ui/Toast';
 import { useHeaderStore } from '../hooks/useHeader';
 
 export const CompaniesPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { data: companies, isLoading, isRefetching } = useCompanies();
+  const { data: companies, isLoading } = useCompanies();
 
   const setHeader = useHeaderStore((state: any) => state.setHeader);
   const clearHeader = useHeaderStore((state: any) => state.clearHeader);
@@ -54,6 +53,7 @@ export const CompaniesPage: React.FC = () => {
   const [testingId, setTestingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [copiedWebhook, setCopiedWebhook] = useState<string | null>(null);
 
   // Custom Toast State
   const [toasts, setToasts] = useState<any[]>([]);
@@ -177,116 +177,156 @@ export const CompaniesPage: React.FC = () => {
     }
   };
 
+  const copyWebhookUrl = (companyId: string) => {
+    const url = getWebhookUrl(companyId);
+    navigator.clipboard.writeText(url);
+    setCopiedWebhook(companyId);
+    setTimeout(() => setCopiedWebhook(null), 2000);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <ToastContainer toasts={toasts} />
 
       {/* Loader */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-48 bg-white rounded-xl border border-slate-200/80 animate-pulse"></div>
+        <div className="max-w-2xl mx-auto space-y-4">
+          <div className="h-56 bg-white rounded-2xl border border-slate-200/80 animate-pulse"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="max-w-2xl mx-auto space-y-5">
           {companies?.map((company: any) => (
             <div 
               key={company.id}
-              className="bg-white rounded-xl border border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/20 transition-all duration-300 p-6 flex flex-col justify-between relative overflow-hidden"
+              className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm"
             >
-              {/* Card visual accent */}
-              <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-primary-500 to-violet-500"></div>
-
-              <div>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">{company.name}</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">RUC: {company.ruc}</p>
+              {/* Company Header */}
+              <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-sm">
+                      <Building2 size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 tracking-tight">{company.name}</h3>
+                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">RUC: {company.ruc}</p>
+                    </div>
                   </div>
                   
-                  {/* Status Indicator */}
-                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
-                    <ShieldCheck size={14} /> Activo
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Conectado
                   </span>
                 </div>
+              </div>
 
-                <div className="mt-5 space-y-2">
-                  <div className="flex flex-col bg-slate-50 rounded-lg p-3">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Punto de Integración (API URL)</span>
-                    <code className="text-xs text-slate-700 break-all select-all font-mono mt-1">
-                      https://{company.subdomain}.syscomecosistemadigital.com/api
-                    </code>
+              {/* Info Grid */}
+              <div className="p-5 space-y-3">
+                {/* API Endpoint */}
+                <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Globe size={12} className="text-slate-400" />
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Punto de Integración (API)</span>
                   </div>
+                  <code className="text-[11px] text-slate-700 break-all select-all font-mono font-medium leading-relaxed">
+                    https://{company.subdomain}.syscomecosistemadigital.com/api
+                  </code>
+                </div>
 
-                  <div className="flex flex-col bg-slate-50 rounded-lg p-3">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Receptor de Webhooks (Tiempo Real)</span>
-                    <code className="text-[11px] text-indigo-700 break-all select-all font-mono mt-1 font-bold">
-                      {getWebhookUrl(company.id)}
-                    </code>
-                    <span className="text-[9px] text-slate-400 mt-1.5 leading-snug">
-                      Registra esta URL en el panel de tu Facturador Pro (Configuración &gt; Webhooks) para recibir ventas y actualizaciones en tiempo real.
-                    </span>
+                {/* Webhook URL */}
+                <div className="bg-blue-50/40 rounded-xl p-3.5 border border-blue-100/60">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Zap size={12} className="text-blue-500" />
+                      <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Webhook de Tiempo Real</span>
+                    </div>
+                    <button
+                      onClick={() => copyWebhookUrl(company.id)}
+                      className="flex items-center gap-1 text-[10px] font-semibold text-blue-500 hover:text-blue-700 transition-colors cursor-pointer"
+                    >
+                      {copiedWebhook === company.id ? (
+                        <><CheckCircle2 size={11} /> Copiado</>
+                      ) : (
+                        <><Copy size={11} /> Copiar</>
+                      )}
+                    </button>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500 px-1 mt-2">
-                    <span>Moneda: <strong className="text-slate-800">{company.currencySymbol || 'S/.'}</strong></span>
-                    <span>Zona horaria: <strong className="text-slate-800">{company.timezone || 'America/Lima'}</strong></span>
+                  <code className="text-[11px] text-blue-700 break-all select-all font-mono font-bold leading-relaxed block">
+                    {getWebhookUrl(company.id)}
+                  </code>
+                  <p className="text-[9px] text-slate-400 mt-2 leading-snug">
+                    Registra esta URL en tu Facturador Pro → Configuración → Webhooks para recibir ventas en tiempo real.
+                  </p>
+                </div>
+
+                {/* Metadata Row */}
+                <div className="flex items-center gap-4 px-1">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <Coins size={12} className="text-slate-400" />
+                    <span>Moneda: <strong className="text-slate-700">{company.currencySymbol || 'S/.'}</strong></span>
+                  </div>
+                  <div className="w-px h-3.5 bg-slate-200"></div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <Clock size={12} className="text-slate-400" />
+                    <span>Zona: <strong className="text-slate-700">{company.timezone || 'America/Lima'}</strong></span>
                   </div>
                 </div>
               </div>
 
-              {/* Actions Section */}
-              <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap gap-2 justify-between items-center">
-                <div className="flex gap-2">
+              {/* Actions Footer */}
+              <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50/40 flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <button 
                     onClick={() => handleTestConnection(company.id, company.name)}
                     disabled={testingId === company.id}
-                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
-                    title="Verificar conexión en vivo con la API del Facturador"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-800 transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                   >
-                    <Check size={14} className={testingId === company.id ? 'animate-spin' : ''} />
+                    <Check size={13} className={testingId === company.id ? 'animate-spin' : ''} />
                     {testingId === company.id ? 'Probando...' : 'Probar API'}
                   </button>
                   <button 
                     onClick={() => handleForceSync(company.id, company.name)}
                     disabled={syncingId === company.id}
-                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors flex items-center gap-1.5 disabled:opacity-60 cursor-pointer"
-                    title="Descargar y sincronizar comprobantes"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-800 transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                   >
-                    <RefreshCw size={14} className={syncingId === company.id ? 'animate-spin' : ''} />
+                    <RefreshCw size={13} className={syncingId === company.id ? 'animate-spin' : ''} />
                     {syncingId === company.id ? 'Sincronizando...' : 'Sincronizar'}
                   </button>
                 </div>
 
-                <div className="flex gap-1.5">
+                <div className="flex items-center gap-1">
                   <button 
                     onClick={() => openEditModal(company)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                    title="Editar parámetros"
+                    className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white transition-all cursor-pointer"
+                    title="Editar credenciales"
                   >
-                    <Edit size={16} />
+                    <Settings size={15} />
                   </button>
                   <button 
                     onClick={() => handleDelete(company.id, company.name)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
                     title="Desconectar integración"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Setup tutorial card if list is empty */}
+          {/* Empty state */}
           {(!companies || companies.length === 0) && (
-            <div className="col-span-2 bg-slate-50 rounded-xl p-8 text-center border border-dashed border-slate-200">
-              <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <h4 className="text-lg font-semibold text-slate-700">Ninguna empresa configurada</h4>
-              <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+            <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-slate-200 shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-7 h-7 text-slate-400" />
+              </div>
+              <h4 className="text-base font-bold text-slate-700">Ninguna empresa configurada</h4>
+              <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto leading-relaxed">
                 Registra las credenciales y subdominios de tus facturadores para comenzar a compilar ventas en tu dashboard unificado.
               </p>
               <button 
                 onClick={openAddModal}
-                className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+                className="mt-5 px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors text-xs font-bold cursor-pointer shadow-sm"
               >
                 Conectar Primera Empresa
               </button>
@@ -295,92 +335,103 @@ export const CompaniesPage: React.FC = () => {
         </div>
       )}
 
-      {/* CRUD / Integration Modal */}
+      {/* ─── CRUD / Integration Modal ─── */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6 relative">
-            {/* Close button */}
-            <button 
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors text-xl font-bold"
-            >
-              &times;
-            </button>
-
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-xl">
             {/* Modal Header */}
-            <div className="flex items-start gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
-                <Building2 size={22} className="text-slate-600" />
+            <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+                  <Building2 size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {editingCompany ? 'Editar Credenciales' : 'Conectar Facturador'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                    Vincula tu cuenta del ecosistema digital para sincronizar comprobantes.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight">
-                  Configurar Facturador Electrónico
-                </h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  Vincula tu cuenta del facturador del ecosistema digital para cargar tus comprobantes y analizarlos en tiempo real.
-                </p>
-              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSave} className="space-y-5">
+            <form onSubmit={handleSave} className="p-6 space-y-5">
+              {/* Subdomain */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 tracking-wider">SUBDOMINIO DE LA EMPRESA</label>
-                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl focus-within:border-slate-400 focus-within:bg-white transition-all overflow-hidden">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <Globe size={11} /> Subdominio de la empresa
+                </label>
+                <div className="flex items-stretch bg-slate-50 border border-slate-200 rounded-xl focus-within:border-slate-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-slate-100 transition-all overflow-hidden">
                   <input 
                     type="text" 
                     value={subdomain} 
                     onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/\s+/g, ''))} 
-                    placeholder="restauranteestrellamarina" 
-                    className="w-full px-3 py-2.5 bg-transparent border-0 outline-none text-slate-800 placeholder-slate-400 text-sm"
+                    placeholder="miempresa" 
+                    className="flex-1 px-3.5 py-2.5 bg-transparent border-0 outline-none text-slate-800 placeholder-slate-400 text-sm font-medium"
                     required
                   />
-                  <span className="pr-3 text-slate-500 text-xs font-semibold border-l border-slate-200 pl-3 bg-slate-100/50 py-2.5 shrink-0 select-none">
+                  <span className="px-3 text-slate-400 text-[10px] font-semibold border-l border-slate-200 bg-slate-100/60 flex items-center shrink-0 select-none">
                     .syscomecosistemadigital.com
                   </span>
                 </div>
               </div>
 
+              {/* API Token */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 tracking-wider">TOKEN DE LA API (API TOKEN)</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <Key size={11} /> Token de la API
+                </label>
                 <input 
                   type="password" 
                   value={apiToken} 
                   onChange={(e) => setApiToken(e.target.value)} 
-                  placeholder={editingCompany ? '••••••••••••••••' : 'bJ7A••••••••kHEw'} 
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-slate-400 focus:bg-white outline-none transition-all text-sm text-slate-800 placeholder-slate-400"
+                  placeholder={editingCompany ? '••••••••••••••••' : 'Pega tu API Token aquí'} 
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100 outline-none transition-all text-sm text-slate-800 placeholder-slate-400 font-medium"
                   required={!editingCompany}
                 />
+                {editingCompany && (
+                  <p className="text-[9px] text-slate-400 leading-snug">
+                    Deja vacío para conservar el token actual. Solo rellena si deseas actualizarlo.
+                  </p>
+                )}
               </div>
 
-              {/* Main Actions Row */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2.5 pt-2">
                 <button 
                   type="button"
                   onClick={() => handleTestConnection(editingCompany?.id || '', name)}
-                  disabled={testingId !== null}
-                  className="px-4 py-2.5 bg-slate-105 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer text-center"
+                  disabled={testingId !== null || !subdomain}
+                  className="flex-1 px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl font-semibold text-xs transition-all disabled:opacity-40 cursor-pointer text-center shadow-sm"
                 >
                   {testingId ? 'Probando...' : 'Probar Conexión'}
                 </button>
                 <button 
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer text-center"
+                  className="flex-1 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer text-center shadow-sm"
                 >
                   {saving ? 'Guardando...' : 'Guardar Conexión'}
                 </button>
               </div>
 
-              {/* Disconnect Action */}
+              {/* Disconnect option for edit mode */}
               {editingCompany && (
-                <div className="pt-3 border-t border-slate-100 mt-2">
+                <div className="pt-3 border-t border-slate-100">
                   <button 
                     type="button"
                     onClick={() => {
                       handleDelete(editingCompany.id, editingCompany.name);
                     }}
-                    className="w-full px-4 py-2.5 border border-red-250 hover:bg-red-50 text-red-600 rounded-xl font-semibold text-sm transition-colors cursor-pointer text-center"
+                    className="w-full px-4 py-2.5 border border-red-200 hover:bg-red-50 text-red-600 rounded-xl font-semibold text-xs transition-all cursor-pointer text-center"
                   >
                     Desconectar Facturador
                   </button>
