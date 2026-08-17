@@ -132,36 +132,81 @@ export const SalesBySellerPage: React.FC = () => {
     { 
       header: 'Desglose Ventas', 
       key: 'cpeTotal',
-      render: (item: any) => (
-        <div className="space-y-1">
-          <div className="text-[10.5px] font-medium text-slate-600 flex justify-between gap-4">
-            <span className="text-emerald-600 font-semibold">{formatCurrency(item.cpeTotal || 0)}</span>
-            <span className="text-amber-600 font-semibold">{formatCurrency(item.notesTotal || 0)}</span>
+      render: (item: any) => {
+        const cpe = item.cpeTotal || 0;
+        const nv = item.notesTotal || 0;
+        const total = cpe + nv || 1;
+        const cpePct = Math.round((cpe / total) * 100);
+        const nvPct = 100 - cpePct;
+        return (
+          <div className="min-w-[160px]">
+            {/* Stacked rows with label + value */}
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">CPE</span>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-600 tabular-nums">{formatCurrency(cpe)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">NV</span>
+              </div>
+              <span className="text-[11px] font-bold text-amber-600 tabular-nums">{formatCurrency(nv)}</span>
+            </div>
+            {/* Proportional bar */}
+            <div className="w-full bg-slate-100 rounded-full h-[5px] overflow-hidden flex">
+              <div className="bg-emerald-500 h-full rounded-l-full transition-all" style={{ width: `${cpePct}%` }} />
+              <div className="bg-amber-400 h-full rounded-r-full transition-all" style={{ width: `${nvPct}%` }} />
+            </div>
+            {(cpe > 0 || nv > 0) && (
+              <div className="flex justify-between mt-0.5">
+                <span className="text-[8px] text-slate-400 tabular-nums">{cpePct}%</span>
+                <span className="text-[8px] text-slate-400 tabular-nums">{nvPct}%</span>
+              </div>
+            )}
           </div>
-          <div className="w-24 bg-slate-100 rounded-full h-1 overflow-hidden flex">
-            <div className="bg-emerald-500 h-full" style={{ width: `${item.total > 0 ? ((item.cpeTotal || 0) / item.total) * 100 : 0}%` }} />
-            <div className="bg-amber-400 h-full" style={{ width: `${item.total > 0 ? ((item.notesTotal || 0) / item.total) * 100 : 0}%` }} />
-          </div>
-        </div>
-      )
+        );
+      }
     },
     { 
-      header: 'Rubro (Productos vs Servicios)', 
+      header: 'Rubro (Prod. vs Serv.)', 
       key: 'productsTotal',
       render: (item: any) => {
         const prodVal = item.productsTotal || 0;
         const servVal = item.servicesTotal || 0;
         const totalRubro = prodVal + servVal || 1;
+        const prodPct = Math.round((prodVal / totalRubro) * 100);
+        const servPct = 100 - prodPct;
         return (
-          <div className="space-y-1">
-            <div className="text-[10.5px] font-medium text-slate-500 flex justify-between gap-4">
-              <span className="text-blue-500 font-semibold">{formatCurrency(prodVal)}</span>
-              <span className="text-violet-500 font-semibold">{formatCurrency(servVal)}</span>
+          <div className="min-w-[160px]">
+            {/* Stacked rows with label + value */}
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-sm bg-blue-500 shrink-0" />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Productos</span>
+              </div>
+              <span className="text-[11px] font-bold text-blue-600 tabular-nums">{formatCurrency(prodVal)}</span>
             </div>
-            <div className="w-24 bg-slate-100 rounded-full h-1 overflow-hidden flex">
-              <div className="bg-blue-500 h-full" style={{ width: `${(prodVal / totalRubro) * 100}%` }} />
-              <div className="bg-violet-500 h-full" style={{ width: `${(servVal / totalRubro) * 100}%` }} />
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-sm bg-violet-500 shrink-0" />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Servicios</span>
+              </div>
+              <span className="text-[11px] font-bold text-violet-600 tabular-nums">{formatCurrency(servVal)}</span>
             </div>
+            {/* Proportional bar */}
+            <div className="w-full bg-slate-100 rounded-full h-[5px] overflow-hidden flex">
+              <div className="bg-blue-500 h-full rounded-l-full transition-all" style={{ width: `${prodPct}%` }} />
+              <div className="bg-violet-500 h-full rounded-r-full transition-all" style={{ width: `${servPct}%` }} />
+            </div>
+            {(prodVal > 0 || servVal > 0) && (
+              <div className="flex justify-between mt-0.5">
+                <span className="text-[8px] text-slate-400 tabular-nums">{prodPct}%</span>
+                <span className="text-[8px] text-slate-400 tabular-nums">{servPct}%</span>
+              </div>
+            )}
           </div>
         );
       }
