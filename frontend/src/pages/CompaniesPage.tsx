@@ -31,6 +31,15 @@ export const CompaniesPage: React.FC = () => {
     return () => clearHeader();
   }, [companies]);
 
+  const getWebhookUrl = (companyId: string) => {
+    const apiEnvUrl = import.meta.env.VITE_API_URL;
+    if (apiEnvUrl) {
+      const cleanUrl = apiEnvUrl.endsWith('/') ? apiEnvUrl.slice(0, -1) : apiEnvUrl;
+      return `${cleanUrl}/api/webhooks/billing/${companyId}`;
+    }
+    return `${window.location.origin}/api/webhooks/billing/${companyId}`;
+  };
+
   // State for Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any | null>(null);
@@ -206,6 +215,16 @@ export const CompaniesPage: React.FC = () => {
                     <code className="text-xs text-slate-700 break-all select-all font-mono mt-1">
                       https://{company.subdomain}.syscomecosistemadigital.com/api
                     </code>
+                  </div>
+
+                  <div className="flex flex-col bg-slate-50 rounded-lg p-3">
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Receptor de Webhooks (Tiempo Real)</span>
+                    <code className="text-[11px] text-indigo-700 break-all select-all font-mono mt-1 font-bold">
+                      {getWebhookUrl(company.id)}
+                    </code>
+                    <span className="text-[9px] text-slate-400 mt-1.5 leading-snug">
+                      Registra esta URL en el panel de tu Facturador Pro (Configuración &gt; Webhooks) para recibir ventas y actualizaciones en tiempo real.
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-500 px-1 mt-2">
                     <span>Moneda: <strong className="text-slate-800">{company.currencySymbol || 'S/.'}</strong></span>
