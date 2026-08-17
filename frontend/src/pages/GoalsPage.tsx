@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, Plus, X, Calendar, DollarSign, User, Trash2, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react';
+import { Target, Plus, X, Calendar, DollarSign, Trash2, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { goalsService } from '../services/api';
 import { useFilters } from '../hooks/useFilters';
 import { useCompanySellers } from '../hooks/useCompany';
 import { Skeleton } from '../components/ui/Skeleton';
 import { CustomDatePicker } from '../components/ui/CustomDatePicker';
+import { CustomSelect } from '../components/ui/CustomSelect';
 import { useHeaderStore } from '../hooks/useHeader';
 import { formatCurrency } from '../utils/formatters';
 
@@ -22,12 +23,12 @@ export const GoalsPage: React.FC = () => {
   const [periodType, setPeriodType] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
   const [periodStart, setPeriodStart] = useState(new Date().toISOString().split('T')[0]);
   const [periodEnd, setPeriodEnd] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [sellerName, setSellerName] = useState('');
+  const [sellerName, setSellerName] = useState<string | null>(null);
 
   // Local Filter States
-  const [filterSeller, setFilterSeller] = useState<string>('all');
-  const [filterPeriod, setFilterPeriod] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterSeller, setFilterSeller] = useState<string | null>(null);
+  const [filterPeriod, setFilterPeriod] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
   // Fetch Goals Progress
   const { data: goalsProgress = [], isLoading } = useQuery({
@@ -47,7 +48,7 @@ export const GoalsPage: React.FC = () => {
       setIsModalOpen(false);
       // Reset form
       setTargetValue('');
-      setSellerName('');
+      setSellerName(null);
     }
   });
 
@@ -85,7 +86,7 @@ export const GoalsPage: React.FC = () => {
       periodType,
       periodStart,
       periodEnd,
-      sellerName: sellerName.trim() || null,
+      sellerName: sellerName ? sellerName.trim() : null,
       isActive: true
     });
   };
@@ -103,11 +104,51 @@ export const GoalsPage: React.FC = () => {
     return names;
   }, [goalsProgress]);
 
+  // Options for custom selects (Filters)
+  const sellerOptions = useMemo(() => {
+    const list = [
+      { value: 'general', label: 'Metas Generales' }
+    ];
+    configuredSellers.forEach((name: any) => {
+      list.push({ value: name, label: name });
+    });
+    return list;
+  }, [configuredSellers]);
+
+  const periodOptions = [
+    { value: 'daily', label: 'Diario' },
+    { value: 'weekly', label: 'Semanal' },
+    { value: 'monthly', label: 'Mensual' },
+    { value: 'yearly', label: 'Anual' }
+  ];
+
+  const statusOptions = [
+    { value: 'achieved', label: 'Cumplida (100%)' },
+    { value: 'on_track', label: 'En camino (80%+)' },
+    { value: 'at_risk', label: 'En riesgo (50%+)' },
+    { value: 'behind', label: 'Atrasado (<50%)' }
+  ];
+
+  // Options for custom selects (Modal)
+  const modalPeriodOptions = [
+    { value: 'daily', label: 'Diario' },
+    { value: 'weekly', label: 'Semanal' },
+    { value: 'monthly', label: 'Mensual' },
+    { value: 'yearly', label: 'Anual' }
+  ];
+
+  const modalSellerOptions = useMemo(() => {
+    return companySellers.map((s: any) => ({
+      value: s.name,
+      label: s.name
+    }));
+  }, [companySellers]);
+
   // Client-side filtering logic
   const filteredGoals = useMemo(() => {
     return goalsProgress.filter((goal: any) => {
       // 1. Seller Filter
-      if (filterSeller !== 'all') {
+      if (filterSeller !== null) {
         if (filterSeller === 'general') {
           if (goal.sellerName !== null) return false;
         } else {
@@ -116,12 +157,12 @@ export const GoalsPage: React.FC = () => {
       }
       
       // 2. Period Filter
-      if (filterPeriod !== 'all') {
+      if (filterPeriod !== null) {
         if (goal.periodType !== filterPeriod) return false;
       }
       
       // 3. Status Filter
-      if (filterStatus !== 'all') {
+      if (filterStatus !== null) {
         if (goal.status !== filterStatus) return false;
       }
       
@@ -146,51 +187,36 @@ export const GoalsPage: React.FC = () => {
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full">
           {/* Seller Filter */}
-          <div className="flex flex-col gap-1 min-w-[150px]">
+          <div className="flex flex-col gap-1 min-w-[170px]">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Filtrar por Vendedor</span>
-            <select
+            <CustomSelect
               value={filterSeller}
-              onChange={(e) => setFilterSeller(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none transition-colors"
-            >
-              <option value="all">Todos los vendedores</option>
-              <option value="general">Metas Generales</option>
-              {configuredSellers.map((name: any) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
+              onChange={setFilterSeller}
+              options={sellerOptions}
+              placeholder="Todos los vendedores"
+            />
           </div>
 
           {/* Period Filter */}
-          <div className="flex flex-col gap-1 min-w-[120px]">
+          <div className="flex flex-col gap-1 min-w-[130px]">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Período</span>
-            <select
+            <CustomSelect
               value={filterPeriod}
-              onChange={(e) => setFilterPeriod(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none transition-colors"
-            >
-              <option value="all">Todos</option>
-              <option value="daily">Diario</option>
-              <option value="weekly">Semanal</option>
-              <option value="monthly">Mensual</option>
-              <option value="yearly">Anual</option>
-            </select>
+              onChange={setFilterPeriod}
+              options={periodOptions}
+              placeholder="Todos"
+            />
           </div>
 
           {/* Status Filter */}
-          <div className="flex flex-col gap-1 min-w-[120px]">
+          <div className="flex flex-col gap-1 min-w-[140px]">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Estado de Meta</span>
-            <select
+            <CustomSelect
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none transition-colors"
-            >
-              <option value="all">Todos los estados</option>
-              <option value="achieved">Cumplida (100%)</option>
-              <option value="on_track">En camino (80%+)</option>
-              <option value="at_risk">En riesgo (50%+)</option>
-              <option value="behind">Atrasado (&lt;50%)</option>
-            </select>
+              onChange={setFilterStatus}
+              options={statusOptions}
+              placeholder="Todos los estados"
+            />
           </div>
         </div>
       </div>
@@ -303,7 +329,7 @@ export const GoalsPage: React.FC = () => {
                     {/* Delete action button */}
                     <button
                       onClick={() => handleDelete(goal.goalId, goal.sellerName)}
-                      className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-all"
+                      className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-all cursor-pointer"
                       title="Eliminar Meta"
                     >
                       <Trash2 size={13} />
@@ -365,7 +391,7 @@ export const GoalsPage: React.FC = () => {
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded-lg hover:bg-slate-100"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -389,7 +415,7 @@ export const GoalsPage: React.FC = () => {
                     placeholder="Ej. 15000"
                     value={targetValue}
                     onChange={(e) => setTargetValue(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 font-semibold focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600 font-semibold focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all animate-none"
                   />
                 </div>
               </div>
@@ -400,34 +426,24 @@ export const GoalsPage: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Período
                   </label>
-                  <select
+                  <CustomSelect
                     value={periodType}
-                    onChange={(e) => setPeriodType(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-600 font-semibold focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
-                  >
-                    <option value="daily">Diario</option>
-                    <option value="weekly">Semanal</option>
-                    <option value="monthly">Mensual</option>
-                    <option value="yearly">Anual</option>
-                  </select>
+                    onChange={(val) => setPeriodType(val as any)}
+                    options={modalPeriodOptions}
+                    placeholder="Seleccionar"
+                  />
                 </div>
                 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Vendedor (Opcional)
                   </label>
-                  <select
+                  <CustomSelect
                     value={sellerName}
-                    onChange={(e) => setSellerName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-600 font-semibold focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
-                  >
-                    <option value="">Meta General (Todos)</option>
-                    {companySellers.map((s: any) => (
-                      <option key={s.id || s.name} value={s.name}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSellerName}
+                    options={modalSellerOptions}
+                    placeholder="Meta General (Todos)"
+                  />
                 </div>
               </div>
 
@@ -452,14 +468,14 @@ export const GoalsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-500 hover:bg-slate-50 transition-colors"
+                  className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={createMutation.isPending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm shadow-blue-200"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm shadow-blue-200 cursor-pointer"
                 >
                   {createMutation.isPending ? 'Guardando...' : 'Crear Meta'}
                 </button>
