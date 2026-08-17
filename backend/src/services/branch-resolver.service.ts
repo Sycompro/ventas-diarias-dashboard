@@ -13,11 +13,14 @@ export interface BranchInfo {
 }
 
 /**
- * Obtiene la configuración de la empresa (establecimientos, almacenes, series y métodos de pago)
+ * Obtiene la configuración de la empresa (establecimientos, series y métodos de pago)
  * en tiempo real desde la API del Facturador Pro del tenant correspondiente.
+ * 
+ * NOTA: La API /company solo retorna el establecimiento asignado al usuario del token,
+ * no todos los establecimientos de la empresa. Por eso complementamos con datos de raw_json.
  */
 export async function getCompanyBillingConfig(companyId: string) {
-  const cacheKey = `company_billing_config_v7:${companyId}`;
+  const cacheKey = `company_billing_config_v8:${companyId}`;
   try {
     const cached = await redis.get(cacheKey);
     if (cached) return JSON.parse(cached);
@@ -28,59 +31,26 @@ export async function getCompanyBillingConfig(companyId: string) {
       where: eq(companies.id, companyId)
     });
     
-    if (!company) return { establishments: [], series: [], paymentMethods: [], warehouses: {} };
+    if (!company) return { establishments: [], series: [], paymentMethods: [] };
     
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
-    // 1. Consultar /company del tenant
+    // Consultar /company del tenant (retorna establecimientos y series visibles para este token)
     const compRes = await client.get('/company');
     const establishments = compRes.data?.establishments || [];
     const series = compRes.data?.series || [];
     const paymentMethods = compRes.data?.payment_method_types || [];
 
-    // 2. Consultar /document/search-items (endpoint oficial del Facturador) para extraer todos los almacenes/sucursales reales
-    const warehouseNames: Record<number, string> = {};
-    try {
-      let items: any[] = [];
-      try {
-        const searchRes = await client.get('/document/search-items');
-        items = searchRes.data?.data?.items || searchRes.data?.data || [];
-      } catch {
-        try {
-          const tableRes = await client.get('/document/tables');
-          items = tableRes.data?.data?.items || [];
-        } catch {
-          const itemsRes = await client.get('/items/records', { params: { limit: 50 } });
-          items = itemsRes.data?.data || [];
-        }
-      }
-
-      if (Array.isArray(items)) {
-        items.forEach((it: any) => {
-          if (Array.isArray(it.warehouses)) {
-            it.warehouses.forEach((w: any) => {
-              const id = w.warehouse_id || w.id;
-              const name = (w.warehouse_description || w.description || w.name || '')
-                .replace(/^Almacén\s*-\s*/i, '')
-                .replace(/^Almacen\s*-\s*/i, '')
-                .trim();
-              if (id && name) {
-                warehouseNames[id] = name;
-              }
-            });
-          }
-        });
-      }
-    } catch (itemErr: any) {
-      console.warn(`[Branch Resolver] Warning fetching warehouses for company ${companyId}:`, itemErr.message);
+    // Asegurar que el método '99' (Crédito) esté presente
+    if (!paymentMethods.find((pm: any) => pm.id === '99')) {
+      paymentMethods.push({ id: '99', description: 'Crédito' });
     }
 
     const data = {
       establishments,
       series,
-      paymentMethods,
-      warehouses: warehouseNames
+      paymentMethods
     };
     
     try {
@@ -90,7 +60,7 @@ export async function getCompanyBillingConfig(companyId: string) {
     return data;
   } catch (error: any) {
     console.warn(`[Branch Resolver] Warning loading billing config for ${companyId}:`, error.message);
-    return { establishments: [], series: [], paymentMethods: [], warehouses: {} };
+    return { establishments: [], series: [], paymentMethods: [] };
   }
 }
 
@@ -98,37 +68,24 @@ export async function getCompanyBillingConfig(companyId: string) {
  * Obtiene la lista dinámica y unificada de TODAS las Sucursales
  * para CUALQUIER empresa conectada.
  * 
- * ARQUITECTURA 100% DINÁMICA BASADA EN DATOS REALES DE FACTURADOR PRO:
- * 1. Lee establecimientos oficiales desde API /company
- * 2. Lee almacenes y sus nombres desde API /items/records
- * 3. Lee series oficiales y sus establishment_id desde API /company
- * 4. Lee establishment_id y nombres de sucursal directamente de los registros de venta (raw_json)
- * 5. Correlaciona series no catalogadas (ej: Notas de Venta) con las series del mismo local
- * 6. NO utiliza ninguna regla hardcodeada específica de ninguna empresa
+ * ARQUITECTURA 100% DINÁMICA:
+ * 1. Lee establecimientos y series desde API /company (vista parcial del token)
+ * 2. Enriquece con establishment_id y nombres desde los documentos ya sincronizados (raw_json)
+ * 3. Correlaciona series sin establishment_id conocido usando el patrón de sufijo numérico
+ * 4. NO utiliza ninguna regla hardcodeada específica de ninguna empresa
  */
 export async function getCompanyBranches(companyId: string): Promise<BranchInfo[]> {
   const config = await getCompanyBillingConfig(companyId);
   const officialEstablishments = config.establishments || [];
   const officialSeries = config.series || [];
-  const warehouses = config.warehouses || {};
 
   // 1. Diccionario dinámico de nombres de sucursal por establishment_id
   const branchNameById: Record<number, string> = {};
-  
-  // Agregar nombres desde almacenes descubiertos en la API
-  for (const [idStr, name] of Object.entries(warehouses)) {
-    const id = parseInt(idStr, 10);
-    if (!isNaN(id)) branchNameById[id] = name as string;
-  }
 
-  // Agregar o enriquecer con descripciones oficiales de establishments
+  // Agregar nombres desde establecimientos oficiales de /company
   for (const est of officialEstablishments) {
-    if (est.id) {
-      const desc = est.description || '';
-      // Si no teníamos nombre de almacén o la descripción es más representativa
-      if (!branchNameById[est.id] || (desc && !desc.toUpperCase().includes('PRINCIPAL'))) {
-        branchNameById[est.id] = desc;
-      }
+    if (est.id && est.description) {
+      branchNameById[est.id] = est.description;
     }
   }
 
@@ -144,6 +101,8 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
   }
 
   // B. Desde los registros de venta reales sincronizados (sales.raw_json)
+  // Esta es la fuente MÁS CONFIABLE porque contiene datos de TODAS las sedes
+  // que el admin haya sincronizado, incluyendo establishment_id del seller
   let allDbSeries: string[] = [];
   try {
     const dbSalesInfo = await sqlClient`
@@ -152,12 +111,14 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
         COALESCE(
           (raw_json->>'establishment_id')::int,
           (raw_json->'establishment'->>'id')::int,
-          (raw_json->>'establishmentId')::int
+          (raw_json->>'establishmentId')::int,
+          (raw_json->'seller'->>'establishment_id')::int
         ) as est_id,
         COALESCE(
           raw_json->>'establishment_description',
           raw_json->'establishment'->>'description',
-          raw_json->>'establishment_name'
+          raw_json->>'establishment_name',
+          raw_json->'seller'->'establishment'->>'description'
         ) as est_desc
       FROM sales
       WHERE company_id = ${companyId} AND series IS NOT NULL AND series != ''
@@ -170,9 +131,9 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
       
       if (s && r.est_id && !seriesToEstId[s]) {
         seriesToEstId[s] = r.est_id;
-        if (r.est_desc && !branchNameById[r.est_id]) {
-          branchNameById[r.est_id] = r.est_desc;
-        }
+      }
+      if (r.est_id && r.est_desc && !branchNameById[r.est_id]) {
+        branchNameById[r.est_id] = r.est_desc;
       }
       if (s && r.est_desc) {
         seriesToBranchName[s] = r.est_desc;
@@ -182,7 +143,8 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     console.warn(`[Branch Resolver] Could not query sales series:`, e.message);
   }
 
-  // C. Construir mapa de correlación de sufijo numérico para series que no tienen establishment_id directo
+  // C. Construir mapa de correlación de sufijo numérico
+  // Ejemplo: si F006 -> est_id=2, entonces NV06 (sufijo "06") también -> est_id=2
   const suffixToEstId: Record<string, number> = {};
   for (const [s, estId] of Object.entries(seriesToEstId)) {
     const match = s.match(/([A-Za-z]+)(\d+)/);
@@ -196,30 +158,17 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
 
   // 3. Función para resolver a qué sucursal pertenece cada serie
   const resolveEstIdForSeries = (s: string): number => {
-    // 1. Asignación directa conocida desde la API o desde raw_json
+    // Paso 1: Asignación directa conocida desde la API o desde raw_json
     if (seriesToEstId[s]) return seriesToEstId[s];
 
-    // 2. Si es GYMBRA o tiene los mismos establecimientos oficiales
-    const isGymbra = companyId === '51089e80-446d-461c-ae37-1518381eb051' || 
-                     officialEstablishments.some((e: any) => e.description?.toUpperCase().includes('PRADERA'));
-    if (isGymbra) {
-      const match = s.match(/([A-Za-z]+)(\d+)/);
-      if (match) {
-        const num = parseInt(match[2], 10);
-        if (num === 5 || num === 1) return 1; // La Pradera (ID: 1)
-        if (num === 6 || num === 2) return 2; // Las Brisas (ID: 2)
-        if (num === 7 || num === 3) return 3; // La Victoria (ID: 3)
-        if (num === 8 || num === 4) return 4; // Pimentel (ID: 4)
-        if (num === 9 || num === 5) return 5; // JLO (ID: 5)
-      }
-    }
-
-    // 3. Correlación por sufijo numérico con series conocidas de la misma empresa
+    // Paso 2: Correlación por sufijo numérico con series conocidas
     const match = s.match(/([A-Za-z]+)(\d+)/);
     if (match) {
       const rawSuffix = match[2];
+      // Buscar sufijo exacto
       if (suffixToEstId[rawSuffix]) return suffixToEstId[rawSuffix];
 
+      // Buscar variantes del sufijo (con/sin padding de ceros)
       const numericVal = parseInt(rawSuffix, 10);
       const variants = [
         String(numericVal),
@@ -230,11 +179,11 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
         if (suffixToEstId[v]) return suffixToEstId[v];
       }
 
-      // Si coincide directamente con un ID de establecimiento registrado
+      // Paso 3: Si el número coincide con un ID de establecimiento conocido
       if (branchNameById[numericVal]) return numericVal;
     }
 
-    // 3. Fallback al primer establecimiento oficial
+    // Paso 4: Fallback al primer establecimiento oficial
     if (officialEstablishments.length > 0 && officialEstablishments[0].id) {
       return officialEstablishments[0].id;
     }
@@ -307,7 +256,7 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
   if (result.length === 0) {
     result.push({
       id: '1',
-      name: branchNameById[1] || 'Sucursal Principal',
+      name: 'Sucursal Principal',
       series: []
     });
   }

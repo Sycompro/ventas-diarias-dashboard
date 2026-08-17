@@ -97,12 +97,13 @@ export async function fetchSaleNotes(client: AxiosInstance, dateStart: string, d
   const allSaleNotes: any[] = [];
   let currentPage = 1;
   let hasMorePages = true;
-  const maxPages = 25;
+  const maxPages = 100; // Cap de seguridad (antes era 25)
 
   while (hasMorePages && currentPage <= maxPages) {
     try {
       const response = await client.get(`/sale-note/lists?page=${currentPage}`);
       const data = response.data?.data || [];
+      const meta = response.data?.meta;
       
       if (!Array.isArray(data) || data.length === 0) {
         hasMorePages = false;
@@ -123,7 +124,11 @@ export async function fetchSaleNotes(client: AxiosInstance, dateStart: string, d
         }
       }
 
+      // Parar si todas las notas de esta página son más antiguas que el rango
       if (olderThanRangeCount === data.length) {
+        hasMorePages = false;
+      } else if (meta?.last_page && currentPage >= meta.last_page) {
+        // Paginación dinámica: respetar meta.last_page de la API
         hasMorePages = false;
       } else {
         currentPage++;
