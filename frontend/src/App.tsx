@@ -43,6 +43,7 @@ const SalesByDocumentPage = lazyWithRetry(() => import('./pages/SalesByDocumentP
 const ComparatorPage = lazyWithRetry(() => import('./pages/ComparatorPage').then(m => ({ default: m.ComparatorPage })));
 const GoalsPage = lazyWithRetry(() => import('./pages/GoalsPage').then(m => ({ default: m.GoalsPage })));
 const CompaniesPage = lazyWithRetry(() => import('./pages/CompaniesPage').then(m => ({ default: m.CompaniesPage })));
+const ProductsPage = lazyWithRetry(() => import('./pages/ProductsPage').then(m => ({ default: m.ProductsPage })));
 // Placeholder components for routing
 const Placeholder = ({ title }: { title: string }) => <div className="p-8 text-center text-xl text-neutral-500 font-medium">{title} - Próximamente</div>;
 
@@ -78,7 +79,7 @@ export const App: React.FC = () => {
               <Route path="ventas/vendedores" element={<SalesBySellerPage />} />
               <Route path="ventas/pagos" element={<SalesByPaymentPage />} />
               <Route path="ventas/documentos" element={<SalesByDocumentPage />} />
-              <Route path="ventas/productos" element={<Placeholder title="Ventas por Producto" />} />
+              <Route path="ventas/productos" element={<ProductsPage />} />
               <Route path="ventas/empresas" element={<Placeholder title="Ventas por Empresa" />} />
               
               <Route path="comparador" element={<ComparatorPage />} />

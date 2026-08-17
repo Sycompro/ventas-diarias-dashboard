@@ -139,8 +139,8 @@ export const GoalsPage: React.FC = () => {
 
   const modalSellerOptions = useMemo(() => {
     return companySellers.map((s: any) => ({
-      value: s.name,
-      label: s.name
+      value: s,
+      label: s
     }));
   }, [companySellers]);
 
@@ -188,12 +188,12 @@ export const GoalsPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3 w-full">
           {/* Seller Filter */}
           <div className="flex flex-col gap-1 min-w-[170px]">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Filtrar por Vendedor</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Filtrar por Usuario</span>
             <CustomSelect
               value={filterSeller}
               onChange={setFilterSeller}
               options={sellerOptions}
-              placeholder="Todos los vendedores"
+              placeholder="Todos los usuarios"
             />
           </div>
 
@@ -318,7 +318,7 @@ export const GoalsPage: React.FC = () => {
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 uppercase">
-                          Vendedor
+                          Usuario
                         </span>
                       )}
                       <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border uppercase ${statusBadge.colors}`}>
@@ -337,7 +337,7 @@ export const GoalsPage: React.FC = () => {
                   </div>
 
                   <h4 className="text-slate-800 font-bold text-xs leading-snug">
-                    {isGeneral ? 'Meta de Ventas Generales' : `Vendedor: ${goal.sellerName}`}
+                    {isGeneral ? 'Meta de Ventas Generales' : `Usuario: ${goal.sellerName}`}
                   </h4>
 
                   {/* Dates description */}
@@ -436,7 +436,7 @@ export const GoalsPage: React.FC = () => {
                 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Vendedor (Opcional)
+                    Usuario (Opcional)
                   </label>
                   <CustomSelect
                     value={sellerName}

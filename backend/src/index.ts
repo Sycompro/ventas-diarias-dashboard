@@ -12,6 +12,7 @@ import salesRoutes from './routes/sales.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import intelligenceRoutes from './routes/intelligence.routes.js';
 import goalsRoutes from './routes/goals.routes.js';
+import productsRoutes from './routes/products.routes.js';
 import reportsRoutes from './routes/reports.routes.js';
 import webhooksRoutes from './routes/webhooks.routes.js';
 
@@ -48,6 +49,7 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/goals', goalsRoutes);
+app.use('/api/products', productsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 
@@ -85,6 +87,7 @@ async function initDatabaseIndexes() {
       CREATE INDEX IF NOT EXISTS idx_sale_payments_sale_id ON sale_payments(sale_id);
       CREATE INDEX IF NOT EXISTS idx_sale_payments_method ON sale_payments(payment_method_id);
       CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
+      CREATE INDEX IF NOT EXISTS idx_sale_items_description ON sale_items(sale_id, category);
     `);
     console.log('⚡ Índices de alto rendimiento verificados en PostgreSQL.');
   } catch (e: any) {

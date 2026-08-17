@@ -13,7 +13,8 @@ import {
   FileText,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Package
 } from 'lucide-react';
 import { useAuthStore } from '../../hooks/useAuth';
 
@@ -31,6 +32,7 @@ const navGroups = [
       { name: 'Dashboard', path: '/', icon: LayoutDashboard },
       { name: 'Ventas', path: '/ventas', icon: ShoppingCart },
       { name: 'Usuarios', path: '/ventas/vendedores', icon: Users },
+      { name: 'Productos', path: '/ventas/productos', icon: Package },
       { name: 'Facturador', path: '/configuracion/empresas', icon: Building2 },
     ]
   },

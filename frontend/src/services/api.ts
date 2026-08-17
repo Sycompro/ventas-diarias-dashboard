@@ -193,4 +193,11 @@ export const intelligenceService = {
   }
 };
 
+export const productsService = {
+  getAnalytics: async (params: { companyId: string; dateStart: string; dateEnd: string; branch?: string; seller?: string }) => {
+    const { data } = await api.get('/products/analytics', { params });
+    return data;
+  }
+};
+
 export default api;
