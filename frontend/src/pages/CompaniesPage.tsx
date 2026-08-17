@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building2, Plus, RefreshCw, Trash2, Edit, Check, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
 import { useCompanies } from '../hooks/useCompany';
 import { useAuthStore } from '../hooks/useAuth';
@@ -6,10 +6,30 @@ import { companyService } from '../services/api';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { ToastContainer } from '../components/ui/Toast';
+import { useHeaderStore } from '../hooks/useHeader';
 
 export const CompaniesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { data: companies, isLoading, isRefetching } = useCompanies();
+
+  const setHeader = useHeaderStore((state: any) => state.setHeader);
+  const clearHeader = useHeaderStore((state: any) => state.clearHeader);
+
+  useEffect(() => {
+    setHeader(
+      'Integración del Facturador',
+      'Conecta y gestiona la sincronización con la API de tu facturador electrónico.',
+      (!companies || companies.length === 0) ? (
+        <button 
+          onClick={openAddModal}
+          className="px-3 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all font-semibold flex items-center gap-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-900"
+        >
+          <Plus size={14} /> Conectar Nueva Empresa
+        </button>
+      ) : undefined
+    );
+    return () => clearHeader();
+  }, [companies]);
 
   // State for Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -151,24 +171,6 @@ export const CompaniesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <ToastContainer toasts={toasts} />
-      
-      {/* Header section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Building2 className="text-primary-600" /> Integración del Facturador
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">Conecta y gestiona la sincronización con la API de tu facturador electrónico.</p>
-        </div>
-        {(!companies || companies.length === 0) && (
-          <button 
-            onClick={openAddModal}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium flex items-center gap-2 active:scale-95 cursor-pointer text-sm"
-          >
-            <Plus size={16} /> Conectar Nueva Empresa
-          </button>
-        )}
-      </div>
 
       {/* Loader */}
       {isLoading ? (
