@@ -38,6 +38,34 @@ router.get('/debug-purchases', async (req, res) => {
   }
 });
 
+router.get('/test-sync-gymbra', async (req, res) => {
+  try {
+    const company = await db.query.companies.findFirst({
+      where: eq(companies.subdomain, 'gymbra')
+    });
+    if (!company) return res.status(404).json({ error: 'Company gymbra not found in DB' });
+
+    const { decrypt } = await import('../services/crypto.service.js');
+    const { createBillingClient } = await import('../services/billing-api.service.js');
+
+    const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
+    const client = createBillingClient(company.subdomain, decryptedToken);
+
+    const apiRes = await client.get('/purchases/records');
+    
+    res.json({
+      subdomain: company.subdomain,
+      status: apiRes.status,
+      data: apiRes.data
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      error: err.message,
+      response: err.response?.data
+    });
+  }
+});
+
 router.use(authenticate);
 
 const parseDateRange = (req: any) => {
