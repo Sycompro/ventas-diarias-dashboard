@@ -8,9 +8,15 @@ import { Search } from 'lucide-react';
 
 interface GlobalFiltersProps {
   actions?: React.ReactNode;
+  showSellerFilter?: boolean;
+  showSearch?: boolean;
 }
 
-export const GlobalFilters: React.FC<GlobalFiltersProps> = ({ actions }) => {
+export const GlobalFilters: React.FC<GlobalFiltersProps> = ({ 
+  actions, 
+  showSellerFilter = true, 
+  showSearch = true 
+}) => {
   const user = useAuthStore((state) => state.user);
   const isCompanyUser = !!user?.companyId;
 
@@ -20,21 +26,23 @@ export const GlobalFilters: React.FC<GlobalFiltersProps> = ({ actions }) => {
       <div className="flex flex-wrap gap-2 items-center">
         {!isCompanyUser && <CompanySelector />}
         <BranchSelector />
-        <SellerSelector />
+        {showSellerFilter && <SellerSelector />}
         <DateRangePicker />
       </div>
 
       {/* Right side: search + extra actions */}
       <div className="flex items-center gap-2 shrink-0">
         {/* Search bar */}
-        <div className="relative flex items-center group w-full lg:w-48">
-          <Search size={14} className="absolute left-3 text-slate-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Buscar..."
-            className="pl-9 pr-4 py-2.5 bg-slate-50 hover:bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-xs w-full transition-all duration-200 outline-none placeholder:text-slate-400 focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 font-semibold text-slate-700"
-          />
-        </div>
+        {showSearch && (
+          <div className="relative flex items-center group w-full lg:w-48">
+            <Search size={14} className="absolute left-3 text-slate-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar..."
+              className="pl-9 pr-4 py-2.5 bg-slate-50 hover:bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-xs w-full transition-all duration-200 outline-none placeholder:text-slate-400 focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 font-semibold text-slate-700"
+            />
+          </div>
+        )}
 
         {/* Slot for extra action buttons (e.g. Export) */}
         {actions && <div className="flex items-center gap-2">{actions}</div>}

@@ -168,7 +168,7 @@ export const SalesBySellerPage: React.FC = () => {
     <div className="space-y-6">
       {/* Filtros Globales */}
       <div className="animate-in fade-in duration-500">
-        <GlobalFilters />
+        <GlobalFilters showSellerFilter={false} showSearch={false} />
       </div>
 
       {/* KPI Cards */}
