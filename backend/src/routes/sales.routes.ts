@@ -23,7 +23,12 @@ const router = Router();
 router.get('/debug-purchases', async (req, res) => {
   try {
     const list = await sqlClient`SELECT id, name, subdomain FROM companies`;
-    const syncedPurchases = await sqlClient`SELECT id, number, total, supplier_name, synced_at FROM purchases ORDER BY synced_at DESC LIMIT 10`;
+    const syncedPurchases = await sqlClient`
+      SELECT p.id, p.number, p.total, p.supplier_name, p.synced_at, c.subdomain
+      FROM purchases p
+      JOIN companies c ON p.company_id = c.id
+      ORDER BY p.synced_at DESC LIMIT 15
+    `;
     res.json({
       companies: list,
       syncedPurchases
