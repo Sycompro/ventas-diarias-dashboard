@@ -7,12 +7,7 @@ import {
   SlidersHorizontal,
   ChevronDown,
   Building2,
-  TrendingUp,
-  HelpCircle,
-  CreditCard,
-  DollarSign,
-  Smartphone,
-  ArrowLeftRight
+  TrendingUp
 } from 'lucide-react';
 import { useSalesBySeller } from '../hooks/useSalesMetrics';
 import { DataTable } from '../components/ui/DataTable';
@@ -86,84 +81,82 @@ export const SalesBySellerPage: React.FC = () => {
 
   const columns = useMemo(() => [
     { 
-      header: 'Ranking / Usuario', 
+      header: 'Usuario', 
       key: 'name',
       render: (item: any) => {
         const rank = processedData.findIndex((s: any) => (s.name || s.sellerName) === (item.name || item.sellerName)) + 1;
         
-        const badgeColor = rank === 1 ? 'bg-amber-100 text-amber-700 border-amber-200 font-black' 
-                         : rank === 2 ? 'bg-slate-100 text-slate-700 border-slate-200 font-bold' 
-                         : rank === 3 ? 'bg-orange-100 text-orange-700 border-orange-200 font-semibold'
-                         : 'bg-slate-50 text-slate-500 border-slate-100';
+        const rankStyles = rank === 1 ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-sm shadow-amber-200' 
+                         : rank === 2 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white' 
+                         : rank === 3 ? 'bg-gradient-to-br from-orange-300 to-orange-400 text-white'
+                         : 'bg-slate-100 text-slate-400';
+
+        const initials = (item.name || item.sellerName || 'U').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
 
         return (
-          <div className="flex items-center gap-2.5">
-            {/* Rank Badge */}
-            <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] shrink-0 font-bold ${badgeColor}`}>
-              #{rank}
+          <div className="flex items-center gap-3">
+            {/* Rank + Avatar combined */}
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center font-bold text-[11px] text-indigo-600">
+                {initials}
+              </div>
+              <div className={`absolute -top-1 -left-1 w-[18px] h-[18px] rounded-md flex items-center justify-center text-[8px] font-black ${rankStyles}`}>
+                {rank}
+              </div>
             </div>
-            {/* User Avatar */}
-            <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-xs text-indigo-600 shrink-0">
-              {(item.name || item.sellerName || 'U').slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <span className="font-bold text-slate-800 block text-xs">{item.name || item.sellerName}</span>
-              <span className="text-[10px] text-slate-400">Usuario registrado</span>
+            <div className="min-w-0">
+              <span className="font-bold text-slate-800 block text-[11px] truncate leading-tight">{item.name || item.sellerName}</span>
+              <span className="text-[9px] text-slate-400 leading-tight">{item.count} operaciones</span>
             </div>
           </div>
         );
       }
     },
     { 
-      header: 'Operaciones', 
-      key: 'count',
-      render: (item: any) => (
-        <div className="space-y-0.5">
-          <div className="text-xs font-semibold text-slate-700 tabular-nums">
-            {item.count} ops
+      header: 'Total', 
+      key: 'total',
+      render: (item: any) => {
+        const rank = processedData.findIndex((s: any) => (s.name || s.sellerName) === (item.name || item.sellerName)) + 1;
+        return (
+          <div className="text-right">
+            <span className={`text-sm font-extrabold tabular-nums ${rank === 1 ? 'text-indigo-600' : 'text-slate-800'}`}>
+              {formatCurrency(item.total)}
+            </span>
+            <div className="text-[9px] text-slate-400 mt-0.5">
+              Ticket: <span className="font-semibold text-slate-500">{formatCurrency(item.avgTicket)}</span>
+            </div>
           </div>
-          <div className="text-[9.5px] text-slate-400 flex items-center gap-1.5">
-            <span className="px-1 py-0.2 bg-emerald-50 text-emerald-700 rounded font-medium">CPE: {item.cpeCount || 0}</span>
-            <span className="px-1 py-0.2 bg-amber-50 text-amber-700 rounded font-medium">NV: {item.notesCount || 0}</span>
-          </div>
-        </div>
-      )
+        );
+      }
     },
     { 
-      header: 'Desglose Ventas', 
+      header: 'Por Comprobante', 
       key: 'cpeTotal',
       render: (item: any) => {
         const cpe = item.cpeTotal || 0;
         const nv = item.notesTotal || 0;
         const total = cpe + nv || 1;
         const cpePct = Math.round((cpe / total) * 100);
-        const nvPct = 100 - cpePct;
         return (
-          <div className="min-w-[160px]">
-            {/* Stacked rows with label + value */}
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">CPE</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-100 rounded-md px-1.5 py-0.5 flex-1 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-[8px] font-bold text-emerald-700 uppercase">CPE</span>
+                <span className="text-[10px] font-bold text-emerald-700 tabular-nums ml-auto">{formatCurrency(cpe)}</span>
               </div>
-              <span className="text-[11px] font-bold text-emerald-600 tabular-nums">{formatCurrency(cpe)}</span>
             </div>
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">NV</span>
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-md px-1.5 py-0.5 flex-1 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                <span className="text-[8px] font-bold text-amber-700 uppercase">NV</span>
+                <span className="text-[10px] font-bold text-amber-700 tabular-nums ml-auto">{formatCurrency(nv)}</span>
               </div>
-              <span className="text-[11px] font-bold text-amber-600 tabular-nums">{formatCurrency(nv)}</span>
-            </div>
-            {/* Proportional bar */}
-            <div className="w-full bg-slate-100 rounded-full h-[5px] overflow-hidden flex">
-              <div className="bg-emerald-500 h-full rounded-l-full transition-all" style={{ width: `${cpePct}%` }} />
-              <div className="bg-amber-400 h-full rounded-r-full transition-all" style={{ width: `${nvPct}%` }} />
             </div>
             {(cpe > 0 || nv > 0) && (
-              <div className="flex justify-between mt-0.5">
-                <span className="text-[8px] text-slate-400 tabular-nums">{cpePct}%</span>
-                <span className="text-[8px] text-slate-400 tabular-nums">{nvPct}%</span>
+              <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden flex">
+                <div className="bg-emerald-500 h-full transition-all" style={{ width: `${cpePct}%` }} />
+                <div className="bg-amber-400 h-full transition-all" style={{ width: `${100 - cpePct}%` }} />
               </div>
             )}
           </div>
@@ -171,55 +164,38 @@ export const SalesBySellerPage: React.FC = () => {
       }
     },
     { 
-      header: 'Rubro (Prod. vs Serv.)', 
+      header: 'Por Rubro', 
       key: 'productsTotal',
       render: (item: any) => {
         const prodVal = item.productsTotal || 0;
         const servVal = item.servicesTotal || 0;
         const totalRubro = prodVal + servVal || 1;
         const prodPct = Math.round((prodVal / totalRubro) * 100);
-        const servPct = 100 - prodPct;
         return (
-          <div className="min-w-[160px]">
-            {/* Stacked rows with label + value */}
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 rounded-sm bg-blue-500 shrink-0" />
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Productos</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 bg-blue-50 border border-blue-100 rounded-md px-1.5 py-0.5 flex-1 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-sm bg-blue-500 shrink-0" />
+                <span className="text-[8px] font-bold text-blue-700 uppercase">Prod</span>
+                <span className="text-[10px] font-bold text-blue-700 tabular-nums ml-auto">{formatCurrency(prodVal)}</span>
               </div>
-              <span className="text-[11px] font-bold text-blue-600 tabular-nums">{formatCurrency(prodVal)}</span>
             </div>
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 rounded-sm bg-violet-500 shrink-0" />
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Servicios</span>
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 bg-violet-50 border border-violet-100 rounded-md px-1.5 py-0.5 flex-1 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-sm bg-violet-500 shrink-0" />
+                <span className="text-[8px] font-bold text-violet-700 uppercase">Serv</span>
+                <span className="text-[10px] font-bold text-violet-700 tabular-nums ml-auto">{formatCurrency(servVal)}</span>
               </div>
-              <span className="text-[11px] font-bold text-violet-600 tabular-nums">{formatCurrency(servVal)}</span>
-            </div>
-            {/* Proportional bar */}
-            <div className="w-full bg-slate-100 rounded-full h-[5px] overflow-hidden flex">
-              <div className="bg-blue-500 h-full rounded-l-full transition-all" style={{ width: `${prodPct}%` }} />
-              <div className="bg-violet-500 h-full rounded-r-full transition-all" style={{ width: `${servPct}%` }} />
             </div>
             {(prodVal > 0 || servVal > 0) && (
-              <div className="flex justify-between mt-0.5">
-                <span className="text-[8px] text-slate-400 tabular-nums">{prodPct}%</span>
-                <span className="text-[8px] text-slate-400 tabular-nums">{servPct}%</span>
+              <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden flex">
+                <div className="bg-blue-500 h-full transition-all" style={{ width: `${prodPct}%` }} />
+                <div className="bg-violet-500 h-full transition-all" style={{ width: `${100 - prodPct}%` }} />
               </div>
             )}
           </div>
         );
       }
-    },
-    { 
-      header: 'Ticket Promedio', 
-      key: 'avgTicket',
-      render: (item: any) => <span className="tabular-nums font-semibold text-slate-600 text-xs">{formatCurrency(item.avgTicket)}</span>
-    },
-    { 
-      header: 'Total Vendido', 
-      key: 'total',
-      render: (item: any) => <span className="font-extrabold text-indigo-600 tabular-nums text-xs">{formatCurrency(item.total)}</span>
     },
   ], [processedData]);
 
