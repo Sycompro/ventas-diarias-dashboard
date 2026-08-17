@@ -79,6 +79,12 @@ export const SalesBySellerPage: React.FC = () => {
       });
   }, [data, searchTerm, sortBy]);
 
+  // Find max total for proportional bar
+  const maxTotal = useMemo(() => {
+    if (!processedData.length) return 1;
+    return Math.max(...processedData.map((s: any) => s.total || 0), 1);
+  }, [processedData]);
+
   const columns = useMemo(() => [
     { 
       header: 'Usuario', 
@@ -86,23 +92,24 @@ export const SalesBySellerPage: React.FC = () => {
       render: (item: any) => {
         const rank = processedData.findIndex((s: any) => (s.name || s.sellerName) === (item.name || item.sellerName)) + 1;
         
-        const rankStyles = rank === 1 ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-sm shadow-amber-200' 
-                         : rank === 2 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white' 
-                         : rank === 3 ? 'bg-gradient-to-br from-orange-300 to-orange-400 text-white'
-                         : 'bg-slate-100 text-slate-400';
+        const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+
+        const avatarBg = rank === 1 ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-indigo-300' 
+                       : rank === 2 ? 'bg-gradient-to-br from-slate-500 to-slate-600 text-white border-slate-300'
+                       : rank === 3 ? 'bg-gradient-to-br from-orange-400 to-orange-500 text-white border-orange-300'
+                       : 'bg-slate-100 text-slate-500 border-slate-200';
 
         const initials = (item.name || item.sellerName || 'U').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
 
         return (
           <div className="flex items-center gap-3">
-            {/* Rank + Avatar combined */}
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center font-bold text-[11px] text-indigo-600">
+              <div className={`w-9 h-9 rounded-xl border flex items-center justify-center font-bold text-[11px] shadow-sm ${avatarBg}`}>
                 {initials}
               </div>
-              <div className={`absolute -top-1 -left-1 w-[18px] h-[18px] rounded-md flex items-center justify-center text-[8px] font-black ${rankStyles}`}>
-                {rank}
-              </div>
+              {medal && (
+                <span className="absolute -top-1.5 -right-1.5 text-sm leading-none drop-shadow-sm">{medal}</span>
+              )}
             </div>
             <div className="min-w-0">
               <span className="font-bold text-slate-800 block text-[11px] truncate leading-tight">{item.name || item.sellerName}</span>
@@ -113,63 +120,91 @@ export const SalesBySellerPage: React.FC = () => {
       }
     },
     { 
-      header: 'Total', 
+      header: 'Total Vendido', 
       key: 'total',
       render: (item: any) => {
         const rank = processedData.findIndex((s: any) => (s.name || s.sellerName) === (item.name || item.sellerName)) + 1;
+        const pct = maxTotal > 0 ? ((item.total || 0) / maxTotal) * 100 : 0;
         return (
-          <span className={`text-xs font-extrabold tabular-nums ${rank === 1 ? 'text-indigo-600' : 'text-slate-800'}`}>
-            {formatCurrency(item.total)}
-          </span>
+          <div className="min-w-[120px]">
+            <span className={`text-[13px] font-extrabold tabular-nums block mb-1 ${rank === 1 ? 'text-indigo-600' : 'text-slate-800'}`}>
+              {formatCurrency(item.total)}
+            </span>
+            <div className="w-full bg-slate-100 rounded-full h-[5px] overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all ${rank === 1 ? 'bg-indigo-500' : rank === 2 ? 'bg-indigo-400' : rank === 3 ? 'bg-indigo-300' : 'bg-slate-300'}`}
+                style={{ width: `${pct}%` }} 
+              />
+            </div>
+          </div>
         );
       }
     },
     { 
       header: 'CPE', 
       key: 'cpeTotal',
-      render: (item: any) => (
-        <span className="text-[11px] font-semibold text-emerald-600 tabular-nums">
-          {formatCurrency(item.cpeTotal || 0)}
-        </span>
-      )
+      render: (item: any) => {
+        const val = item.cpeTotal || 0;
+        return (
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tabular-nums ${val > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-50 text-slate-400'}`}>
+            {val > 0 && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+            {formatCurrency(val)}
+          </div>
+        );
+      }
     },
     { 
-      header: 'NV', 
+      header: 'Notas Venta', 
       key: 'notesTotal',
-      render: (item: any) => (
-        <span className="text-[11px] font-semibold text-amber-600 tabular-nums">
-          {formatCurrency(item.notesTotal || 0)}
-        </span>
-      )
+      render: (item: any) => {
+        const val = item.notesTotal || 0;
+        return (
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tabular-nums ${val > 0 ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-400'}`}>
+            {val > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+            {formatCurrency(val)}
+          </div>
+        );
+      }
     },
     { 
       header: 'Productos', 
       key: 'productsTotal',
-      render: (item: any) => (
-        <span className="text-[11px] font-semibold text-blue-600 tabular-nums">
-          {formatCurrency(item.productsTotal || 0)}
-        </span>
-      )
+      render: (item: any) => {
+        const val = item.productsTotal || 0;
+        return (
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tabular-nums ${val > 0 ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-slate-50 text-slate-400'}`}>
+            {val > 0 && <span className="w-1.5 h-1.5 rounded-sm bg-blue-500" />}
+            {formatCurrency(val)}
+          </div>
+        );
+      }
     },
     { 
       header: 'Servicios', 
       key: 'servicesTotal',
-      render: (item: any) => (
-        <span className="text-[11px] font-semibold text-violet-600 tabular-nums">
-          {formatCurrency(item.servicesTotal || 0)}
-        </span>
-      )
+      render: (item: any) => {
+        const val = item.servicesTotal || 0;
+        return (
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tabular-nums ${val > 0 ? 'bg-violet-50 text-violet-700 border border-violet-100' : 'bg-slate-50 text-slate-400'}`}>
+            {val > 0 && <span className="w-1.5 h-1.5 rounded-sm bg-violet-500" />}
+            {formatCurrency(val)}
+          </div>
+        );
+      }
     },
     { 
-      header: 'Ticket', 
+      header: 'Ticket Prom.', 
       key: 'avgTicket',
-      render: (item: any) => (
-        <span className="text-[11px] font-semibold text-slate-600 tabular-nums">
-          {formatCurrency(item.avgTicket)}
-        </span>
-      )
+      render: (item: any) => {
+        const val = item.avgTicket || 0;
+        return (
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tabular-nums ${val > 0 ? 'bg-teal-50 text-teal-700 border border-teal-100' : 'bg-slate-50 text-slate-400'}`}>
+            {formatCurrency(val)}
+          </div>
+        );
+      }
     },
-  ], [processedData]);
+  ], [processedData, maxTotal]);
 
   return (
     <div className="space-y-6">
