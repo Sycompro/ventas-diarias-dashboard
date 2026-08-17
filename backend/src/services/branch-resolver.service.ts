@@ -185,7 +185,22 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     // 1. Asignación directa conocida desde la API o desde raw_json
     if (seriesToEstId[s]) return seriesToEstId[s];
 
-    // 2. Correlación por sufijo numérico con series conocidas de la misma empresa
+    // 2. Si es GYMBRA o tiene los mismos establecimientos oficiales
+    const isGymbra = companyId === '51089e80-446d-461c-ae37-1518381eb051' || 
+                     officialEstablishments.some((e: any) => e.description?.toUpperCase().includes('PRADERA'));
+    if (isGymbra) {
+      const match = s.match(/([A-Za-z]+)(\d+)/);
+      if (match) {
+        const num = parseInt(match[2], 10);
+        if (num === 5 || num === 1) return 1; // La Pradera (ID: 1)
+        if (num === 6 || num === 2) return 2; // Las Brisas (ID: 2)
+        if (num === 7 || num === 3) return 3; // La Victoria (ID: 3)
+        if (num === 8 || num === 4) return 4; // Pimentel (ID: 4)
+        if (num === 9 || num === 5) return 5; // JLO (ID: 5)
+      }
+    }
+
+    // 3. Correlación por sufijo numérico con series conocidas de la misma empresa
     const match = s.match(/([A-Za-z]+)(\d+)/);
     if (match) {
       const rawSuffix = match[2];
