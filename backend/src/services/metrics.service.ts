@@ -53,7 +53,7 @@ export async function getDashboardMetrics(
 ): Promise<DashboardMetrics> {
   const branchKey = branch || 'all';
   const sellerKey = seller || 'all';
-  const cacheKey = `metrics_v6:${companyId || 'all'}:${dateStart}:${dateEnd}:${branchKey}:${sellerKey}`;
+  const cacheKey = `metrics_v7:${companyId || 'all'}:${dateStart}:${dateEnd}:${branchKey}:${sellerKey}`;
   
   try {
     const cached = await redis.get(cacheKey);
@@ -221,7 +221,16 @@ export async function getDashboardMetrics(
       AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${dateStart}::date 
       AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${dateEnd}::date
     GROUP BY seller_name
-    ORDER BY total DESC
+  `;
+
+  // Obtener la lista de todos los vendedores históricos para esta empresa y sucursales
+  const allCompanySellersRes = await sqlClient`
+    SELECT DISTINCT COALESCE(seller_name, 'Sin Vendedor') as seller_name
+    FROM sales
+    WHERE status = 'active'
+      AND (${!hasCompanyFilter} OR company_id = ${cId})
+      AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
+      AND (${!hasSellerFilter} OR seller_name = ${sellerName})
   `;
 
   const sellerItemsRes = await sqlClient`
@@ -361,10 +370,12 @@ export async function getDashboardMetrics(
       total: parseFloat(r.total as string),
       category: r.category === '02' ? '02' : '01',
     })),
-    salesBySeller: sellersRes.map(r => {
-      const total = parseFloat(r.total as string);
-      const count = parseInt(r.count as string, 10);
-      const name = r.seller_name as string;
+    salesBySeller: allCompanySellersRes.map(sr => {
+      const name = sr.seller_name as string;
+      const r = sellersRes.find((x: any) => x.seller_name === name);
+      
+      const total = r ? parseFloat(r.total as string) : 0;
+      const count = r ? parseInt(r.count as string, 10) : 0;
       
       const itemBreakdown = sellerItemsRes.find((item: any) => item.seller_name === name);
       const productsTotal = itemBreakdown ? parseFloat(itemBreakdown.products_total as string) : 0;
@@ -375,14 +386,14 @@ export async function getDashboardMetrics(
         total,
         count,
         avgTicket: count > 0 ? total / count : 0,
-        cpeTotal: parseFloat(r.cpe_total as string),
-        notesTotal: parseFloat(r.notes_total as string),
-        cpeCount: parseInt(r.cpe_count as string, 10),
-        notesCount: parseInt(r.notes_count as string, 10),
+        cpeTotal: r ? parseFloat(r.cpe_total as string) : 0,
+        notesTotal: r ? parseFloat(r.notes_total as string) : 0,
+        cpeCount: r ? parseInt(r.cpe_count as string, 10) : 0,
+        notesCount: r ? parseInt(r.notes_count as string, 10) : 0,
         productsTotal,
         servicesTotal
       };
-    }),
+    }).sort((a, b) => b.total - a.total),
   };
 
   const isCurrentDay = dateEnd >= new Date().toISOString().split('T')[0];
