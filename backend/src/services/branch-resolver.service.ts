@@ -81,15 +81,16 @@ export async function getCompanyBillingConfig(companyId: string) {
 }
 
 /**
- * Obtiene la lista dinámica y unificada de TODAS las Sucursales (sin vendedores)
+ * Obtiene la lista dinámica y unificada de TODAS las Sucursales
  * para CUALQUIER empresa conectada.
  * 
- * DISEÑO 100% DINÁMICO — SIN REGLAS HARDCODEADAS:
- * 1. Lee los establecimientos y series oficiales de la API de Facturador Pro
- * 2. Lee los nombres de almacenes/sucursales de la API
- * 3. Para series no registradas oficialmente (ej: Notas de Venta NV05),
- *    las correlaciona con series oficiales conocidas que tengan el mismo sufijo numérico
- * 4. NO usa ninguna regla específica de empresa ni mapeos manuales
+ * ARQUITECTURA 100% DINÁMICA BASADA EN DATOS REALES DE FACTURADOR PRO:
+ * 1. Lee establecimientos oficiales desde API /company
+ * 2. Lee almacenes y sus nombres desde API /items/records
+ * 3. Lee series oficiales y sus establishment_id desde API /company
+ * 4. Lee establishment_id y nombres de sucursal directamente de los registros de venta (raw_json)
+ * 5. Correlaciona series no catalogadas (ej: Notas de Venta) con las series del mismo local
+ * 6. NO utiliza ninguna regla hardcodeada específica de ninguna empresa
  */
 export async function getCompanyBranches(companyId: string): Promise<BranchInfo[]> {
   const config = await getCompanyBillingConfig(companyId);
@@ -108,77 +109,103 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
 
   // Agregar o enriquecer con descripciones oficiales de establishments
   for (const est of officialEstablishments) {
-    if (est.id && est.description) {
-      branchNameById[est.id] = est.description;
-    }
-  }
-
-  // 2. Construir un mapa de sufijo numérico → establishment_id desde las series OFICIALES
-  //    Esto nos permite correlacionar series no oficiales (NV05, etc.) con su sucursal correcta
-  //    basándonos en datos REALES de la API, no en reglas hardcodeadas.
-  const suffixToEstId: Record<string, number> = {};
-  for (const os of officialSeries) {
-    if (os.establishment_id && os.number) {
-      const match = String(os.number).match(/([A-Za-z]+)(\d+)/);
-      if (match) {
-        const suffix = match[2]; // ej: "005", "006", "01", etc.
-        // Solo registrar si no existe aún (la primera serie oficial tiene prioridad)
-        if (!suffixToEstId[suffix]) {
-          suffixToEstId[suffix] = os.establishment_id;
-        }
+    if (est.id) {
+      const desc = est.description || '';
+      // Si no teníamos nombre de almacén o la descripción es más representativa
+      if (!branchNameById[est.id] || (desc && !desc.toUpperCase().includes('PRINCIPAL'))) {
+        branchNameById[est.id] = desc;
       }
     }
   }
 
-  // 3. Consultar dinámicamente todas las series con ventas en la base de datos
+  // 2. Mapeo real de Series -> establishment_id
+  const seriesToEstId: Record<string, number> = {};
+  const seriesToBranchName: Record<string, string> = {};
+
+  // A. Desde las series oficiales de Facturador Pro (/company)
+  for (const os of officialSeries) {
+    if (os.number && os.establishment_id) {
+      seriesToEstId[os.number] = os.establishment_id;
+    }
+  }
+
+  // B. Desde los registros de venta reales sincronizados (sales.raw_json)
   let allDbSeries: string[] = [];
   try {
-    const dbSeriesRows = await sqlClient`
-      SELECT DISTINCT series
+    const dbSalesInfo = await sqlClient`
+      SELECT DISTINCT 
+        series,
+        COALESCE(
+          (raw_json->>'establishment_id')::int,
+          (raw_json->'establishment'->>'id')::int,
+          (raw_json->>'establishmentId')::int
+        ) as est_id,
+        COALESCE(
+          raw_json->>'establishment_description',
+          raw_json->'establishment'->>'description',
+          raw_json->>'establishment_name'
+        ) as est_desc
       FROM sales
       WHERE company_id = ${companyId} AND series IS NOT NULL AND series != ''
       ORDER BY series ASC
     `;
-    allDbSeries = dbSeriesRows.map(r => r.series as string);
+
+    dbSalesInfo.forEach((r: any) => {
+      const s = r.series as string;
+      if (s && !allDbSeries.includes(s)) allDbSeries.push(s);
+      
+      if (s && r.est_id && !seriesToEstId[s]) {
+        seriesToEstId[s] = r.est_id;
+        if (r.est_desc && !branchNameById[r.est_id]) {
+          branchNameById[r.est_id] = r.est_desc;
+        }
+      }
+      if (s && r.est_desc) {
+        seriesToBranchName[s] = r.est_desc;
+      }
+    });
   } catch (e: any) {
     console.warn(`[Branch Resolver] Could not query sales series:`, e.message);
   }
 
-  // 4. Función 100% dinámica para resolver a qué sucursal pertenece cada serie
-  const resolveEstIdForSeries = (s: string): number => {
-    // A. Si está explícitamente en officialSeries de Facturador Pro → usar su establishment_id
-    const off = officialSeries.find((os: any) => os.number === s);
-    if (off && off.establishment_id) return off.establishment_id;
-
-    // B. Correlacionar con series oficiales conocidas por sufijo numérico
-    //    Ej: Si "B005" está asignada oficialmente al establecimiento 1,
-    //    entonces "NV05", "F005", "NV005" también pertenecen al establecimiento 1
+  // C. Construir mapa de correlación de sufijo numérico para series que no tienen establishment_id directo
+  const suffixToEstId: Record<string, number> = {};
+  for (const [s, estId] of Object.entries(seriesToEstId)) {
     const match = s.match(/([A-Za-z]+)(\d+)/);
     if (match) {
-      const rawSuffix = match[2]; // "05", "005", "5", "06", etc.
-      
-      // Buscar coincidencia exacta del sufijo
-      if (suffixToEstId[rawSuffix]) return suffixToEstId[rawSuffix];
-      
-      // Normalizar: "05" → "005" y viceversa (con/sin zero-padding)
-      const numericVal = parseInt(rawSuffix, 10);
-      
-      // Probar variantes de padding: "5" ↔ "05" ↔ "005"
-      const variants = [
-        String(numericVal),                          // "5"
-        String(numericVal).padStart(2, '0'),          // "05"
-        String(numericVal).padStart(3, '0'),          // "005"
-      ];
-      
-      for (const variant of variants) {
-        if (suffixToEstId[variant]) return suffixToEstId[variant];
+      const suffix = match[2];
+      if (!suffixToEstId[suffix]) {
+        suffixToEstId[suffix] = estId;
       }
-      
-      // Si el número corresponde directamente a un establishment_id conocido
+    }
+  }
+
+  // 3. Función para resolver a qué sucursal pertenece cada serie
+  const resolveEstIdForSeries = (s: string): number => {
+    // 1. Asignación directa conocida desde la API o desde raw_json
+    if (seriesToEstId[s]) return seriesToEstId[s];
+
+    // 2. Correlación por sufijo numérico con series conocidas de la misma empresa
+    const match = s.match(/([A-Za-z]+)(\d+)/);
+    if (match) {
+      const rawSuffix = match[2];
+      if (suffixToEstId[rawSuffix]) return suffixToEstId[rawSuffix];
+
+      const numericVal = parseInt(rawSuffix, 10);
+      const variants = [
+        String(numericVal),
+        String(numericVal).padStart(2, '0'),
+        String(numericVal).padStart(3, '0')
+      ];
+      for (const v of variants) {
+        if (suffixToEstId[v]) return suffixToEstId[v];
+      }
+
+      // Si coincide directamente con un ID de establecimiento registrado
       if (branchNameById[numericVal]) return numericVal;
     }
-    
-    // C. Si hay un establecimiento principal oficial, usarlo como fallback
+
+    // 3. Fallback al primer establecimiento oficial
     if (officialEstablishments.length > 0 && officialEstablishments[0].id) {
       return officialEstablishments[0].id;
     }
@@ -186,13 +213,11 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     return 1;
   };
 
-  // 5. Inicializar TODAS las sucursales detectadas en la API del tenant
+  // 4. Inicializar todas las sucursales oficiales detectadas
   const branchesMap: Record<string, BranchInfo> = {};
-  
+
   for (const [idStr, name] of Object.entries(branchNameById)) {
     const estId = parseInt(idStr, 10);
-    
-    // Series oficiales asignadas en Facturador Pro a este establecimiento
     const estSeries = officialSeries
       .filter((s: any) => s.establishment_id === estId)
       .map((s: any) => s.number);
@@ -205,13 +230,13 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     };
   }
 
-  // 6. Asignar dinámicamente cada serie encontrada en ventas a la sucursal correspondiente
+  // 5. Asignar cada serie encontrada en ventas a su sucursal
   for (const s of allDbSeries) {
     const estId = resolveEstIdForSeries(s);
     const key = String(estId);
-    
+
     if (!branchesMap[key]) {
-      const name = branchNameById[estId] || `Sucursal ${estId}`;
+      const name = seriesToBranchName[s] || branchNameById[estId] || `Sucursal ${estId}`;
       branchesMap[key] = {
         id: key,
         name,
@@ -225,7 +250,7 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     }
   }
 
-  // 7. Retornar TODAS las sucursales descubiertas (tengan o no ventas activas en el rango)
+  // 6. Retornar todas las sucursales descubiertas
   const result: BranchInfo[] = [];
   const processedKeys = new Set<string>();
 
@@ -250,7 +275,6 @@ export async function getCompanyBranches(companyId: string): Promise<BranchInfo[
     }
   }
 
-  // Si queda vacía (empresa nueva sin datos), generar Sucursal Principal dinámica
   if (result.length === 0) {
     result.push({
       id: '1',
