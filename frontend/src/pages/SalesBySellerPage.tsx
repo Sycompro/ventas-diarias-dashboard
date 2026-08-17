@@ -84,21 +84,35 @@ export const SalesBySellerPage: React.FC = () => {
       });
   }, [data, searchTerm, sortBy]);
 
-  const columns = [
+  const columns = useMemo(() => [
     { 
-      header: 'Usuario', 
+      header: 'Ranking / Usuario', 
       key: 'name',
-      render: (item: any) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-xs text-indigo-600 shrink-0">
-            {(item.name || item.sellerName || 'U').slice(0, 2).toUpperCase()}
+      render: (item: any) => {
+        const rank = processedData.findIndex((s: any) => (s.name || s.sellerName) === (item.name || item.sellerName)) + 1;
+        
+        const badgeColor = rank === 1 ? 'bg-amber-100 text-amber-700 border-amber-200 font-black' 
+                         : rank === 2 ? 'bg-slate-100 text-slate-700 border-slate-200 font-bold' 
+                         : rank === 3 ? 'bg-orange-100 text-orange-700 border-orange-200 font-semibold'
+                         : 'bg-slate-50 text-slate-500 border-slate-100';
+
+        return (
+          <div className="flex items-center gap-2.5">
+            {/* Rank Badge */}
+            <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] shrink-0 font-bold ${badgeColor}`}>
+              #{rank}
+            </div>
+            {/* User Avatar */}
+            <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-xs text-indigo-600 shrink-0">
+              {(item.name || item.sellerName || 'U').slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <span className="font-bold text-slate-800 block text-xs">{item.name || item.sellerName}</span>
+              <span className="text-[10px] text-slate-400">Usuario registrado</span>
+            </div>
           </div>
-          <div>
-            <span className="font-bold text-slate-800 block text-xs">{item.name || item.sellerName}</span>
-            <span className="text-[10px] text-slate-400">Usuario registrado</span>
-          </div>
-        </div>
-      )
+        );
+      }
     },
     { 
       header: 'Operaciones', 
@@ -162,7 +176,7 @@ export const SalesBySellerPage: React.FC = () => {
       key: 'total',
       render: (item: any) => <span className="font-extrabold text-indigo-600 tabular-nums text-xs">{formatCurrency(item.total)}</span>
     },
-  ];
+  ], [processedData]);
 
   return (
     <div className="space-y-6">
@@ -331,74 +345,15 @@ export const SalesBySellerPage: React.FC = () => {
         </div>
       ) : null}
 
-      {/* Leaderboard & Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Leaderboard Card */}
-        <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <Trophy className="text-amber-500 w-4 h-4 shrink-0" /> Leaderboard de Ventas
-            </h3>
-            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[9px] font-bold rounded-full border border-indigo-100">
-              Podio
-            </span>
-          </div>
-
-          <div className="p-4 divide-y divide-slate-100">
-            {isLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-10" />
-                <Skeleton className="h-10" />
-                <Skeleton className="h-10" />
-              </div>
-            ) : processedData.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-400">
-                No hay usuarios para mostrar.
-              </div>
-            ) : (
-              processedData.slice(0, 5).map((sellerItem: any, index: number) => {
-                const badgeColor = index === 0 ? 'bg-amber-100 text-amber-700 border-amber-200' 
-                                 : index === 1 ? 'bg-slate-100 text-slate-700 border-slate-200' 
-                                 : index === 2 ? 'bg-orange-100 text-orange-700 border-orange-200'
-                                 : 'bg-slate-50 text-slate-500 border-slate-100';
-
-                return (
-                  <div key={sellerItem.name || sellerItem.sellerName} className="py-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Badge / Medal */}
-                      <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-bold shrink-0 ${badgeColor}`}>
-                        #{index + 1}
-                      </div>
-                      
-                      <div className="min-w-0">
-                        <span className="font-bold text-xs text-slate-800 block truncate">{sellerItem.name || sellerItem.sellerName}</span>
-                        <span className="text-[9.5px] text-slate-400 block">{sellerItem.count} operaciones registradas</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <span className="font-extrabold text-xs text-slate-800 block tabular-nums">{formatCurrency(sellerItem.total)}</span>
-                      <span className="text-[9px] text-slate-400 block tabular-nums">Prom: {formatCurrency(sellerItem.avgTicket)}</span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Detailed List Card */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Table */}
-          <DataTable 
-            title="Matriz de Desglose Analítico"
-            columns={columns} 
-            data={processedData} 
-            isLoading={isLoading} 
-            showSearch={false}
-          />
-        </div>
+      {/* Unificación de Leaderboard y Desglose en una Sola Tabla */}
+      <div className="animate-in fade-in duration-700">
+        <DataTable 
+          title="Ranking y Desglose Analítico de Ventas"
+          columns={columns} 
+          data={processedData} 
+          isLoading={isLoading} 
+          showSearch={false}
+        />
       </div>
     </div>
   );
