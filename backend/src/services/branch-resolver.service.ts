@@ -39,25 +39,39 @@ export async function getCompanyBillingConfig(companyId: string) {
     const series = compRes.data?.series || [];
     const paymentMethods = compRes.data?.payment_method_types || [];
 
-    // 2. Consultar /items/records para extraer todos los nombres reales de los almacenes/sucursales
+    // 2. Consultar /document/search-items (endpoint oficial del Facturador) para extraer todos los almacenes/sucursales reales
     const warehouseNames: Record<number, string> = {};
     try {
-      const itemsRes = await client.get('/items/records', { params: { limit: 50 } });
-      const items = itemsRes.data?.data || [];
-      items.forEach((it: any) => {
-        if (Array.isArray(it.warehouses)) {
-          it.warehouses.forEach((w: any) => {
-            const id = w.warehouse_id || w.id;
-            const name = (w.warehouse_description || w.description || w.name || '')
-              .replace(/^Almacén\s*-\s*/i, '')
-              .replace(/^Almacen\s*-\s*/i, '')
-              .trim();
-            if (id && name) {
-              warehouseNames[id] = name;
-            }
-          });
+      let items: any[] = [];
+      try {
+        const searchRes = await client.get('/document/search-items');
+        items = searchRes.data?.data?.items || searchRes.data?.data || [];
+      } catch {
+        try {
+          const tableRes = await client.get('/document/tables');
+          items = tableRes.data?.data?.items || [];
+        } catch {
+          const itemsRes = await client.get('/items/records', { params: { limit: 50 } });
+          items = itemsRes.data?.data || [];
         }
-      });
+      }
+
+      if (Array.isArray(items)) {
+        items.forEach((it: any) => {
+          if (Array.isArray(it.warehouses)) {
+            it.warehouses.forEach((w: any) => {
+              const id = w.warehouse_id || w.id;
+              const name = (w.warehouse_description || w.description || w.name || '')
+                .replace(/^Almacén\s*-\s*/i, '')
+                .replace(/^Almacen\s*-\s*/i, '')
+                .trim();
+              if (id && name) {
+                warehouseNames[id] = name;
+              }
+            });
+          }
+        });
+      }
     } catch (itemErr: any) {
       console.warn(`[Branch Resolver] Warning fetching warehouses for company ${companyId}:`, itemErr.message);
     }
