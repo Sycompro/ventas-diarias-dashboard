@@ -32,28 +32,16 @@ router.get('/temp-debug-gymbra', async (req, res) => {
     const gymbraId = '51089e80-446d-461c-ae37-1518381eb051';
     const branches = await getCompanyBranches(gymbraId);
     
-    const gymbraSalesCount = await sqlClient`
-      SELECT COUNT(*)::int as cnt, SUM(total::numeric)::numeric as total
+    const sampleSales = await sqlClient`
+      SELECT id, series, number, raw_json
       FROM sales
       WHERE company_id = ${gymbraId} AND status = 'active'
-    `;
-
-    const rawSales = await sqlClient`
-      SELECT DISTINCT 
-        series,
-        COALESCE(
-          (raw_json->>'establishment_id')::int,
-          (raw_json->'establishment'->>'id')::int,
-          (raw_json->>'establishmentId')::int
-        ) as est_id
-      FROM sales
-      WHERE company_id = ${gymbraId}
+      LIMIT 2
     `;
 
     res.json({
       branches,
-      salesSummary: gymbraSalesCount[0],
-      rawSales
+      sampleSales
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message, stack: err.stack });
