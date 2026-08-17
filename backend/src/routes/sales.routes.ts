@@ -31,26 +31,41 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
-    const saleNotes = await fetchSaleNotes(client, '2026-06-01', '2026-06-30');
-    const documents = await fetchDocuments(client, '2026-06-01', '2026-06-30');
+    const page1Res = await client.get('/sale-note/lists?page=1');
+    const page1Data = page1Res.data?.data || [];
+    const page1Meta = page1Res.data?.meta;
+    const page1Dates = page1Data.map((x: any) => x.date_of_issue || x.created_at);
+
+    const pagesChecked: any[] = [];
+    let currentPage = 1;
+    let notesInJuneCount = 0;
+
+    while (currentPage <= 20) {
+      const r = await client.get(`/sale-note/lists?page=${currentPage}`);
+      const data = r.data?.data || [];
+      if (data.length === 0) break;
+
+      const dates = data.map((x: any) => x.date_of_issue);
+      const juneNotes = data.filter((x: any) => x.date_of_issue && x.date_of_issue.split('-')[1] === '06');
+      notesInJuneCount += juneNotes.length;
+      
+      pagesChecked.push({
+        page: currentPage,
+        count: data.length,
+        minDate: dates[dates.length - 1],
+        maxDate: dates[0],
+        juneCount: juneNotes.length
+      });
+
+      currentPage++;
+    }
 
     res.json({
-      notesCount: saleNotes.length,
-      sampleNotes: saleNotes.slice(0, 5).map((n: any) => ({
-        id: n.id,
-        number: n.number,
-        total: n.total,
-        date_of_issue: n.date_of_issue,
-        user_name: n.user_name || n.seller_name || n.user?.name
-      })),
-      documentsCount: documents.length,
-      sampleDocuments: documents.slice(0, 5).map((d: any) => ({
-        id: d.id,
-        number: d.number,
-        total: d.total,
-        date_of_issue: d.date_of_issue,
-        document_type_id: d.document_type_id
-      }))
+      page1Meta,
+      page1DatesCount: page1Dates.length,
+      page1FirstDates: page1Dates.slice(0, 5),
+      pagesChecked,
+      notesInJuneCount
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message, stack: err.stack });
