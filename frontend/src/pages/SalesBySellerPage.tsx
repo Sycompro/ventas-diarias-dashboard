@@ -118,84 +118,56 @@ export const SalesBySellerPage: React.FC = () => {
       render: (item: any) => {
         const rank = processedData.findIndex((s: any) => (s.name || s.sellerName) === (item.name || item.sellerName)) + 1;
         return (
-          <div className="text-right">
-            <span className={`text-sm font-extrabold tabular-nums ${rank === 1 ? 'text-indigo-600' : 'text-slate-800'}`}>
-              {formatCurrency(item.total)}
-            </span>
-            <div className="text-[9px] text-slate-400 mt-0.5">
-              Ticket: <span className="font-semibold text-slate-500">{formatCurrency(item.avgTicket)}</span>
-            </div>
-          </div>
+          <span className={`text-xs font-extrabold tabular-nums ${rank === 1 ? 'text-indigo-600' : 'text-slate-800'}`}>
+            {formatCurrency(item.total)}
+          </span>
         );
       }
     },
     { 
-      header: 'Por Comprobante', 
+      header: 'CPE', 
       key: 'cpeTotal',
-      render: (item: any) => {
-        const cpe = item.cpeTotal || 0;
-        const nv = item.notesTotal || 0;
-        const total = cpe + nv || 1;
-        const cpePct = Math.round((cpe / total) * 100);
-        return (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-100 rounded-md px-1.5 py-0.5 flex-1 min-w-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-[8px] font-bold text-emerald-700 uppercase">CPE</span>
-                <span className="text-[10px] font-bold text-emerald-700 tabular-nums ml-auto">{formatCurrency(cpe)}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-md px-1.5 py-0.5 flex-1 min-w-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                <span className="text-[8px] font-bold text-amber-700 uppercase">NV</span>
-                <span className="text-[10px] font-bold text-amber-700 tabular-nums ml-auto">{formatCurrency(nv)}</span>
-              </div>
-            </div>
-            {(cpe > 0 || nv > 0) && (
-              <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden flex">
-                <div className="bg-emerald-500 h-full transition-all" style={{ width: `${cpePct}%` }} />
-                <div className="bg-amber-400 h-full transition-all" style={{ width: `${100 - cpePct}%` }} />
-              </div>
-            )}
-          </div>
-        );
-      }
+      render: (item: any) => (
+        <span className="text-[11px] font-semibold text-emerald-600 tabular-nums">
+          {formatCurrency(item.cpeTotal || 0)}
+        </span>
+      )
     },
     { 
-      header: 'Por Rubro', 
+      header: 'NV', 
+      key: 'notesTotal',
+      render: (item: any) => (
+        <span className="text-[11px] font-semibold text-amber-600 tabular-nums">
+          {formatCurrency(item.notesTotal || 0)}
+        </span>
+      )
+    },
+    { 
+      header: 'Productos', 
       key: 'productsTotal',
-      render: (item: any) => {
-        const prodVal = item.productsTotal || 0;
-        const servVal = item.servicesTotal || 0;
-        const totalRubro = prodVal + servVal || 1;
-        const prodPct = Math.round((prodVal / totalRubro) * 100);
-        return (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <div className="flex items-center gap-1 bg-blue-50 border border-blue-100 rounded-md px-1.5 py-0.5 flex-1 min-w-0">
-                <span className="w-1.5 h-1.5 rounded-sm bg-blue-500 shrink-0" />
-                <span className="text-[8px] font-bold text-blue-700 uppercase">Prod</span>
-                <span className="text-[10px] font-bold text-blue-700 tabular-nums ml-auto">{formatCurrency(prodVal)}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="flex items-center gap-1 bg-violet-50 border border-violet-100 rounded-md px-1.5 py-0.5 flex-1 min-w-0">
-                <span className="w-1.5 h-1.5 rounded-sm bg-violet-500 shrink-0" />
-                <span className="text-[8px] font-bold text-violet-700 uppercase">Serv</span>
-                <span className="text-[10px] font-bold text-violet-700 tabular-nums ml-auto">{formatCurrency(servVal)}</span>
-              </div>
-            </div>
-            {(prodVal > 0 || servVal > 0) && (
-              <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden flex">
-                <div className="bg-blue-500 h-full transition-all" style={{ width: `${prodPct}%` }} />
-                <div className="bg-violet-500 h-full transition-all" style={{ width: `${100 - prodPct}%` }} />
-              </div>
-            )}
-          </div>
-        );
-      }
+      render: (item: any) => (
+        <span className="text-[11px] font-semibold text-blue-600 tabular-nums">
+          {formatCurrency(item.productsTotal || 0)}
+        </span>
+      )
+    },
+    { 
+      header: 'Servicios', 
+      key: 'servicesTotal',
+      render: (item: any) => (
+        <span className="text-[11px] font-semibold text-violet-600 tabular-nums">
+          {formatCurrency(item.servicesTotal || 0)}
+        </span>
+      )
+    },
+    { 
+      header: 'Ticket', 
+      key: 'avgTicket',
+      render: (item: any) => (
+        <span className="text-[11px] font-semibold text-slate-600 tabular-nums">
+          {formatCurrency(item.avgTicket)}
+        </span>
+      )
     },
   ], [processedData]);
 
