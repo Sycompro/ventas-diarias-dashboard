@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Target, Calendar, GitCompare, Layout } from 'lucide-react';
+import { GitCompare, Calendar, DollarSign, CreditCard, ArrowLeftRight } from 'lucide-react';
 import { ComparisonChart } from '../components/charts/ComparisonChart';
 import { formatCurrency } from '../utils/formatters';
 import { useQuery } from '@tanstack/react-query';
@@ -130,10 +130,22 @@ export const ComparatorPage: React.FC = () => {
     ];
   }, [compareData]);
 
-  const renderChangeBadge = (val: number) => {
+  const renderChangeBadge = (val: number, onCard = false) => {
     const isPositive = val > 0;
     const isZero = val === 0;
     
+    if (onCard) {
+      const bg = isZero ? 'bg-white/10 text-white/80 border border-white/10' 
+               : isPositive ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-500/30' 
+               : 'bg-rose-500/20 text-rose-100 border border-rose-500/30';
+      const sign = isZero ? '' : isPositive ? '+' : '';
+      return (
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5 backdrop-blur-sm ${bg}`}>
+          {sign}{val.toFixed(1)}%
+        </span>
+      );
+    }
+
     const bg = isZero ? 'bg-slate-100 text-slate-500' : isPositive ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100';
     const sign = isZero ? '' : isPositive ? '+' : '';
     
@@ -187,55 +199,108 @@ export const ComparatorPage: React.FC = () => {
       ) : compareData && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Card 1: Ventas */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-colors">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ventas Totales</span>
-              {renderChangeBadge(compareData.percentageChange || 0)}
+          <div className="relative overflow-hidden p-5 rounded-2xl border bg-gradient-to-br from-indigo-500 to-indigo-700 border-indigo-700/30 shadow-lg shadow-indigo-500/10 flex flex-col justify-between hover:scale-[1.01] transition-transform duration-200">
+            {/* Watermark icon bottom-right */}
+            <div className="absolute -bottom-3 -right-3 pointer-events-none select-none opacity-20 text-white">
+              <DollarSign size={80} />
             </div>
-            <div className="mt-3">
-              <span className="text-2xl font-black text-slate-800 block tabular-nums">{formatCurrency(compareData.period1?.total || 0)}</span>
-              <span className="text-[10px] text-slate-400 mt-1 block">
-                Período anterior: <span className="font-semibold text-slate-600">{formatCurrency(compareData.period2?.total || 0)}</span>
+
+            {/* Top row */}
+            <div className="flex justify-between items-center z-10">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0 text-white">
+                  <DollarSign size={14} />
+                </div>
+                <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-none">
+                  Ventas Totales
+                </span>
+              </div>
+              {renderChangeBadge(compareData.percentageChange || 0, true)}
+            </div>
+
+            {/* Bottom amount */}
+            <div className="mt-4 z-10">
+              <span className="text-2xl font-black tabular-nums text-white drop-shadow-sm leading-none block">
+                {formatCurrency(compareData.period1?.total || 0)}
+              </span>
+              <span className="text-[10px] text-white/80 mt-1 block font-medium">
+                Período anterior: <span className="font-bold text-white">{formatCurrency(compareData.period2?.total || 0)}</span>
               </span>
             </div>
           </div>
 
           {/* Card 2: Operaciones */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-colors">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Operaciones</span>
+          <div className="relative overflow-hidden p-5 rounded-2xl border bg-gradient-to-br from-emerald-500 to-emerald-700 border-emerald-700/30 shadow-lg shadow-emerald-500/10 flex flex-col justify-between hover:scale-[1.01] transition-transform duration-200">
+            {/* Watermark icon bottom-right */}
+            <div className="absolute -bottom-3 -right-3 pointer-events-none select-none opacity-20 text-white">
+              <ArrowLeftRight size={80} />
+            </div>
+
+            {/* Top row */}
+            <div className="flex justify-between items-center z-10">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0 text-white">
+                  <ArrowLeftRight size={14} />
+                </div>
+                <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-none">
+                  Operaciones
+                </span>
+              </div>
               {renderChangeBadge(
                 ((compareData.period1?.count || 0) === 0 && (compareData.period2?.count || 0) === 0)
                   ? 0 
                   : (compareData.period2?.count || 0) === 0 
                     ? 100 
-                    : (((compareData.period1?.count || 0) - (compareData.period2?.count || 0)) / (compareData.period2?.count || 1)) * 100
+                    : (((compareData.period1?.count || 0) - (compareData.period2?.count || 0)) / (compareData.period2?.count || 1)) * 100,
+                true
               )}
             </div>
-            <div className="mt-3">
-              <span className="text-2xl font-black text-slate-800 block tabular-nums">{compareData.period1?.count || 0} ops</span>
-              <span className="text-[10px] text-slate-400 mt-1 block">
-                Período anterior: <span className="font-semibold text-slate-600">{compareData.period2?.count || 0} ops</span>
+
+            {/* Bottom amount */}
+            <div className="mt-4 z-10">
+              <span className="text-2xl font-black tabular-nums text-white drop-shadow-sm leading-none block">
+                {compareData.period1?.count || 0} ops
+              </span>
+              <span className="text-[10px] text-white/80 mt-1 block font-medium">
+                Período anterior: <span className="font-bold text-white">{compareData.period2?.count || 0} ops</span>
               </span>
             </div>
           </div>
 
           {/* Card 3: Ticket Promedio */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-colors">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ticket Promedio</span>
+          <div className="relative overflow-hidden p-5 rounded-2xl border bg-gradient-to-br from-amber-400 to-amber-600 border-amber-600/30 shadow-lg shadow-amber-500/10 flex flex-col justify-between hover:scale-[1.01] transition-transform duration-200">
+            {/* Watermark icon bottom-right */}
+            <div className="absolute -bottom-3 -right-3 pointer-events-none select-none opacity-20 text-white">
+              <CreditCard size={80} />
+            </div>
+
+            {/* Top row */}
+            <div className="flex justify-between items-center z-10">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0 text-white">
+                  <CreditCard size={14} />
+                </div>
+                <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-none">
+                  Ticket Promedio
+                </span>
+              </div>
               {renderChangeBadge(
                 ((compareData.period1?.avgTicket || 0) === 0 && (compareData.period2?.avgTicket || 0) === 0)
                   ? 0 
                   : (compareData.period2?.avgTicket || 0) === 0 
                     ? 100 
-                    : (((compareData.period1?.avgTicket || 0) - (compareData.period2?.avgTicket || 0)) / (compareData.period2?.avgTicket || 1)) * 100
+                    : (((compareData.period1?.avgTicket || 0) - (compareData.period2?.avgTicket || 0)) / (compareData.period2?.avgTicket || 1)) * 100,
+                true
               )}
             </div>
-            <div className="mt-3">
-              <span className="text-2xl font-black text-slate-800 block tabular-nums">{formatCurrency(compareData.period1?.avgTicket || 0)}</span>
-              <span className="text-[10px] text-slate-400 mt-1 block">
-                Período anterior: <span className="font-semibold text-slate-600">{formatCurrency(compareData.period2?.avgTicket || 0)}</span>
+
+            {/* Bottom amount */}
+            <div className="mt-4 z-10">
+              <span className="text-2xl font-black tabular-nums text-white drop-shadow-sm leading-none block">
+                {formatCurrency(compareData.period1?.avgTicket || 0)}
+              </span>
+              <span className="text-[10px] text-white/80 mt-1 block font-medium">
+                Período anterior: <span className="font-bold text-white">{formatCurrency(compareData.period2?.avgTicket || 0)}</span>
               </span>
             </div>
           </div>
