@@ -135,7 +135,7 @@ export const SalesPage: React.FC = () => {
     <div className="space-y-6">
 
       {/* Filtros Globales + Exportar */}
-      <div className="animate-in fade-in duration-500">
+      <div className="animate-in fade-in duration-500 space-y-3">
         <GlobalFilters
           actions={
             <div className="flex items-center gap-2">
@@ -149,6 +149,7 @@ export const SalesPage: React.FC = () => {
             </div>
           }
         />
+        <TaxIgvCard taxes={metrics?.taxes} isLoading={loadingDocTypes} />
       </div>
 
       {/* Resumen General Unificado */}
@@ -345,20 +346,8 @@ export const SalesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Sección Analítica: Análisis por Hora + Desglose Tributario IGV */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* Columna Izquierda: Análisis Estadístico de Ventas por Hora (Ancho: 7/12 o 8/12) */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-start">
-          <HourlySalesAnalysis data={hourlySales || []} isLoading={loadingHourly} />
-        </div>
-
-        {/* Columna Derecha: Desglose Tributario (IGV) (Ancho: 5/12 o 4/12) */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col justify-start">
-          <TaxIgvCard taxes={metrics?.taxes} isLoading={loadingDocTypes} />
-        </div>
-
-      </div>
+      {/* Sección Analítica: Análisis por Hora */}
+      <HourlySalesAnalysis data={hourlySales || []} isLoading={loadingHourly} />
 
     </div>
   );
