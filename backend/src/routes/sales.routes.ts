@@ -27,6 +27,39 @@ router.get('/temp-debug-companies', async (req, res) => {
   }
 });
 
+router.get('/temp-debug-gymbra', async (req, res) => {
+  try {
+    const gymbraId = '51089e80-446d-461c-ae37-1518381eb051';
+    const branches = await getCompanyBranches(gymbraId);
+    
+    const gymbraSalesCount = await sqlClient`
+      SELECT COUNT(*)::int as cnt, SUM(total::numeric)::numeric as total
+      FROM sales
+      WHERE company_id = ${gymbraId} AND status = 'active'
+    `;
+
+    const rawSales = await sqlClient`
+      SELECT DISTINCT 
+        series,
+        COALESCE(
+          (raw_json->>'establishment_id')::int,
+          (raw_json->'establishment'->>'id')::int,
+          (raw_json->>'establishmentId')::int
+        ) as est_id
+      FROM sales
+      WHERE company_id = ${gymbraId}
+    `;
+
+    res.json({
+      branches,
+      salesSummary: gymbraSalesCount[0],
+      rawSales
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
 router.use(authenticate);
 
 const parseDateRange = (req: any) => {
