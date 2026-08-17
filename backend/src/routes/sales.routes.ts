@@ -31,41 +31,47 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
-    const page1Res = await client.get('/sale-note/lists?page=1');
-    const page1Data = page1Res.data?.data || [];
-    const page1Meta = page1Res.data?.meta;
-    const page1Dates = page1Data.map((x: any) => x.date_of_issue || x.created_at);
+    // Page 1
+    const p1 = await client.get('/sale-note/lists?page=1');
+    const p1Id = p1.data?.data?.[0]?.id;
 
-    const pagesChecked: any[] = [];
-    let currentPage = 1;
-    let notesInJuneCount = 0;
+    // Test 1: page=2
+    const testPage = await client.get('/sale-note/lists?page=2');
+    const testPageId = testPage.data?.data?.[0]?.id;
 
-    while (currentPage <= 3) {
-      const r = await client.get(`/sale-note/lists?page=${currentPage}`);
-      const data = r.data?.data || [];
-      if (data.length === 0) break;
+    // Test 2: URL path pagination
+    let testPathId = null;
+    try {
+      const testPath = await client.get('/sale-note/lists/2');
+      testPathId = testPath.data?.data?.[0]?.id || testPath.data?.[0]?.id;
+    } catch(e: any) {}
 
-      const dates = data.map((x: any) => x.date_of_issue);
-      const juneNotes = data.filter((x: any) => x.date_of_issue && x.date_of_issue.split('-')[1] === '06');
-      notesInJuneCount += juneNotes.length;
-      
-      pagesChecked.push({
-        page: currentPage,
-        count: data.length,
-        minDate: dates[dates.length - 1],
-        maxDate: dates[0],
-        juneCount: juneNotes.length
-      });
+    // Test 3: Date range in URL path (similar to documents)
+    let testDateRangeCount = null;
+    let testDateRangeFirstDate = null;
+    try {
+      const testDateRange = await client.get('/sale-note/lists/2026-06-01/2026-06-30');
+      const data = testDateRange.data?.data || testDateRange.data || [];
+      testDateRangeCount = data.length;
+      testDateRangeFirstDate = data[0]?.date_of_issue || data[0]?.created_at;
+    } catch(e: any) {}
 
-      currentPage++;
-    }
+    // Test 4: query parameters for dates
+    let testQueryParamsCount = null;
+    let testQueryParamsFirstDate = null;
+    try {
+      const testQueryParams = await client.get('/sale-note/lists?date_start=2026-06-01&date_end=2026-06-30');
+      const data = testQueryParams.data?.data || testQueryParams.data || [];
+      testQueryParamsCount = data.length;
+      testQueryParamsFirstDate = data[0]?.date_of_issue || data[0]?.created_at;
+    } catch(e: any) {}
 
     res.json({
-      page1Meta,
-      page1DatesCount: page1Dates.length,
-      page1FirstDates: page1Dates.slice(0, 5),
-      pagesChecked,
-      notesInJuneCount
+      page1FirstId: p1Id,
+      testPage2FirstId: testPageId,
+      testPathPaginationFirstId: testPathId,
+      testDateRangeInPath: { count: testDateRangeCount, firstDate: testDateRangeFirstDate },
+      testDateRangeInQueryParams: { count: testQueryParamsCount, firstDate: testQueryParamsFirstDate }
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message, stack: err.stack });
