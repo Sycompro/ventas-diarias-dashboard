@@ -36,6 +36,8 @@ const syncInProgress: Record<string, Promise<any>> = {};
 /**
  * Sincroniza automáticamente en tiempo real los comprobantes del rango de fechas
  * solicitado consultando la API oficial del Facturador, sin necesidad de botones manuales.
+ * Si la sincronización externa tarda más de 3 segundos, continúa en segundo plano y entrega
+ * los datos actuales de la base de datos inmediatamente para que la UI nunca se congele.
  */
 async function ensureDateRangeSynced(companyId?: string, dateStart?: string, dateEnd?: string) {
   if (!companyId || !dateStart || !dateEnd) return;
@@ -47,8 +49,8 @@ async function ensureDateRangeSynced(companyId?: string, dateStart?: string, dat
   } catch {}
 
   const memKey = `${companyId}:${dateStart}:${dateEnd}`;
+  // Si ya hay una sincronización en marcha para este rango, no bloquear los otros endpoints
   if (memKey in syncInProgress) {
-    await syncInProgress[memKey];
     return;
   }
 
@@ -67,7 +69,15 @@ async function ensureDateRangeSynced(companyId?: string, dateStart?: string, dat
   })();
 
   syncInProgress[memKey] = syncPromise;
-  await syncPromise;
+
+  // Esperar un máximo de 3 segundos. Si la API del facturador responde rápido, entrega datos frescos;
+  // si es un rango histórico grande y tarda más, continúa en background y entrega datos de BD sin bloquear al usuario.
+  try {
+    await Promise.race([
+      syncPromise,
+      new Promise((resolve) => setTimeout(resolve, 3000))
+    ]);
+  } catch {}
 }
 
 router.get('/metrics', async (req, res) => {
