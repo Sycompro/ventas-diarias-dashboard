@@ -42,7 +42,7 @@ export async function getDashboardMetrics(
 ): Promise<DashboardMetrics> {
   const branchKey = branch || 'all';
   const sellerKey = seller || 'all';
-  const cacheKey = `metrics_v4:${companyId || 'all'}:${dateStart}:${dateEnd}:${branchKey}:${sellerKey}`;
+  const cacheKey = `metrics_v5:${companyId || 'all'}:${dateStart}:${dateEnd}:${branchKey}:${sellerKey}`;
   
   try {
     const cached = await redis.get(cacheKey);
@@ -342,8 +342,10 @@ export async function getDashboardMetrics(
     }),
   };
 
+  const isCurrentDay = dateEnd >= new Date().toISOString().split('T')[0];
+  const ttl = isCurrentDay ? 10 : 180;
   try {
-    await redis.setex(cacheKey, 180, JSON.stringify(result));
+    await redis.setex(cacheKey, ttl, JSON.stringify(result));
   } catch {}
 
   return result;
