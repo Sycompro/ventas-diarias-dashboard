@@ -149,7 +149,11 @@ export const SalesPage: React.FC = () => {
             </div>
           }
         />
-        <TaxIgvCard taxes={metrics?.taxes} isLoading={loadingDocTypes} />
+        <TaxIgvCard 
+          taxes={metrics?.taxes} 
+          nonDeclaredAmount={metrics?.byDocumentType?.notasVenta?.amount} 
+          isLoading={loadingDocTypes} 
+        />
       </div>
 
       {/* Resumen General Unificado */}

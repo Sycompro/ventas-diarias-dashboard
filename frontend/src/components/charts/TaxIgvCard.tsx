@@ -10,14 +10,16 @@ interface TaxIgvCardProps {
     unaffected: number;
     total: number;
   };
+  nonDeclaredAmount?: number;
   isLoading?: boolean;
 }
 
-export const TaxIgvCard: React.FC<TaxIgvCardProps> = ({ taxes, isLoading }) => {
+export const TaxIgvCard: React.FC<TaxIgvCardProps> = ({ taxes, nonDeclaredAmount = 0, isLoading }) => {
   if (isLoading) {
     return (
       <div className="bg-white rounded-2xl border border-slate-200/80 px-5 py-4 shadow-sm animate-pulse flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
         <div className="h-5 bg-slate-100 rounded-lg w-1/4"></div>
+        <div className="h-10 bg-slate-100 rounded-lg flex-1"></div>
         <div className="h-10 bg-slate-100 rounded-lg flex-1"></div>
         <div className="h-10 bg-slate-100 rounded-lg flex-1"></div>
         <div className="h-10 bg-slate-100 rounded-lg flex-1"></div>
@@ -55,8 +57,8 @@ export const TaxIgvCard: React.FC<TaxIgvCardProps> = ({ taxes, isLoading }) => {
       {/* Horizontal Divider for Mobile, Vertical for Desktop */}
       <div className="h-px w-full bg-slate-100 md:h-8 md:w-px shrink-0" />
 
-      {/* Grid of 3 horizontal metrics */}
-      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Grid of 4 horizontal metrics */}
+      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         
         {/* Metric 1: Total Facturado */}
         <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/40 hover:bg-slate-50/50 transition-colors">
@@ -109,6 +111,21 @@ export const TaxIgvCard: React.FC<TaxIgvCardProps> = ({ taxes, isLoading }) => {
             </div>
             <span className="text-xs font-black text-emerald-900 tabular-nums block mt-1.5 leading-tight">
               {formatCurrency(igv)}
+            </span>
+          </div>
+        </div>
+
+        {/* Metric 4: Notas de Venta (No Declaradas) */}
+        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-amber-50/40 border border-amber-100 hover:bg-amber-50/60 transition-colors">
+          <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg shrink-0">
+            <ReceiptText size={13} />
+          </div>
+          <div>
+            <span className="text-[9px] font-bold text-amber-800 uppercase tracking-wider block leading-none">
+              No Declarado (Notas Venta)
+            </span>
+            <span className="text-xs font-black text-amber-900 tabular-nums block mt-1.5 leading-tight">
+              {formatCurrency(nonDeclaredAmount)}
             </span>
           </div>
         </div>
