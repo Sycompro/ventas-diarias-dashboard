@@ -253,10 +253,11 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
             }
           } else {
             const totalNum = parseFloat(totalAmount) || 0;
-            const itemCategory = totalNum > 20 ? '02' : '01';
-            const itemDescription = itemCategory === '02' 
-              ? `Servicio (S/. ${totalNum.toFixed(2)})` 
-              : `Producto (S/. ${totalNum.toFixed(2)})`;
+            const isService = totalNum >= 25.0 || totalNum === 8.0;
+            const itemCategory = isService ? '02' : '01';
+            const itemDescription = isService 
+              ? (totalNum === 8.0 ? 'Rutina Diaria (Pase Diario)' : `Servicio / Membresía (S/. ${totalNum.toFixed(2)})`)
+              : `Producto / Bebida (S/. ${totalNum.toFixed(2)})`;
 
             await db.insert(saleItems).values({
               saleId: insertedSale.id,
@@ -264,7 +265,8 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
               quantity: '1',
               unitPrice: totalAmount,
               total: totalAmount,
-              category: itemCategory
+              category: itemCategory,
+              unitType: isService ? 'ZZ' : 'NIU'
             });
           }
 
@@ -401,10 +403,11 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
           );
         } else {
           const totalNum = parseFloat(note.total || '0') || 0;
-          const itemCategory = totalNum > 20 ? '02' : '01';
-          const itemDescription = itemCategory === '02'
-            ? `Servicio (S/. ${totalNum.toFixed(2)})`
-            : `Producto (S/. ${totalNum.toFixed(2)})`;
+          const isService = totalNum >= 25.0 || totalNum === 8.0;
+          const itemCategory = isService ? '02' : '01';
+          const itemDescription = isService
+            ? (totalNum === 8.0 ? 'Rutina Diaria (Pase Diario)' : `Servicio / Membresía (S/. ${totalNum.toFixed(2)})`)
+            : `Producto / Bebida (S/. ${totalNum.toFixed(2)})`;
 
           await db.insert(saleItems).values({
             saleId: insertedSale.id,
@@ -413,6 +416,7 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
             unitPrice: note.total.toString(),
             total: note.total.toString(),
             category: itemCategory,
+            unitType: isService ? 'ZZ' : 'NIU'
           });
         }
 
