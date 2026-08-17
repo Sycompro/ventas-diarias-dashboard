@@ -134,45 +134,91 @@ export const ProductsPage: React.FC = () => {
         <>
           {/* Section 2: KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                <Package size={20} />
+            {/* Card 1: Productos Únicos */}
+            <div className="relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between bg-gradient-to-br from-blue-500 to-blue-700 border-blue-700/30 shadow-blue-500/20">
+              <div className="absolute -bottom-3 -right-3 pointer-events-none select-none">
+                <Package size={64} className="text-white/10" />
               </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Productos Únicos</span>
-                <span className="text-lg font-black text-slate-800 block mt-0.5 truncate">{data.summary.totalUniqueProducts}</span>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0 text-white">
+                    <Package size={16} />
+                  </div>
+                  <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-tight truncate">
+                    Productos Únicos
+                  </span>
+                </div>
               </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-                <TrendingUp size={20} />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Unidades Vendidas</span>
-                <span className="text-lg font-black text-slate-800 block mt-0.5 truncate">{data.summary.totalUnitsSold.toLocaleString()}</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                <BarChart3 size={20} />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Rotación Prom/Día</span>
-                <span className="text-lg font-black text-slate-800 block mt-0.5 truncate">{data.summary.avgRotationPerDay.toFixed(1)} uds</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-3.5 hover:border-slate-300 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
-                <Tag size={20} />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Distribución ABC</span>
-                <span className="text-lg font-black text-slate-800 block mt-0.5 truncate">
-                  A:{data.summary.classACount} B:{data.summary.classBCount} C:{data.summary.classCCount}
+              <div>
+                <span className="text-xl font-black tabular-nums text-white drop-shadow-sm">
+                  {data.summary.totalUniqueProducts}
                 </span>
+              </div>
+            </div>
+
+            {/* Card 2: Unidades Vendidas */}
+            <div className="relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between bg-gradient-to-br from-emerald-500 to-emerald-700 border-emerald-700/30 shadow-emerald-500/20">
+              <div className="absolute -bottom-3 -right-3 pointer-events-none select-none">
+                <TrendingUp size={64} className="text-white/10" />
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0 text-white">
+                    <TrendingUp size={16} />
+                  </div>
+                  <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-tight truncate">
+                    Unidades Vendidas
+                  </span>
+                </div>
+              </div>
+              <div>
+                <span className="text-xl font-black tabular-nums text-white drop-shadow-sm">
+                  {data.summary.totalUnitsSold.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 3: Rotación Prom/Día */}
+            <div className="relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between bg-gradient-to-br from-indigo-500 to-indigo-700 border-indigo-700/30 shadow-indigo-500/20">
+              <div className="absolute -bottom-3 -right-3 pointer-events-none select-none">
+                <BarChart3 size={64} className="text-white/10" />
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0 text-white">
+                    <BarChart3 size={16} />
+                  </div>
+                  <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-tight truncate">
+                    Rotación Prom/Día
+                  </span>
+                </div>
+              </div>
+              <div>
+                <span className="text-xl font-black tabular-nums text-white drop-shadow-sm">
+                  {data.summary.avgRotationPerDay.toFixed(1)} uds
+                </span>
+              </div>
+            </div>
+
+            {/* Card 4: Distribución ABC */}
+            <div className="relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.03] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between bg-gradient-to-br from-amber-400 to-amber-600 border-amber-600/30 shadow-amber-500/20">
+              <div className="absolute -bottom-3 -right-3 pointer-events-none select-none">
+                <Tag size={64} className="text-white/10" />
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0 text-white">
+                    <Tag size={16} />
+                  </div>
+                  <span className="text-[10px] font-extrabold text-white/90 uppercase tracking-widest leading-tight truncate">
+                    Distribución ABC
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-lg backdrop-blur-sm">A: {data.summary.classACount}</span>
+                <span className="text-[9px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-lg backdrop-blur-sm">B: {data.summary.classBCount}</span>
+                <span className="text-[9px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-lg backdrop-blur-sm">C: {data.summary.classCCount}</span>
               </div>
             </div>
           </div>
