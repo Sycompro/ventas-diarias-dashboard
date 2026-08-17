@@ -33,10 +33,18 @@ router.get('/temp-debug-gymbra', async (req, res) => {
     const config = await getCompanyBillingConfig(gymbraId);
     const branches = await getCompanyBranches(gymbraId);
 
+    const sampleNote = await sqlClient`
+      SELECT id, series, number, raw_json
+      FROM sales
+      WHERE company_id = ${gymbraId} AND document_type_id = '80' AND status = 'active'
+      LIMIT 1
+    `;
+
     res.json({
       officialEstablishments: config.establishments,
       officialSeries: config.series,
-      branches
+      branches,
+      sampleNote
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message, stack: err.stack });
