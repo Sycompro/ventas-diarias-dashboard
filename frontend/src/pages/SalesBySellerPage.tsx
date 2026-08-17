@@ -212,45 +212,120 @@ export const SalesBySellerPage: React.FC = () => {
       {/* KPI Cards */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-20" />
-          <Skeleton className="h-20" />
-          <Skeleton className="h-20" />
+          <Skeleton className="h-[120px] rounded-2xl" />
+          <Skeleton className="h-[120px] rounded-2xl" />
+          <Skeleton className="h-[120px] rounded-2xl" />
         </div>
       ) : kpis ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1: Top Seller */}
-          <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white rounded-2xl p-4 shadow-md shadow-indigo-500/10 flex items-center justify-between border border-indigo-600/30">
-            <div className="space-y-1">
-              <span className="text-[10px] text-indigo-100 font-bold uppercase tracking-wider">Vendedor Estrella</span>
-              <h3 className="text-sm font-black truncate max-w-[150px]">{kpis.topSeller?.name || kpis.topSeller?.sellerName}</h3>
-              <p className="text-lg font-black tabular-nums">{formatCurrency(kpis.topSeller?.total)}</p>
+          <div className="relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.02] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between bg-gradient-to-br from-indigo-500 to-indigo-700 text-white border-indigo-700/30">
+            {/* Watermark */}
+            <div className="absolute -bottom-4 -right-4 pointer-events-none select-none text-white/10">
+              <Trophy size={72} />
             </div>
-            <div className="p-3 bg-white/10 rounded-xl">
-              <Trophy className="text-amber-300 w-6 h-6 animate-bounce" />
+
+            {/* Top row */}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0">
+                  <Trophy size={14} className="text-amber-300" />
+                </div>
+                <span className="text-[10px] font-extrabold text-white/95 uppercase tracking-widest leading-tight truncate">
+                  Vendedor Estrella
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 bg-amber-400 text-indigo-900 border border-amber-300">
+                LÍDER
+              </span>
+            </div>
+
+            {/* Center: Vendor Name */}
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-indigo-100 truncate block">
+                {kpis.topSeller?.name || kpis.topSeller?.sellerName}
+              </span>
+            </div>
+
+            {/* Bottom: total amount */}
+            <div>
+              <span className="text-xl font-black tabular-nums text-white drop-shadow-sm">
+                {formatCurrency(kpis.topSeller?.total)}
+              </span>
             </div>
           </div>
 
           {/* Card 2: Operations Champion */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Mayor Operatividad</span>
-              <h3 className="text-sm font-bold text-slate-800 truncate max-w-[150px]">{kpis.maxOpsSeller?.name || kpis.maxOpsSeller?.sellerName}</h3>
-              <p className="text-lg font-black text-slate-800 tabular-nums">{kpis.maxOpsSeller?.count} <span className="text-xs text-slate-400 font-normal">operaciones</span></p>
+          <div className="relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.02] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between bg-gradient-to-br from-emerald-500 to-emerald-700 text-white border-emerald-700/30">
+            {/* Watermark */}
+            <div className="absolute -bottom-4 -right-4 pointer-events-none select-none text-white/10">
+              <Target size={72} />
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl text-primary border border-slate-100">
-              <Target className="w-6 h-6" />
+
+            {/* Top row */}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0">
+                  <Target size={14} className="text-emerald-300" />
+                </div>
+                <span className="text-[10px] font-extrabold text-white/95 uppercase tracking-widest leading-tight truncate">
+                  Mayor Operatividad
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 bg-white/20 text-white">
+                PRODUCTIVO
+              </span>
+            </div>
+
+            {/* Center: Vendor Name */}
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-emerald-100 truncate block">
+                {kpis.maxOpsSeller?.name || kpis.maxOpsSeller?.sellerName}
+              </span>
+            </div>
+
+            {/* Bottom: total operations */}
+            <div>
+              <span className="text-xl font-black tabular-nums text-white drop-shadow-sm">
+                {kpis.maxOpsSeller?.count} <span className="text-xs font-bold text-emerald-100">operaciones</span>
+              </span>
             </div>
           </div>
 
           {/* Card 3: Global Average Ticket */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Ticket Promedio Global</span>
-              <h3 className="text-sm font-bold text-slate-800">Consolidado Usuarios</h3>
-              <p className="text-lg font-black text-slate-800 tabular-nums">{formatCurrency(kpis.avgTicket)}</p>
+          <div className="relative overflow-hidden rounded-2xl border shadow-md transition-all duration-300 hover:scale-[1.02] hover:shadow-lg p-4 h-[120px] flex flex-col justify-between bg-gradient-to-br from-teal-500 to-teal-700 text-white border-teal-700/30">
+            {/* Watermark */}
+            <div className="absolute -bottom-4 -right-4 pointer-events-none select-none text-white/10">
+              <TrendingUp size={72} />
             </div>
-            <div className="p-3 bg-slate-50 rounded-xl text-emerald-600 border border-slate-100">
-              <TrendingUp className="w-6 h-6" />
+
+            {/* Top row */}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm shrink-0">
+                  <TrendingUp size={14} className="text-teal-300" />
+                </div>
+                <span className="text-[10px] font-extrabold text-white/95 uppercase tracking-widest leading-tight truncate">
+                  Ticket Promedio Global
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 bg-white/20 text-white">
+                PROMEDIO
+              </span>
+            </div>
+
+            {/* Center: Vendor Name */}
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-teal-100 truncate block">
+                Consolidado de Ventas
+              </span>
+            </div>
+
+            {/* Bottom: average ticket */}
+            <div>
+              <span className="text-xl font-black tabular-nums text-white drop-shadow-sm">
+                {formatCurrency(kpis.avgTicket)}
+              </span>
             </div>
           </div>
         </div>
