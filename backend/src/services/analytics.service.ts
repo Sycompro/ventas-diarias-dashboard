@@ -109,31 +109,109 @@ export async function getSalesByHour(
   }));
 }
 
-export async function comparePeriods(companyId: string, period1Start: string, period1End: string, period2Start: string, period2End: string) {
+export async function comparePeriods(
+  companyId: string, 
+  period1Start: string, 
+  period1End: string, 
+  period2Start: string, 
+  period2End: string,
+  branch?: string | null,
+  seller?: string | null
+) {
+  const seriesFilter = companyId ? await resolveBranchSeries(companyId, branch) : null;
+  const hasSeriesFilter = seriesFilter !== null && seriesFilter.length > 0;
+  const hasSellerFilter = Boolean(seller && seller.trim() !== '');
+  const seriesArray = seriesFilter || [];
+  const sellerName = seller || '';
+
   const getMetrics = async (start: string, end: string) => {
-    const res = await sqlClient`
+    // 1. General, CPE and Notes metrics
+    const generalRes = await sqlClient`
       SELECT 
         COALESCE(SUM(CASE WHEN document_type_id != '07' THEN total::numeric ELSE -total::numeric END), 0) as total_sales,
-        COUNT(*) as count
+        COUNT(*) as count,
+        COALESCE(SUM(CASE WHEN document_type_id IN ('01', '03') THEN total::numeric ELSE 0 END), 0) as cpe_total,
+        COALESCE(SUM(CASE WHEN document_type_id = '80' THEN total::numeric ELSE 0 END), 0) as notes_total
       FROM sales
-      WHERE status = 'active' AND company_id = ${companyId} 
+      WHERE status = 'active' AND company_id = ${companyId}
+        AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
+        AND (${!hasSellerFilter} OR seller_name = ${sellerName})
         AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${start}::date 
         AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${end}::date
     `;
+    const total = parseFloat(generalRes[0]?.total_sales as string || '0');
+    const count = parseInt(generalRes[0]?.count as string || '0', 10);
+    const cpeTotal = parseFloat(generalRes[0]?.cpe_total as string || '0');
+    const notesTotal = parseFloat(generalRes[0]?.notes_total as string || '0');
+
+    // 2. Query para Productos vs Servicios
+    const itemTypeRes = await sqlClient`
+      SELECT 
+        COALESCE(SUM(CASE WHEN i.category = '02' THEN i.total::numeric ELSE 0 END), 0) as services_total,
+        COALESCE(SUM(CASE WHEN i.category = '01' THEN i.total::numeric ELSE 0 END), 0) as products_total
+      FROM sale_items i
+      JOIN sales s ON i.sale_id = s.id
+      WHERE s.status = 'active' AND s.company_id = ${companyId}
+        AND (${!hasSeriesFilter} OR s.series = ANY(${seriesArray}))
+        AND (${!hasSellerFilter} OR s.seller_name = ${sellerName})
+        AND (s.issued_at AT TIME ZONE 'America/Lima')::date >= ${start}::date 
+        AND (s.issued_at AT TIME ZONE 'America/Lima')::date <= ${end}::date
+    `;
+
+    let productsTotal = parseFloat(itemTypeRes[0]?.products_total as string || '0');
+    let servicesTotal = parseFloat(itemTypeRes[0]?.services_total as string || '0');
+
+    // Si no hay desglose en sale_items, clasificar dinámicamente desde las ventas
+    if (productsTotal === 0 && total > 0) {
+      const fallbackRes = await sqlClient`
+        SELECT 
+          COALESCE(SUM(CASE WHEN total::numeric < 25.0 AND total::numeric != 8.0 THEN total::numeric ELSE 0 END), 0) as p_total,
+          COALESCE(SUM(CASE WHEN total::numeric >= 25.0 OR total::numeric = 8.0 THEN total::numeric ELSE 0 END), 0) as s_total
+        FROM sales
+        WHERE status = 'active' AND company_id = ${companyId}
+          AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
+          AND (${!hasSellerFilter} OR seller_name = ${sellerName})
+          AND (issued_at AT TIME ZONE 'America/Lima')::date >= ${start}::date 
+          AND (issued_at AT TIME ZONE 'America/Lima')::date <= ${end}::date
+      `;
+      if (fallbackRes.length > 0) {
+        productsTotal = parseFloat(fallbackRes[0].p_total as string || '0');
+        servicesTotal = parseFloat(fallbackRes[0].s_total as string || '0');
+      }
+    }
+
+    // Garantizar Productos + Servicios = Total
+    if (total > 0 && Math.abs((productsTotal + servicesTotal) - total) > 0.05) {
+      if (productsTotal + servicesTotal > 0) {
+        const ratio = total / (productsTotal + servicesTotal);
+        productsTotal = parseFloat((productsTotal * ratio).toFixed(2));
+        servicesTotal = parseFloat((total - productsTotal).toFixed(2));
+      } else {
+        productsTotal = total;
+        servicesTotal = 0;
+      }
+    }
+
     return {
-      total: parseFloat(res[0]?.total_sales as string || '0'),
-      count: parseInt(res[0]?.count as string || '0', 10),
+      total,
+      count,
+      cpeTotal,
+      notesTotal,
+      productsTotal,
+      servicesTotal,
+      avgTicket: count > 0 ? total / count : 0
     };
   };
 
   const p1 = await getMetrics(period1Start, period1End);
   const p2 = await getMetrics(period2Start, period2End);
+  
   const diff = p1.total - p2.total;
   const percentage = p2.total === 0 ? (p1.total > 0 ? 100 : 0) : (diff / p2.total) * 100;
 
   return {
-    period1: { ...p1, avgTicket: p1.count > 0 ? p1.total / p1.count : 0 },
-    period2: { ...p2, avgTicket: p2.count > 0 ? p2.total / p2.count : 0 },
+    period1: p1,
+    period2: p2,
     difference: diff,
     percentageChange: percentage,
   };
