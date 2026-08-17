@@ -102,7 +102,11 @@ export const SalesBySellerPage: React.FC = () => {
         const initials = (item.name || item.sellerName || 'U').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
 
         return (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {/* Rank number */}
+            <span className="w-5 text-right font-black text-[11px] text-slate-400 tabular-nums shrink-0">
+              {rank}°
+            </span>
             <div className="relative shrink-0">
               <div className={`w-9 h-9 rounded-xl border flex items-center justify-center font-bold text-[11px] shadow-sm ${avatarBg}`}>
                 {initials}
