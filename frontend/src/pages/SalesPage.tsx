@@ -297,7 +297,7 @@ export const SalesPage: React.FC = () => {
                     return (
                       <React.Fragment key={m.id}>
                         {/* Fila principal del Método de Pago */}
-                        <tr className="bg-slate-50/75 hover:bg-slate-100/50 transition-colors">
+                        <tr className="bg-slate-50/75 hover:bg-slate-200/70 transition-colors duration-150">
                           <td className="py-2.5 px-4">
                             <div className="flex items-center gap-2">
                               <button
@@ -340,7 +340,7 @@ export const SalesPage: React.FC = () => {
                           const bSaldo = bCpe + bNotes - bPurchases;
 
                           return (
-                            <tr key={branchName} className="hover:bg-slate-50/50 transition-colors border-l-2 border-indigo-100">
+                            <tr key={branchName} className="hover:bg-slate-100/80 transition-colors duration-150 border-l-2 border-indigo-200">
                               <td className="py-2 pl-12 pr-4">
                                 <div className="flex items-center gap-1.5">
                                   <Building2 size={11} className="text-slate-400 shrink-0" />
