@@ -20,6 +20,21 @@ import https from 'https';
 
 const router = Router();
 
+router.get('/debug-sellers-by-company', async (req, res) => {
+  try {
+    const sellersByCompany = await sqlClient`
+      SELECT company_id, seller_name, count(*)::int as count, sum(total::numeric) as total
+      FROM sales
+      WHERE status = 'active'
+      GROUP BY company_id, seller_name
+      ORDER BY company_id, total DESC
+    `;
+    res.json(sellersByCompany);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.use(authenticate);
 
 const parseDateRange = (req: any) => {
