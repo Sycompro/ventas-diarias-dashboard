@@ -22,18 +22,21 @@ const router = Router();
 router.get('/debug-sync-check-june', async (req: any, res: any) => {
   try {
     const companyId = '51089e80-446d-461c-ae37-1518381eb051'; // Gymbra
-    const config = await getCompanyBillingConfig(companyId);
-    if (!config || !config.token) {
-      throw new Error("Billing config or token not found for company");
+    const company = await db.query.companies.findFirst({
+      where: eq(companies.id, companyId)
+    });
+    if (!company) {
+      throw new Error("Company not found");
     }
-    const client = createBillingClient(config.subdomain, config.token);
+    const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
+    const client = createBillingClient(company.subdomain, decryptedToken);
     
     const saleNotes = await fetchSaleNotes(client, '2026-06-01', '2026-06-30');
     const documents = await fetchDocuments(client, '2026-06-01', '2026-06-30');
 
     res.json({
       notesCount: saleNotes.length,
-      sampleNotes: saleNotes.slice(0, 5).map(n => ({
+      sampleNotes: saleNotes.slice(0, 5).map((n: any) => ({
         id: n.id,
         number: n.number,
         total: n.total,
@@ -41,7 +44,7 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
         user_name: n.user_name || n.seller_name || n.user?.name
       })),
       documentsCount: documents.length,
-      sampleDocuments: documents.slice(0, 5).map(d => ({
+      sampleDocuments: documents.slice(0, 5).map((d: any) => ({
         id: d.id,
         number: d.number,
         total: d.total,
