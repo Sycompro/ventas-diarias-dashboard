@@ -236,6 +236,18 @@ export async function getDashboardMetrics(
     }
   }
 
+  // Garantizar que la suma de Productos + Servicios coincida exactamente con Total Ventas
+  if (totalSales > 0 && Math.abs((productsTotal + servicesTotal) - totalSales) > 0.05) {
+    if (productsTotal + servicesTotal > 0) {
+      const ratio = totalSales / (productsTotal + servicesTotal);
+      productsTotal = parseFloat((productsTotal * ratio).toFixed(2));
+      servicesTotal = parseFloat((totalSales - productsTotal).toFixed(2));
+    } else {
+      productsTotal = totalSales;
+      servicesTotal = 0;
+    }
+  }
+
   let taxedAmount = parseFloat(row.taxed_total as string || '0');
   let igvAmount = parseFloat(row.igv_total as string || '0');
   const exoneratedAmount = parseFloat(row.exonerated_total as string || '0');
