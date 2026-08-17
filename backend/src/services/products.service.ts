@@ -24,7 +24,8 @@ export async function getProductAnalytics(
     
     let seriesArray: string[] = [];
     if (branch) {
-      seriesArray = await resolveBranchSeries(companyId, branch);
+      const resolved = await resolveBranchSeries(companyId, branch);
+      seriesArray = resolved || [];
     }
     const hasSeriesFilter = seriesArray.length > 0;
     
