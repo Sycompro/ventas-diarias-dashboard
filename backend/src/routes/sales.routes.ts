@@ -20,7 +20,51 @@ import https from 'https';
 
 const router = Router();
 
+router.get('/debug-seller-sql', async (req, res) => {
+  try {
+    const sampleSellers = await sqlClient`
+      SELECT seller_name, count(*)::int as count, sum(total::numeric) as total
+      FROM sales
+      GROUP BY seller_name
+      LIMIT 10
+    `;
 
+    const itemsCount = await sqlClient`
+      SELECT count(*)::int as count
+      FROM sale_items
+    `;
+
+    const sellerItems = await sqlClient`
+      SELECT 
+        s.seller_name,
+        i.category,
+        count(*)::int as count,
+        sum(i.total::numeric) as total
+      FROM sale_items i
+      JOIN sales s ON i.sale_id = s.id
+      GROUP BY s.seller_name, i.category
+    `;
+
+    const docTypes = await sqlClient`
+      SELECT 
+        seller_name,
+        document_type_id,
+        count(*)::int as count,
+        sum(total::numeric) as total
+      FROM sales
+      GROUP BY seller_name, document_type_id
+    `;
+
+    res.json({
+      sampleSellers,
+      itemsCount: itemsCount[0]?.count || 0,
+      sellerItems,
+      docTypes
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.use(authenticate);
 
