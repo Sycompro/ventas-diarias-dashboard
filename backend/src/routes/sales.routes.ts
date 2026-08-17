@@ -7,7 +7,7 @@ import { sales, companies } from '../db/schema.js';
 import { eq, and, sql, gte, lte, inArray } from 'drizzle-orm';
 import { redis } from '../config/redis.js';
 import { decrypt } from '../services/crypto.service.js';
-import { createBillingClient, fetchDocuments } from '../services/billing-api.service.js';
+import { createBillingClient, fetchDocuments, fetchSaleNotes } from '../services/billing-api.service.js';
 import { syncCompany } from '../services/sync.service.js';
 import { 
   getCompanyBillingConfig, 
@@ -16,11 +16,47 @@ import {
   getBranchNameForSeries 
 } from '../services/branch-resolver.service.js';
 import axios from 'axios';
-import https from 'https';
 
 const router = Router();
 
-router.get('/debug-june', async (req, res) => {
+router.get('/debug-sync-check-june', async (req: any, res: any) => {
+  try {
+    const companyId = '51089e80-446d-461c-ae37-1518381eb051'; // Gymbra
+    const config = await getCompanyBillingConfig(companyId);
+    if (!config || !config.token) {
+      throw new Error("Billing config or token not found for company");
+    }
+    const client = createBillingClient(config.subdomain, config.token);
+    
+    const saleNotes = await fetchSaleNotes(client, '2026-06-01', '2026-06-30');
+    const documents = await fetchDocuments(client, '2026-06-01', '2026-06-30');
+
+    res.json({
+      notesCount: saleNotes.length,
+      sampleNotes: saleNotes.slice(0, 5).map(n => ({
+        id: n.id,
+        number: n.number,
+        total: n.total,
+        date_of_issue: n.date_of_issue,
+        user_name: n.user_name || n.seller_name || n.user?.name
+      })),
+      documentsCount: documents.length,
+      sampleDocuments: documents.slice(0, 5).map(d => ({
+        id: d.id,
+        number: d.number,
+        total: d.total,
+        date_of_issue: d.date_of_issue,
+        document_type_id: d.document_type_id
+      }))
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
+router.use(authenticate);
+
+router.get('/debug-june', async (req: any, res: any) => {
   try {
     const companyId = '51089e80-446d-461c-ae37-1518381eb051';
     const dateStart = '2026-06-01';
@@ -40,9 +76,28 @@ router.get('/debug-june', async (req, res) => {
       GROUP BY document_type_id
     `;
 
+    const itemsInJune = await sqlClient`
+      SELECT 
+        s.seller_name,
+        i.description,
+        i.category,
+        count(*)::int as count,
+        sum(i.total::numeric) as total
+      FROM sale_items i
+      JOIN sales s ON i.sale_id = s.id
+      WHERE s.status = 'active' 
+        AND s.company_id = '51089e80-446d-461c-ae37-1518381eb051'
+        AND (s.issued_at AT TIME ZONE 'America/Lima')::date >= '2026-06-01'::date
+        AND (s.issued_at AT TIME ZONE 'America/Lima')::date <= '2026-06-30'::date
+      GROUP BY s.seller_name, i.description, i.category
+      ORDER BY total DESC
+      LIMIT 100
+    `;
+
     res.json({
       salesBySeller: metrics.salesBySeller,
-      docTypesInJune
+      docTypesInJune,
+      itemsInJune
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
