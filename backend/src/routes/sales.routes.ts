@@ -20,16 +20,20 @@ import https from 'https';
 
 const router = Router();
 
-router.get('/debug-sellers-by-company', async (req, res) => {
+router.get('/debug-seller-date-ranges', async (req, res) => {
   try {
-    const sellersByCompany = await sqlClient`
-      SELECT company_id, seller_name, count(*)::int as count, sum(total::numeric) as total
+    const dates = await sqlClient`
+      SELECT 
+        seller_name, 
+        count(*)::int as count, 
+        min((issued_at AT TIME ZONE 'America/Lima')::date) as min_date, 
+        max((issued_at AT TIME ZONE 'America/Lima')::date) as max_date
       FROM sales
-      WHERE status = 'active'
-      GROUP BY company_id, seller_name
-      ORDER BY company_id, total DESC
+      WHERE status = 'active' AND company_id = '51089e80-446d-461c-ae37-1518381eb051'
+      GROUP BY seller_name
+      ORDER BY count DESC
     `;
-    res.json(sellersByCompany);
+    res.json(dates);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
