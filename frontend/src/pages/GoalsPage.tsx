@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Target, Plus, X, Calendar, DollarSign, User } from 'lucide-react';
 import { GoalProgress } from '../components/ui/GoalProgress';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -6,11 +6,30 @@ import { goalsService } from '../services/api';
 import { useFilters } from '../hooks/useFilters';
 import { Skeleton } from '../components/ui/Skeleton';
 import { CustomDatePicker } from '../components/ui/CustomDatePicker';
+import { useHeaderStore } from '../hooks/useHeader';
 
 export const GoalsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { companyId } = useFilters();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const setHeader = useHeaderStore((state: any) => state.setHeader);
+  const clearHeader = useHeaderStore((state: any) => state.clearHeader);
+
+  useEffect(() => {
+    setHeader(
+      'Metas y Objetivos',
+      'Seguimiento de cumplimiento de metas empresariales y de ventas.',
+      <button 
+        onClick={() => setIsModalOpen(true)}
+        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900"
+      >
+        <Plus className="w-4 h-4" />
+        Nueva Meta
+      </button>
+    );
+    return () => clearHeader();
+  }, [companyId]);
 
   // Form State
   const [targetValue, setTargetValue] = useState('');
@@ -56,21 +75,6 @@ export const GoalsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
-            <Target className="text-primary" /> Metas y Objetivos
-          </h2>
-          <p className="text-sm text-neutral-500 mt-1">Seguimiento de cumplimiento de metas empresariales y de ventas.</p>
-        </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Nueva Meta
-        </button>
-      </div>
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
