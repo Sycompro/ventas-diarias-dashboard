@@ -1,4 +1,4 @@
-import { db } from '../config/database.js';
+import { db, sqlClient } from '../config/database.js';
 import { redis } from '../config/redis.js';
 import { companies, sales, saleItems, salePayments, syncLogs } from '../db/schema.js';
 import { eq, sql } from 'drizzle-orm';
@@ -438,6 +438,20 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
 
         documentsSynced++;
       }
+    }
+
+    // 3. Limpieza automática de duplicados históricos asegurando exactamente 1 registro por documento oficial
+    try {
+      await sqlClient`
+        DELETE FROM sales a USING sales b
+        WHERE a.id < b.id 
+          AND a.company_id = b.company_id 
+          AND a.document_type_id = b.document_type_id 
+          AND a.series = b.series 
+          AND a.number = b.number;
+      `;
+    } catch (dedupErr: any) {
+      console.warn(`[Sync Service] Warning during sales deduplication:`, dedupErr.message);
     }
   } catch (error: any) {
     syncStatus = 'failed';

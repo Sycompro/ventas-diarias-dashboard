@@ -33,6 +33,24 @@ const parseDateRange = (req: any) => {
 
 const syncInProgress: Record<string, Promise<any>> = {};
 
+let initialDedupDone = false;
+async function ensureDeduplicated() {
+  if (initialDedupDone) return;
+  try {
+    await sqlClient`
+      DELETE FROM sales a USING sales b
+      WHERE a.id < b.id 
+        AND a.company_id = b.company_id 
+        AND a.document_type_id = b.document_type_id 
+        AND a.series = b.series 
+        AND a.number = b.number;
+    `;
+    initialDedupDone = true;
+  } catch (e: any) {
+    console.warn('[Dedup] Warning during initial sales deduplication:', e.message);
+  }
+}
+
 /**
  * Sincroniza automáticamente en tiempo real los comprobantes del rango de fechas
  * solicitado consultando la API oficial del Facturador, sin necesidad de botones manuales.
@@ -42,6 +60,8 @@ const syncInProgress: Record<string, Promise<any>> = {};
 async function ensureDateRangeSynced(companyId?: string, dateStart?: string, dateEnd?: string) {
   if (!companyId || !dateStart || !dateEnd) return;
   
+  await ensureDeduplicated();
+
   const cacheKey = `sync_range:${companyId}:${dateStart}:${dateEnd}`;
   try {
     const cached = await redis.get(cacheKey);
