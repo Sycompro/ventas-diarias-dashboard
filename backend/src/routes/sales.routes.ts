@@ -40,7 +40,7 @@ router.get('/debug-sync-check-june', async (req: any, res: any) => {
     let currentPage = 1;
     let notesInJuneCount = 0;
 
-    while (currentPage <= 20) {
+    while (currentPage <= 3) {
       const r = await client.get(`/sale-note/lists?page=${currentPage}`);
       const data = r.data?.data || [];
       if (data.length === 0) break;
