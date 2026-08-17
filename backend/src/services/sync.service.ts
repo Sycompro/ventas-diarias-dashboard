@@ -7,6 +7,82 @@ import https from 'https';
 import { decrypt } from './crypto.service.js';
 import { createBillingClient, fetchDocuments, fetchReportDocuments, fetchSaleNotes, fetchSaleNoteDetail, fetchPurchases } from './billing-api.service.js';
 
+function parseXmlItems(xmlText: string, isServiceItem: (desc: string) => boolean): any[] {
+  const items: any[] = [];
+  let startIdx = 0;
+  
+  let lineStartTag = '<cac:InvoiceLine>';
+  let lineEndTag = '</cac:InvoiceLine>';
+  let qtyTagPattern = /<cbc:InvoicedQuantity\s+unitCode="([^"]+)">([^<]+)<\/cbc:InvoicedQuantity>/;
+  
+  if (xmlText.includes('<cac:CreditNoteLine>')) {
+    lineStartTag = '<cac:CreditNoteLine>';
+    lineEndTag = '</cac:CreditNoteLine>';
+    qtyTagPattern = /<cbc:CreditedQuantity\s+unitCode="([^"]+)">([^<]+)<\/cbc:CreditedQuantity>/;
+  } else if (xmlText.includes('<cac:DebitNoteLine>')) {
+    lineStartTag = '<cac:DebitNoteLine>';
+    lineEndTag = '</cac:DebitNoteLine>';
+    qtyTagPattern = /<cbc:DebitedQuantity\s+unitCode="([^"]+)">([^<]+)<\/cbc:DebitedQuantity>/;
+  }
+  
+  while (true) {
+    const startNode = xmlText.indexOf(lineStartTag, startIdx);
+    if (startNode === -1) break;
+    const endNode = xmlText.indexOf(lineEndTag, startNode);
+    if (endNode === -1) break;
+    
+    const lineText = xmlText.substring(startNode, endNode + lineEndTag.length);
+    startIdx = endNode + lineEndTag.length;
+    
+    // Extract description
+    let description = 'Ítem';
+    const descMatch = lineText.match(/<cbc:Description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/cbc:Description>/);
+    if (descMatch) {
+      description = descMatch[1].trim();
+    }
+    
+    // Extract quantity and unitCode
+    let quantity = '1';
+    let unitCode = 'NIU';
+    const qtyMatch = lineText.match(qtyTagPattern);
+    if (qtyMatch) {
+      unitCode = qtyMatch[1];
+      quantity = qtyMatch[2].trim();
+    }
+    
+    // Extract price including tax (AlternativeConditionPrice)
+    let unitPrice = '0';
+    const priceMatch = lineText.match(/<cac:AlternativeConditionPrice>[\s\S]*?<cbc:PriceAmount[^>]*>([^<]+)<\/cbc:PriceAmount>/);
+    if (priceMatch) {
+      unitPrice = priceMatch[1].trim();
+    } else {
+      // Fallback to base price
+      const basePriceMatch = lineText.match(/<cac:Price>[\s\S]*?<cbc:PriceAmount[^>]*>([^<]+)<\/cbc:PriceAmount>/);
+      if (basePriceMatch) {
+        unitPrice = basePriceMatch[1].trim();
+      }
+    }
+    
+    const qtyVal = parseFloat(quantity) || 0;
+    const priceVal = parseFloat(unitPrice) || 0;
+    const total = (qtyVal * priceVal).toFixed(2);
+    
+    const isService = unitCode === 'ZZ' || isServiceItem(description);
+    const category = isService ? '02' : '01';
+    
+    items.push({
+      description,
+      quantity,
+      unitPrice,
+      total,
+      category,
+      unitType: unitCode
+    });
+  }
+  
+  return items;
+}
+
 export interface SyncResult {
   syncedCount: number;
 }
@@ -252,22 +328,51 @@ export async function syncCompany(companyId: string, days: number = 90, customSt
               });
             }
           } else {
-            const totalNum = parseFloat(totalAmount) || 0;
-            const isService = totalNum >= 25.0 || totalNum === 8.0;
-            const itemCategory = isService ? '02' : '01';
-            const itemDescription = isService 
-              ? (totalNum === 8.0 ? 'Rutina Diaria (Pase Diario)' : `Servicio / Membresía (S/. ${totalNum.toFixed(2)})`)
-              : `Producto / Bebida (S/. ${totalNum.toFixed(2)})`;
+            let parsedItems: any[] = [];
+            if (doc.download_xml) {
+              try {
+                const xmlRes = await axios.get(doc.download_xml, {
+                  responseType: 'text',
+                  timeout: 7000,
+                  httpsAgent: new https.Agent({ rejectUnauthorized: false })
+                });
+                const xmlText = xmlRes.data;
+                parsedItems = parseXmlItems(xmlText, isServiceItem);
+              } catch (xmlErr: any) {
+                console.warn(`[Sync Service] Error downloading/parsing XML for ${doc.number || doc.id}:`, xmlErr.message);
+              }
+            }
 
-            await db.insert(saleItems).values({
-              saleId: insertedSale.id,
-              description: itemDescription,
-              quantity: '1',
-              unitPrice: totalAmount,
-              total: totalAmount,
-              category: itemCategory,
-              unitType: isService ? 'ZZ' : 'NIU'
-            });
+            if (parsedItems.length > 0) {
+              for (const item of parsedItems) {
+                await db.insert(saleItems).values({
+                  saleId: insertedSale.id,
+                  description: item.description,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                  total: item.total,
+                  category: item.category,
+                  unitType: item.unitType || null
+                });
+              }
+            } else {
+              const totalNum = parseFloat(totalAmount) || 0;
+              const isService = totalNum >= 25.0 || totalNum === 8.0;
+              const itemCategory = isService ? '02' : '01';
+              const itemDescription = isService 
+                ? (totalNum === 8.0 ? 'Rutina Diaria (Pase Diario)' : `Servicio / Membresía (S/. ${totalNum.toFixed(2)})`)
+                : `Producto / Bebida (S/. ${totalNum.toFixed(2)})`;
+
+              await db.insert(saleItems).values({
+                saleId: insertedSale.id,
+                description: itemDescription,
+                quantity: '1',
+                unitPrice: totalAmount,
+                total: totalAmount,
+                category: itemCategory,
+                unitType: isService ? 'ZZ' : 'NIU'
+              });
+            }
           }
 
           await db.delete(salePayments).where(eq(salePayments.saleId, insertedSale.id));
