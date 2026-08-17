@@ -244,24 +244,11 @@ router.get('/:id/sellers', async (req: any, res) => {
     }
     
     const branch = req.query.branch as string;
+    
+    // Resolver las series de la sucursal seleccionada (o null = todas)
     let seriesFilter: string[] | null = null;
-    let branchSellers: string[] = [];
-
-    if (targetCompanyId) {
-      const branches = await getCompanyBranches(targetCompanyId);
-      if (branch && branch !== 'all') {
-        const foundBranch = branches.find(b => b.id === branch || b.name.toLowerCase() === branch.toLowerCase() || String(b.establishmentId) === branch);
-        if (foundBranch) {
-          seriesFilter = foundBranch.series;
-          branchSellers = foundBranch.sellers || [];
-        } else {
-          seriesFilter = await resolveBranchSeries(targetCompanyId, branch);
-        }
-      } else {
-        branches.forEach(b => {
-          if (b.sellers) branchSellers.push(...b.sellers);
-        });
-      }
+    if (targetCompanyId && branch && branch !== 'all') {
+      seriesFilter = await resolveBranchSeries(targetCompanyId, branch);
     }
 
     const hasSeriesFilter = seriesFilter !== null && seriesFilter.length > 0;
@@ -269,19 +256,20 @@ router.get('/:id/sellers', async (req: any, res) => {
     const hasCompanyFilter = Boolean(targetCompanyId);
     const cId = targetCompanyId || '';
 
+    // Consultar vendedores DIRECTAMENTE de la base de datos, filtrados por series de la sucursal
     const dbResult = await sqlClient`
       SELECT DISTINCT seller_name as "name"
       FROM sales
       WHERE seller_name IS NOT NULL AND seller_name != ''
+        AND status = 'active'
         AND (${!hasCompanyFilter} OR company_id = ${cId})
         AND (${!hasSeriesFilter} OR series = ANY(${seriesArray}))
       ORDER BY seller_name ASC
     `;
     
-    const dbSellers = dbResult.map(r => r.name);
-    const unifiedSellers = [...new Set([...branchSellers, ...dbSellers])].filter(Boolean).sort();
+    const sellers = dbResult.map(r => r.name).filter(Boolean);
     
-    res.json(unifiedSellers);
+    res.json(sellers);
   } catch (error: any) {
     res.status(500).json({ message: 'Error listing company sellers', error: error.message });
   }
