@@ -20,7 +20,10 @@ const router = Router();
 router.use(authenticate);
 
 const parseDateRange = (req: any) => {
-  const companyId = req.user.companyId || (req.query.companyId as string);
+  let companyId = req.user.companyId;
+  if ((req.user.role === 'admin' || req.user.role === 'superadmin') && req.query.companyId) {
+    companyId = req.query.companyId as string;
+  }
   const dateStart = (req.query.dateStart as string) || new Date().toISOString().split('T')[0];
   const dateEnd = (req.query.dateEnd as string) || new Date().toISOString().split('T')[0];
   return { companyId, dateStart, dateEnd };
