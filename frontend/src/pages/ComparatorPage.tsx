@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GitCompare, Calendar } from 'lucide-react';
 import { ComparisonChart } from '../components/charts/ComparisonChart';
 import { DataTable } from '../components/ui/DataTable';
@@ -9,10 +9,22 @@ import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import api, { salesService } from '../services/api';
 import { useAuthStore } from '../hooks/useAuth';
 import { CustomDatePicker } from '../components/ui/CustomDatePicker';
+import { useHeaderStore } from '../hooks/useHeader';
 
 export const ComparatorPage: React.FC = () => {
   const { companyId } = useFilters();
   const token = useAuthStore((state) => state.accessToken);
+  
+  const setHeader = useHeaderStore((state: any) => state.setHeader);
+  const clearHeader = useHeaderStore((state: any) => state.clearHeader);
+
+  useEffect(() => {
+    setHeader(
+      'Comparador de Períodos',
+      'Analice el rendimiento actual frente a períodos anteriores.'
+    );
+    return () => clearHeader();
+  }, []);
 
   // Default dates: This month vs Last month
   const today = new Date();
@@ -125,14 +137,6 @@ export const ComparatorPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
-            <GitCompare className="text-primary" /> Comparador de Períodos
-          </h2>
-          <p className="text-sm text-neutral-500 mt-1">Analice el rendimiento actual frente a períodos anteriores.</p>
-        </div>
-      </div>
 
       {/* Date Selectors for both periods */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-5 rounded-2xl border border-slate-200/80">
