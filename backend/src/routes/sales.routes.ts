@@ -39,6 +39,60 @@ router.get('/metrics', async (req, res) => {
   }
 });
 
+router.get('/verify-distribution', async (req, res) => {
+  try {
+    const { companyId } = parseDateRange(req);
+    const salesSample = await sqlClient`
+      SELECT 
+        series, 
+        number, 
+        seller_name, 
+        total,
+        COALESCE(
+          (raw_json->>'establishment_id')::int,
+          (raw_json->'establishment'->>'id')::int,
+          (raw_json->>'establishmentId')::int
+        ) as est_id
+      FROM sales
+      WHERE company_id = ${companyId} AND series IS NOT NULL
+      ORDER BY id DESC
+      LIMIT 10
+    `;
+    const branchDistribution = await sqlClient`
+      SELECT 
+        series,
+        COALESCE(
+          (raw_json->>'establishment_id')::int,
+          (raw_json->'establishment'->>'id')::int,
+          (raw_json->>'establishmentId')::int
+        ) as est_id,
+        COUNT(*)::int as count_sales,
+        SUM(total::numeric)::numeric as total_amount
+      FROM sales
+      WHERE company_id = ${companyId} AND series IS NOT NULL AND status = 'active'
+      GROUP BY series, est_id
+      ORDER BY est_id, series
+    `;
+    const sellerDist = await sqlClient`
+      SELECT 
+        COALESCE(
+          (raw_json->>'establishment_id')::int,
+          (raw_json->'establishment'->>'id')::int,
+          (raw_json->>'establishmentId')::int
+        ) as est_id,
+        seller_name,
+        COUNT(*)::int as count_sales
+      FROM sales
+      WHERE company_id = ${companyId} AND series IS NOT NULL AND status = 'active'
+      GROUP BY est_id, seller_name
+      ORDER BY est_id, count_sales DESC
+    `;
+    res.json({ salesSample, branchDistribution, sellerDist });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/trend', async (req, res) => {
   try {
     const { companyId, dateStart, dateEnd } = parseDateRange(req);
