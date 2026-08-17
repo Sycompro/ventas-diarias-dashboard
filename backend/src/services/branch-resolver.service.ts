@@ -36,11 +36,34 @@ export async function getCompanyBillingConfig(companyId: string) {
     const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
     const client = createBillingClient(company.subdomain, decryptedToken);
     
-    // Consultar /company del tenant (retorna establecimientos y series visibles para este token)
+    // 1. Consultar /company del tenant (retorna establecimientos y series visibles para este token)
     const compRes = await client.get('/company');
     const establishments = compRes.data?.establishments || [];
     const series = compRes.data?.series || [];
     const paymentMethods = compRes.data?.payment_method_types || [];
+
+    // 2. Descubrir todos los almacenes/sucursales reales de la empresa desde /document/search-items
+    const warehouseNames: Record<number, string> = {};
+    try {
+      const searchRes = await client.get('/document/search-items');
+      const items = searchRes.data?.data?.items || searchRes.data?.data || [];
+      if (Array.isArray(items)) {
+        items.forEach((it: any) => {
+          if (Array.isArray(it.warehouses)) {
+            it.warehouses.forEach((w: any) => {
+              const id = w.warehouse_id || w.id;
+              const name = (w.warehouse_description || w.description || w.name || '')
+                .replace(/^Almacén\s*-\s*/i, '')
+                .replace(/^Almacen\s*-\s*/i, '')
+                .trim();
+              if (id && name) {
+                warehouseNames[id] = name;
+              }
+            });
+          }
+        });
+      }
+    } catch (e: any) {}
 
     // Asegurar que el método '99' (Crédito) esté presente
     if (!paymentMethods.find((pm: any) => pm.id === '99')) {
@@ -50,7 +73,8 @@ export async function getCompanyBillingConfig(companyId: string) {
     const data = {
       establishments,
       series,
-      paymentMethods
+      paymentMethods,
+      warehouses: warehouseNames
     };
     
     try {
@@ -60,7 +84,7 @@ export async function getCompanyBillingConfig(companyId: string) {
     return data;
   } catch (error: any) {
     console.warn(`[Branch Resolver] Warning loading billing config for ${companyId}:`, error.message);
-    return { establishments: [], series: [], paymentMethods: [] };
+    return { establishments: [], series: [], paymentMethods: [], warehouses: {} };
   }
 }
 
@@ -69,20 +93,27 @@ export async function getCompanyBillingConfig(companyId: string) {
  * para CUALQUIER empresa conectada.
  * 
  * ARQUITECTURA 100% DINÁMICA:
- * 1. Lee establecimientos y series desde API /company (vista parcial del token)
- * 2. Enriquece con establishment_id y nombres desde los documentos ya sincronizados (raw_json)
- * 3. Correlaciona series sin establishment_id conocido usando el patrón de sufijo numérico
- * 4. NO utiliza ninguna regla hardcodeada específica de ninguna empresa
+ * 1. Lee almacenes y locales desde /document/search-items (catálogo completo de sedes físicas)
+ * 2. Lee establecimientos y series desde API /company
+ * 3. Enriquece con establishment_id y nombres desde los documentos sincronizados (raw_json)
+ * 4. Correlaciona series usando el patrón de sufijo numérico
  */
 export async function getCompanyBranches(companyId: string): Promise<BranchInfo[]> {
   const config = await getCompanyBillingConfig(companyId);
   const officialEstablishments = config.establishments || [];
   const officialSeries = config.series || [];
+  const warehouses = config.warehouses || {};
 
   // 1. Diccionario dinámico de nombres de sucursal por establishment_id
   const branchNameById: Record<number, string> = {};
 
-  // Agregar nombres desde establecimientos oficiales de /company
+  // A. Agregar todos los locales descubiertos desde almacenes
+  for (const [idStr, name] of Object.entries(warehouses)) {
+    const id = parseInt(idStr, 10);
+    if (!isNaN(id) && name) branchNameById[id] = name as string;
+  }
+
+  // B. Agregar o enriquecer con descripciones oficiales de establishments de /company
   for (const est of officialEstablishments) {
     if (est.id && est.description) {
       branchNameById[est.id] = est.description;
