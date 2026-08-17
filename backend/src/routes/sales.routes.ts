@@ -59,12 +59,25 @@ router.get('/debug-seller-sql', async (req, res) => {
       SELECT DISTINCT company_id FROM sales
     `;
 
+    const salesByDay = await sqlClient`
+      SELECT 
+        (issued_at AT TIME ZONE 'America/Lima')::date as day,
+        seller_name,
+        count(*)::int as count
+      FROM sales
+      WHERE status = 'active'
+      GROUP BY day, seller_name
+      ORDER BY day DESC
+      LIMIT 100
+    `;
+
     res.json({
       sampleSellers,
       itemsCount: itemsCount[0]?.count || 0,
       sellerItems,
       docTypes,
-      companiesList
+      companiesList,
+      salesByDay
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
