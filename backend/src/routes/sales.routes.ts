@@ -30,18 +30,13 @@ router.get('/temp-debug-companies', async (req, res) => {
 router.get('/temp-debug-gymbra', async (req, res) => {
   try {
     const gymbraId = '51089e80-446d-461c-ae37-1518381eb051';
+    const config = await getCompanyBillingConfig(gymbraId);
     const branches = await getCompanyBranches(gymbraId);
-    
-    const sampleSales = await sqlClient`
-      SELECT id, series, number, raw_json
-      FROM sales
-      WHERE company_id = ${gymbraId} AND status = 'active'
-      LIMIT 2
-    `;
 
     res.json({
-      branches,
-      sampleSales
+      officialEstablishments: config.establishments,
+      officialSeries: config.series,
+      branches
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message, stack: err.stack });
