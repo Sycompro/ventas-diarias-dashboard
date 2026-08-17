@@ -13,6 +13,7 @@ import analyticsRoutes from './routes/analytics.routes.js';
 import intelligenceRoutes from './routes/intelligence.routes.js';
 import goalsRoutes from './routes/goals.routes.js';
 import reportsRoutes from './routes/reports.routes.js';
+import webhooksRoutes from './routes/webhooks.routes.js';
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/goals', goalsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/webhooks', webhooksRoutes);
 
 // Tarea programada: Sincronización automática cada 5 minutos
 cron.schedule('*/5 * * * *', async () => {
