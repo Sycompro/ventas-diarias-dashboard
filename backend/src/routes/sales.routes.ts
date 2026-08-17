@@ -91,6 +91,7 @@ router.get('/verify-distribution', async (req, res) => {
         number, 
         seller_name, 
         total,
+        issued_at,
         COALESCE(
           (raw_json->>'establishment_id')::int,
           (raw_json->'establishment'->>'id')::int,

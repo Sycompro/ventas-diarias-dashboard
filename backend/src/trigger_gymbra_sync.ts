@@ -16,7 +16,7 @@ async function main() {
     
     console.log("2. Triggering sync for GYMBRA...");
     try {
-      const syncRes = await axios.post(`${backendUrl}/api/companies/${gymbraId}/sync`, { days: 120 }, {
+      const syncRes = await axios.post(`${backendUrl}/api/companies/${gymbraId}/sync`, { days: 15 }, {
         headers: {
           Authorization: `Bearer ${accessToken}`
         }
