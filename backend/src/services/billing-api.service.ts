@@ -97,23 +97,39 @@ export async function fetchSaleNotes(client: AxiosInstance, dateStart: string, d
   const allSaleNotes: any[] = [];
   let currentPage = 1;
   let hasMorePages = true;
+  const maxPages = 25;
 
-  while (hasMorePages) {
+  while (hasMorePages && currentPage <= maxPages) {
     try {
-      const response = await client.get(`/sale-notes/lists/${dateStart}/${dateEnd}?page=${currentPage}`);
+      const response = await client.get(`/sale-note/lists?page=${currentPage}`);
+      const data = response.data?.data || [];
       
-      const { data, meta } = response.data;
-      if (data && Array.isArray(data)) {
-        allSaleNotes.push(...data);
-      }
-      
-      if (meta && meta.last_page > currentPage) {
-        currentPage++;
-      } else {
+      if (!Array.isArray(data) || data.length === 0) {
         hasMorePages = false;
+        break;
+      }
+
+      let olderThanRangeCount = 0;
+      for (const item of data) {
+        const itemDate = item.date_of_issue || (item.created_at ? item.created_at.split(' ')[0] : null);
+        if (itemDate) {
+          if (itemDate >= dateStart && itemDate <= dateEnd) {
+            allSaleNotes.push(item);
+          } else if (itemDate < dateStart) {
+            olderThanRangeCount++;
+          }
+        } else {
+          allSaleNotes.push(item);
+        }
+      }
+
+      if (olderThanRangeCount === data.length) {
+        hasMorePages = false;
+      } else {
+        currentPage++;
       }
     } catch (error: any) {
-      console.error(`[Billing API Service] Error fetching sale notes on page ${currentPage}:`, error.message);
+      console.warn(`[Billing API Service] Warning fetching sale notes on page ${currentPage}:`, error.message);
       hasMorePages = false;
     }
   }
