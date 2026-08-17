@@ -20,75 +20,7 @@ import https from 'https';
 
 const router = Router();
 
-router.get('/debug-purchases', async (req, res) => {
-  try {
-    const list = await sqlClient`SELECT id, name, subdomain FROM companies`;
-    const syncedPurchases = await sqlClient`
-      SELECT p.id, p.number, p.total, p.supplier_name, p.synced_at, c.subdomain
-      FROM purchases p
-      JOIN companies c ON p.company_id = c.id
-      ORDER BY p.synced_at DESC LIMIT 15
-    `;
-    res.json({
-      companies: list,
-      syncedPurchases
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
-router.get('/test-sync-gymbra', async (req, res) => {
-  try {
-    const company = await db.query.companies.findFirst({
-      where: eq(companies.subdomain, 'gymbra')
-    });
-    if (!company) return res.status(404).json({ error: 'Company gymbra not found in DB' });
-
-    const { decrypt } = await import('../services/crypto.service.js');
-    const { createBillingClient } = await import('../services/billing-api.service.js');
-
-    const decryptedToken = decrypt(company.apiTokenEncrypted, company.apiTokenIv, company.apiTokenTag);
-    const client = createBillingClient(company.subdomain, decryptedToken);
-
-    let purchasesData = null;
-    let expensesData = null;
-    let cashData = null;
-
-    try {
-      const r = await client.get('/purchases/records');
-      purchasesData = { status: r.status, count: r.data?.data?.length || 0, data: r.data };
-    } catch (e: any) {
-      purchasesData = { error: e.message, response: e.response?.data };
-    }
-
-    try {
-      const r = await client.get('/expenses/records');
-      expensesData = { status: r.status, count: r.data?.data?.length || 0, data: r.data };
-    } catch (e: any) {
-      expensesData = { error: e.message, response: e.response?.data };
-    }
-
-    try {
-      const r = await client.get('/cash/records');
-      cashData = { status: r.status, count: r.data?.data?.length || 0, data: r.data };
-    } catch (e: any) {
-      cashData = { error: e.message, response: e.response?.data };
-    }
-
-    res.json({
-      subdomain: company.subdomain,
-      purchases: purchasesData,
-      expenses: expensesData,
-      cash: cashData
-    });
-  } catch (err: any) {
-    res.status(500).json({
-      error: err.message,
-      response: err.response?.data
-    });
-  }
-});
 
 router.use(authenticate);
 
